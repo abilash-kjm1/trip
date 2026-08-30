@@ -767,6 +767,7 @@ details.more > summary:hover, details.more > summary:focus-visible{ color:var(--
     <a href="#food">Food</a>
     <a href="#parking">Parking</a>
     <a href="#tips">Tips</a>
+    <a href="expenses.html">Expenses</a>
   </div>
 </nav>
 
@@ -2206,6 +2207,150 @@ details.more > summary:hover, details.more > summary:focus-visible{ color:var(--
       }).catch(function(){ setBadge(false,"Offline unavailable"); });
     });
   } else { setBadge(false,"Offline not supported"); }
+})();
+
+</script>
+<style>
+/* ----- search + filter bar ----- */
+.findbar{
+  position:sticky; top:53px; z-index:45;
+  background:var(--paper); border-bottom:1px solid var(--rule);
+  padding:10px 0 11px; margin-bottom:4px;
+}
+.findbar .inner{ width:100%; max-width:760px; margin:0 auto; padding:0 18px; }
+@media(min-width:900px){ .findbar .inner{ max-width:940px; padding:0 28px; } }
+@media(min-width:1240px){ .findbar .inner{ max-width:1200px; padding:0 40px; } }
+.findrow{ display:flex; gap:8px; align-items:center; }
+.findrow input{
+  flex:1; min-width:0; height:44px; padding:10px 13px; font:inherit; font-size:16px;
+  color:var(--ink); background:var(--card);
+  border:1px solid var(--rule); border-radius:3px;
+}
+.findrow input:focus{ outline:none; border-color:var(--route); box-shadow:0 0 0 2px var(--route-tint); }
+.findclear{
+  width:44px; height:44px; flex:0 0 auto; border-radius:3px; cursor:pointer;
+  border:1px solid var(--rule); background:var(--card); color:var(--ink-soft);
+  font-size:19px; line-height:1; display:none;
+}
+.findclear.on{ display:block; }
+.findchips{ display:flex; gap:7px; overflow-x:auto; scrollbar-width:none; margin-top:9px; padding-bottom:2px; }
+.findchips::-webkit-scrollbar{ display:none; }
+.fchip{
+  flex:0 0 auto; min-height:34px; padding:6px 13px; cursor:pointer;
+  border-radius:17px; border:1px solid var(--rule); background:var(--card);
+  font-family:var(--f-mono); font-size:12px; font-weight:600;
+  letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft);
+}
+.fchip[aria-pressed="true"]{ background:var(--route); color:#fff; border-color:var(--route); }
+.fchip[data-k="must"][aria-pressed="true"]{ background:var(--must); border-color:var(--must); }
+.fchip[data-k="food"][aria-pressed="true"]{ background:var(--maple); border-color:var(--maple); }
+.fchip[data-k="goblin"][aria-pressed="true"]{ background:var(--drama); border-color:var(--drama); }
+.findcount{
+  font-family:var(--f-mono); font-size:11.5px; color:var(--ink-faint);
+  margin-top:8px; letter-spacing:.04em; display:none;
+}
+.findcount.on{ display:block; }
+.fhide{ display:none !important; }
+.noresult{
+  display:none; text-align:center; padding:30px 16px; color:var(--ink-soft);
+  background:var(--card); border:1px dashed var(--rule); border-radius:3px; margin-top:18px;
+}
+.noresult.on{ display:block; }
+
+</style>
+<script>
+(function(){
+  "use strict";
+  var nav=document.querySelector(".navbar"); if(!nav) return;
+
+  var bar=document.createElement("div");
+  bar.className="findbar";
+  bar.innerHTML=
+    '<div class="inner">'+
+      '<div class="findrow">'+
+        '<input id="findq" type="search" placeholder="Search stops, food, places…" aria-label="Search the guide" autocomplete="off">'+
+        '<button type="button" class="findclear" id="findx" aria-label="Clear search">&times;</button>'+
+      '</div>'+
+      '<div class="findchips" id="fchips">'+
+        '<button type="button" class="fchip" data-k="must" aria-pressed="false">★ Must-visit</button>'+
+        '<button type="button" class="fchip" data-k="food" aria-pressed="false">Food</button>'+
+        '<button type="button" class="fchip" data-k="photo" aria-pressed="false">Photo spots</button>'+
+        '<button type="button" class="fchip" data-k="goblin" aria-pressed="false">Goblin</button>'+
+        '<button type="button" class="fchip" data-k="gem" aria-pressed="false">Hidden gems</button>'+
+      '</div>'+
+      '<div class="findcount" id="findcount"></div>'+
+    '</div>';
+  nav.parentNode.insertBefore(bar, nav.nextSibling);
+
+  var note=document.createElement("div");
+  note.className="noresult"; note.id="noresult";
+  note.innerHTML='<strong>Nothing matches.</strong><br>Try a different word, or clear the filters.';
+  var routeSec=document.getElementById("route");
+  if(routeSec) routeSec.parentNode.insertBefore(note, routeSec);
+
+  var cards=[].slice.call(document.querySelectorAll(".card"));
+  var rows =[].slice.call(document.querySelectorAll(".rm"));
+
+  function tagOf(el){
+    var t={};
+    if(el.classList.contains("must")) t.must=1;
+    if(el.classList.contains("gem")) t.gem=1;
+    if(el.classList.contains("photo")) t.photo=1;
+    if(el.classList.contains("food")) t.food=1;
+    var sec=el.closest("section");
+    var id=sec?sec.id:"";
+    if(id==="food") t.food=1;
+    if(id==="photos") t.photo=1;
+    if(id==="goblin") t.goblin=1;
+    if(el.querySelector(".gob")) t.goblin=1;
+    return t;
+  }
+  var meta=cards.concat(rows).map(function(el){
+    return { el:el, tags:tagOf(el), text:(el.textContent||"").toLowerCase() };
+  });
+
+  var q="", active={};
+
+  function apply(){
+    var keys=Object.keys(active).filter(function(k){ return active[k]; });
+    var shown=0;
+    meta.forEach(function(m){
+      var okQ = !q || m.text.indexOf(q)!==-1;
+      var okT = !keys.length || keys.some(function(k){ return m.tags[k]; });
+      var ok = okQ && okT;
+      m.el.classList.toggle("fhide", !ok);
+      if(ok) shown++;
+    });
+    // hide a card grid that has emptied out
+    [].slice.call(document.querySelectorAll(".grid")).forEach(function(g){
+      var any=[].slice.call(g.querySelectorAll(".card")).some(function(c){ return !c.classList.contains("fhide"); });
+      g.classList.toggle("fhide", !any);
+    });
+    var filtering = !!q || !!keys.length;
+    var c=document.getElementById("findcount");
+    c.classList.toggle("on", filtering);
+    c.textContent = filtering ? ("Showing "+shown+" of "+meta.length) : "";
+    document.getElementById("noresult").classList.toggle("on", filtering && shown===0);
+    document.getElementById("findx").classList.toggle("on", !!q);
+  }
+
+  var input=document.getElementById("findq");
+  var t;
+  input.addEventListener("input", function(){
+    clearTimeout(t);
+    t=setTimeout(function(){ q=input.value.trim().toLowerCase(); apply(); }, 130);
+  });
+  document.getElementById("findx").addEventListener("click", function(){
+    input.value=""; q=""; apply(); input.focus();
+  });
+  [].slice.call(document.querySelectorAll(".fchip")).forEach(function(b){
+    b.addEventListener("click", function(){
+      var k=b.dataset.k;
+      active[k]=!active[k];
+      b.setAttribute("aria-pressed", active[k]?"true":"false");
+      apply();
+    });
+  });
 })();
 
 </script>

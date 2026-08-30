@@ -1,11 +1,12 @@
 /* The Saint Lawrence Run - offline service worker */
-const VERSION = 'slr-v1';
+const VERSION = 'slr-v2';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 
 const PRECACHE = [
   './',
   './index.html',
+  './expenses.html',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
