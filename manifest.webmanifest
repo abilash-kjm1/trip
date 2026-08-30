@@ -1,0 +1,16 @@
+{
+  "name": "The Saint Lawrence Run",
+  "short_name": "St Lawrence",
+  "description": "Scarborough to Montreal and Quebec City, 5-7 September. Every stop in driving order.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#073F37",
+  "theme_color": "#073F37",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

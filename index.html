@@ -13,6 +13,11 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%81%3C/text%3E%3C/svg%3E">
 <style>html{-webkit-text-size-adjust:100%}body{margin:0}</style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="St Lawrence">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2076,5 +2081,133 @@ details.more > summary:hover, details.more > summary:focus-visible{ color:var(--
   </div>
 </footer>
 
+<style>
+/* ----- stop check-off ----- */
+.rmdone{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:34px; height:34px; border-radius:50%; flex:0 0 auto;
+  margin-left:8px; align-self:center; cursor:pointer; padding:0;
+  background:var(--card); border:2px solid var(--rule); color:transparent;
+  font-size:16px; line-height:1;
+  transition:background .12s ease, border-color .12s ease, color .12s ease;
+}
+.rmdone:hover,.rmdone:focus-visible{ border-color:var(--route); }
+.rmdone[aria-pressed="true"]{ background:var(--route); border-color:var(--route); color:#fff; }
+.rm.ticked > .rmt, .rm.ticked > .rmx b{ text-decoration:line-through; }
+.rm.ticked > .rmx, .rm.ticked > .rmt{ opacity:.5; }
+.rm.ticked > .rmn{ opacity:.45; }
+
+/* ----- per-day progress ----- */
+.rmprog{ flex:0 0 100%; display:flex; align-items:center; gap:9px; margin-top:9px; }
+.rmprog .bar{ flex:1; height:6px; border-radius:3px; overflow:hidden; background:rgba(255,255,255,.22); }
+.rmprog .fill{ height:100%; width:0%; background:#fff; border-radius:3px; transition:width .25s ease; }
+.rmprog .num{ font-family:var(--f-mono); font-size:11.5px; font-weight:600; color:#fff;
+  font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+/* ----- toolbar ----- */
+.tripbar{
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px;
+  background:var(--card); border:1px solid var(--rule); border-left:5px solid var(--route);
+  border-radius:3px; padding:14px 16px; margin-top:18px;
+}
+.tripbar .lead{ font-family:var(--f-display); font-size:15px; font-weight:700; flex:1 1 190px; }
+.tripbar .lead span{ display:block; font-family:var(--f-mono); font-size:12px; font-weight:500;
+  color:var(--ink-faint); margin-top:3px; }
+.tripbtn{
+  display:inline-flex; align-items:center; gap:6px; min-height:38px; padding:7px 13px;
+  border-radius:3px; border:1px solid var(--rule); background:var(--paper-2);
+  font-family:var(--f-mono); font-size:12px; font-weight:600; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--ink-soft); cursor:pointer;
+}
+.tripbtn:hover,.tripbtn:focus-visible{ background:var(--route); color:#fff; border-color:var(--route); }
+.offbadge{ display:inline-flex; align-items:center; gap:6px; font-family:var(--f-mono);
+  font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--route); }
+.offbadge b{ width:8px; height:8px; border-radius:50%; background:var(--ink-faint); display:block; }
+.offbadge.ready b{ background:var(--route); }
+
+</style>
+<script>
+(function(){
+  "use strict";
+  var KEY="slr.done.v1";
+  function load(){ try{ return new Set(JSON.parse(localStorage.getItem(KEY)||"[]")); }catch(e){ return new Set(); } }
+  function save(set){ try{ localStorage.setItem(KEY, JSON.stringify(Array.from(set))); }catch(e){} }
+  var done=load();
+
+  var rows=[].slice.call(document.querySelectorAll(".rm"));
+  rows.forEach(function(row){
+    var n=row.querySelector(".rmn"); if(!n) return;
+    var id=n.textContent.trim();
+    var b=document.createElement("button");
+    b.type="button"; b.className="rmdone"; b.innerHTML="&#10003;";
+    b.setAttribute("aria-label","Mark stop "+id+" as done");
+    b.setAttribute("aria-pressed", done.has(id)?"true":"false");
+    if(done.has(id)) row.classList.add("ticked");
+    b.addEventListener("click", function(){
+      if(done.has(id)){ done.delete(id); b.setAttribute("aria-pressed","false"); row.classList.remove("ticked"); }
+      else { done.add(id); b.setAttribute("aria-pressed","true"); row.classList.add("ticked"); }
+      save(done); refresh();
+    });
+    var pin=row.querySelector(".rmmap");
+    if(pin && pin.parentNode===row) row.insertBefore(b, pin.nextSibling); else row.appendChild(b);
+  });
+
+  var groups=[].slice.call(document.querySelectorAll(".rmgroup")).map(function(g){
+    var head=g.querySelector(".rmday");
+    var wrap=document.createElement("div"); wrap.className="rmprog";
+    wrap.innerHTML='<span class="bar"><span class="fill"></span></span><span class="num"></span>';
+    head.appendChild(wrap);
+    return {g:g, fill:wrap.querySelector(".fill"), num:wrap.querySelector(".num")};
+  });
+
+  function refresh(){
+    var total=0, hit=0;
+    groups.forEach(function(o){
+      var rs=[].slice.call(o.g.querySelectorAll(".rm"));
+      var d=rs.filter(function(r){ return r.classList.contains("ticked"); }).length;
+      total+=rs.length; hit+=d;
+      o.fill.style.width = rs.length ? (d/rs.length*100)+"%" : "0%";
+      o.num.textContent = d+"/"+rs.length;
+    });
+    var st=document.getElementById("tripstat");
+    if(st) st.textContent = hit+" of "+total+" stops done";
+  }
+
+  var host=document.querySelector("#route .rmkey");
+  if(host){
+    var bar=document.createElement("div");
+    bar.className="tripbar";
+    bar.innerHTML='<span class="lead">Tick stops off as you go<span id="tripstat">0 stops done</span></span>'+
+                  '<button type="button" class="tripbtn" id="tripreset">Reset</button>'+
+                  '<span class="offbadge" id="offbadge"><b></b><span>Checking offline</span></span>';
+    host.parentNode.insertBefore(bar, host.nextSibling);
+    bar.querySelector("#tripreset").addEventListener("click", function(){
+      if(!confirm("Clear every ticked stop?")) return;
+      done.clear(); save(done);
+      rows.forEach(function(r){ r.classList.remove("ticked"); });
+      [].slice.call(document.querySelectorAll(".rmdone")).forEach(function(b){ b.setAttribute("aria-pressed","false"); });
+      refresh();
+    });
+  }
+  refresh();
+
+  var badge=document.getElementById("offbadge");
+  function setBadge(ok,txt){ if(!badge) return; badge.classList.toggle("ready",!!ok); badge.lastChild.textContent=txt; }
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").then(function(reg){
+        setBadge(!!navigator.serviceWorker.controller,
+                 navigator.serviceWorker.controller ? "Saved for offline" : "Saving for offline");
+        navigator.serviceWorker.addEventListener("controllerchange", function(){ setBadge(true,"Saved for offline"); });
+        reg.addEventListener("updatefound", function(){
+          var w=reg.installing; if(!w) return;
+          w.addEventListener("statechange", function(){ if(w.state==="activated") setBadge(true,"Saved for offline"); });
+        });
+      }).catch(function(){ setBadge(false,"Offline unavailable"); });
+    });
+  } else { setBadge(false,"Offline not supported"); }
+})();
+
+</script>
 </body>
 </html>
