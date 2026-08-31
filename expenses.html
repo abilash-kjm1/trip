@@ -230,11 +230,12 @@ let selected = {};
 
 /* the trip code lives in the URL, so the link itself is the invite */
 function tripCode(){
-  const m = location.hash.match(/trip=([A-Za-z0-9_-]{6,})/);
+  // An explicit #trip= wins, so a separate sheet is still possible on demand.
+  const m = location.hash.match(/trip=([A-Za-z0-9_-]{3,})/);
   if (m) return m[1];
-  const c = Math.random().toString(36).slice(2,8) + Math.random().toString(36).slice(2,6);
-  history.replaceState(null, "", location.pathname + "#trip=" + c);
-  return c;
+  // Otherwise everyone lands on the same shared sheet - which is what makes
+  // sharing the plain site link work, with no code to pass around.
+  return (window.DEFAULT_TRIP || "shared");
 }
 const CODE = tripCode();
 
@@ -432,7 +433,8 @@ $("resetAll").addEventListener("click",function(){
 });
 
 $("shareBtn").addEventListener("click",async function(){
-  const url = location.origin + location.pathname + "#trip=" + CODE;
+  const isDefault = CODE === (window.DEFAULT_TRIP || "shared");
+  const url = location.origin + location.pathname + (isDefault ? "" : "#trip=" + CODE);
   try{
     if(navigator.share){ await navigator.share({title:"Trip Expenses", url:url}); return; }
     await navigator.clipboard.writeText(url); snack("Link copied - send it to everyone");
@@ -465,7 +467,10 @@ if(!configured){
         S.people   = v.people   || {};
         S.expenses = v.expenses || {};
         renderAll();
-        setSync("","Shared and live","Everyone with this link sees the same sheet. Code "+CODE);
+        const isDefault = CODE === (window.DEFAULT_TRIP || "shared");
+        setSync("","Shared and live", isDefault
+          ? "Everyone who opens Expenses on this site shares this sheet."
+          : "Private sheet - only people with your link see it. Code " + CODE);
       }, function(err){
         setSync("bad","Cannot read the sheet", err && err.message ? err.message : "Check your database rules.");
       });
