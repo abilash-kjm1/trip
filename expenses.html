@@ -169,6 +169,41 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
   color:var(--on-surface); font-variant-numeric:tabular-nums; white-space:nowrap; }
 @media(max-width:400px){ .barrow .who{ flex-basis:66px; font-size:13px; } }
 
+/* ===== receipt ===== */
+.dialog.receipt{ width:min(94vw,460px); }
+.rchead{ display:flex; align-items:center; gap:12px; margin-bottom:4px; }
+.rchead .txt{ flex:1; min-width:0; }
+.rchead .txt b{ display:block; font-size:19px; font-weight:500; }
+.rchead .txt small{ display:block; font-size:12.5px; color:var(--on-surface-variant); }
+.paper{
+  margin-top:14px; background:#fffdf7; color:#1d1a14;
+  border:1px solid #e6dfcd; border-radius:6px; padding:16px 14px;
+  font-family:"Roboto Mono",monospace; font-size:13px; line-height:1.7;
+  box-shadow:inset 0 0 0 1px #fff, 0 1px 2px rgba(0,0,0,.08);
+  overflow-x:auto;
+}
+.paper .rc-title{ text-align:center; font-weight:500; letter-spacing:.12em; text-transform:uppercase; }
+.paper .rc-sub{ text-align:center; font-size:11.5px; color:#6b6350; margin-bottom:10px; letter-spacing:.06em; }
+.paper .rc-rule{ border-top:1px dashed #c9c0a8; margin:9px 0; }
+.paper .rc-rule.solid{ border-top:2px solid #1d1a14; }
+.paper .rc-grp{
+  margin:12px 0 4px; font-weight:500; text-transform:uppercase;
+  letter-spacing:.09em; font-size:11.5px; color:#6b6350;
+}
+.paper .rc-line{ display:flex; gap:10px; align-items:baseline; }
+.paper .rc-line .d{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.paper .rc-line .n{ flex:0 0 auto; font-variant-numeric:tabular-nums; }
+.paper .rc-line .note{ font-size:11px; color:#8a8067; }
+.paper .rc-tot{ display:flex; gap:10px; font-weight:500; font-size:14px; }
+.paper .rc-tot .d{ flex:1; }
+.paper .rc-tot .n{ font-variant-numeric:tabular-nums; }
+.paper .rc-net{ text-align:center; margin-top:12px; font-size:14px; font-weight:500; }
+.paper .rc-none{ text-align:center; color:#8a8067; padding:10px 0; }
+.paper .swatch-inline{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+.item.tappable{ cursor:pointer; }
+.item.tappable:hover{ background:var(--surface-container); border-radius:8px; }
+.item .chev{ color:var(--on-surface-variant); flex:0 0 auto; }
+
 /* ===== admin dialog ===== */
 .scrim{ position:fixed; inset:0; background:rgba(0,0,0,.42); z-index:50; }
 .dialog{
@@ -290,6 +325,18 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
       <button class="btn filled" data-close>Done</button>
     </div>
   </div>
+</div>
+
+<div class="scrim" id="rcScrim" hidden></div>
+<div class="dialog receipt" id="rcDlg" role="dialog" aria-modal="true" aria-labelledby="rcWho" hidden>
+  <div class="rchead">
+    <span class="avatar" id="rcAvatar" aria-hidden="true"></span>
+    <span class="txt"><b id="rcWho">Name</b><small id="rcRole">statement</small></span>
+    <button class="iconbtn" id="rcClose" aria-label="Close"><span class="ms" aria-hidden="true">close</span></button>
+  </div>
+  <p class="dsub" style="margin:2px 0 10px">Filter by person, or see everyone.</p>
+  <div class="chips" id="rcFilters"></div>
+  <div class="paper" id="rcPaper"></div>
 </div>
 
 <div class="snack" id="snack" role="status" aria-live="polite"></div>
@@ -467,9 +514,14 @@ function renderBalances(){
   names.forEach(function(n){
     const v=Math.round(b[n]*100)/100;
     const li=document.createElement("li"); li.className="item";
+    li.className="item tappable"; li.setAttribute("role","button"); li.tabIndex=0;
+    li.setAttribute("aria-label","Open the receipt for "+n);
     li.innerHTML='<span class="avatar" aria-hidden="true" style="background:'+colorOf(n)+';color:#fff">'+esc(initials(n))+'</span>'+
-      '<span class="txt"><b>'+esc(n)+'</b><small>'+(v>0.004?"is owed":v<-0.004?"owes":"square")+'</small></span>'+
-      '<span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"")+'">'+(v>0.004?"+":"")+money(v)+'</span>';
+      '<span class="txt"><b>'+esc(n)+'</b><small>'+(v>0.004?"is owed - tap for the receipt":v<-0.004?"owes - tap for the receipt":"square")+'</small></span>'+
+      '<span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"")+'">'+(v>0.004?"+":"")+money(v)+'</span>'+
+      '<span class="ms chev" aria-hidden="true">chevron_right</span>';
+    li.addEventListener("click", function(){ openReceipt(n); });
+    li.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openReceipt(n); } });
     ul.appendChild(li);
   });
   $("balanceEmpty").style.display = (names.length && expenseArr().length) ? "none" : "";
@@ -557,6 +609,111 @@ $("shareBtn").addEventListener("click",async function(){
     await navigator.clipboard.writeText(url); snack("Link copied - send it to everyone");
   }catch(e){ window.prompt("Copy this link and send it to everyone:", url); }
 });
+
+/* ---------- receipt: itemised statement between two people ---------- */
+// Raw pairwise debt: for every expense X paid, each other person in the split
+// owes X their share. This is the itemisation, not the netted settlement.
+function itemsOwedTo(creditor, debtor){
+  return expenseArr().filter(function(e){
+    const b = (e.between && e.between.length) ? e.between : [e.payer];
+    return e.payer===creditor && debtor!==creditor && b.indexOf(debtor)!==-1;
+  }).map(function(e){
+    const b = (e.between && e.between.length) ? e.between : [e.payer];
+    return { desc:e.desc, share:e.amount/b.length, total:e.amount, ways:b.length };
+  });
+}
+function sumShares(list){ return list.reduce(function(a,x){ return a+x.share; },0); }
+
+let rcPerson=null, rcFilter="__all__";
+
+function openReceipt(name){
+  rcPerson=name; rcFilter="__all__";
+  $("rcScrim").hidden=false; $("rcDlg").hidden=false;
+  $("rcWho").textContent=name;
+  const av=$("rcAvatar"); av.textContent=initials(name);
+  av.style.background=colorOf(name); av.style.color="#fff";
+  renderReceiptFilters(); renderReceipt();
+  setTimeout(function(){ $("rcClose").focus(); },60);
+}
+function closeReceipt(){ $("rcScrim").hidden=true; $("rcDlg").hidden=true; }
+
+function renderReceiptFilters(){
+  const box=$("rcFilters"); box.innerHTML="";
+  function mk(key,label,color){
+    const b=document.createElement("button");
+    b.type="button"; b.className="chip";
+    b.setAttribute("aria-pressed", rcFilter===key ? "true":"false");
+    b.innerHTML=(color?'<span class="pdot" aria-hidden="true" style="background:'+color+'"></span>':'')+esc(label);
+    b.addEventListener("click",function(){ rcFilter=key; renderReceiptFilters(); renderReceipt(); });
+    box.appendChild(b);
+  }
+  mk("__all__","Everyone",null);
+  peopleArr().forEach(function(p){ if(p.name!==rcPerson) mk(p.name,p.name,p.color); });
+}
+
+function renderReceipt(){
+  const paper=$("rcPaper");
+  let h='<div class="rc-title">'+esc(rcPerson)+'</div>';
+
+  if(rcFilter==="__all__"){
+    $("rcRole").textContent="what everyone owes them";
+    h+='<div class="rc-sub">amounts owed to '+esc(rcPerson)+'</div><div class="rc-rule"></div>';
+    const paid = expenseArr().filter(function(e){ return e.payer===rcPerson; });
+    if(!paid.length){
+      h+='<div class="rc-none">'+esc(rcPerson)+' has not paid for anything yet.</div>';
+    } else {
+      let grand=0;
+      paid.forEach(function(e){
+        const b=(e.between&&e.between.length)?e.between:[e.payer];
+        const share=e.amount/b.length;
+        const debtors=b.filter(function(n){ return n!==rcPerson; });
+        h+='<div class="rc-grp">'+esc(e.desc)+' &middot; '+money(e.amount)+' / '+b.length+' ways</div>';
+        if(!debtors.length){
+          h+='<div class="rc-line"><span class="d note">paid for themselves only</span><span class="n">'+money(0)+'</span></div>';
+        }
+        debtors.forEach(function(n,i){
+          grand+=share;
+          h+='<div class="rc-line"><span class="d"><span class="swatch-inline" style="background:'+colorOf(n)+'"></span>'+
+             (i+1)+') '+esc(n)+'</span><span class="n">'+money(share)+'</span></div>';
+        });
+      });
+      h+='<div class="rc-rule solid"></div><div class="rc-tot"><span class="d">TOTAL OWED TO '+esc(rcPerson).toUpperCase()+'</span><span class="n">'+money(grand)+'</span></div>';
+    }
+  } else {
+    const other=rcFilter;
+    $("rcRole").textContent="statement with "+other;
+    h+='<div class="rc-sub">statement with '+esc(other)+'</div><div class="rc-rule"></div>';
+    const theyOwe = itemsOwedTo(rcPerson, other);
+    const weOwe   = itemsOwedTo(other, rcPerson);
+    const a=sumShares(theyOwe), b=sumShares(weOwe);
+
+    h+='<div class="rc-grp">'+esc(other).toUpperCase()+' OWES '+esc(rcPerson).toUpperCase()+'</div>';
+    if(!theyOwe.length) h+='<div class="rc-line"><span class="d note">nothing</span><span class="n">'+money(0)+'</span></div>';
+    theyOwe.forEach(function(x,i){
+      h+='<div class="rc-line"><span class="d">'+(i+1)+') '+esc(x.desc)+' <span class="note">('+money(x.total)+' / '+x.ways+')</span></span><span class="n">'+money(x.share)+'</span></div>';
+    });
+    h+='<div class="rc-rule"></div><div class="rc-tot"><span class="d">subtotal</span><span class="n">'+money(a)+'</span></div>';
+
+    h+='<div class="rc-grp">'+esc(rcPerson).toUpperCase()+' OWES '+esc(other).toUpperCase()+'</div>';
+    if(!weOwe.length) h+='<div class="rc-line"><span class="d note">nothing</span><span class="n">'+money(0)+'</span></div>';
+    weOwe.forEach(function(x,i){
+      h+='<div class="rc-line"><span class="d">'+(i+1)+') '+esc(x.desc)+' <span class="note">('+money(x.total)+' / '+x.ways+')</span></span><span class="n">'+money(x.share)+'</span></div>';
+    });
+    h+='<div class="rc-rule"></div><div class="rc-tot"><span class="d">subtotal</span><span class="n">'+money(b)+'</span></div>';
+
+    const net=a-b;
+    h+='<div class="rc-rule solid"></div>';
+    h+='<div class="rc-net">'+ (Math.abs(net)<0.005
+        ? "SQUARE - nothing between you"
+        : (net>0 ? esc(other).toUpperCase()+" OWES "+esc(rcPerson).toUpperCase()+" "+money(net)
+                 : esc(rcPerson).toUpperCase()+" OWES "+esc(other).toUpperCase()+" "+money(-net))) +'</div>';
+  }
+  paper.innerHTML=h;
+}
+
+$("rcClose").addEventListener("click", closeReceipt);
+$("rcScrim").addEventListener("click", closeReceipt);
+document.addEventListener("keydown", function(e){ if(e.key==="Escape" && !$("rcDlg").hidden) closeReceipt(); });
 
 /* ---------- admin panel ---------- */
 const ADMIN_KEY = "slr.admin.v1";
