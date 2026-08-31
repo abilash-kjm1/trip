@@ -127,6 +127,23 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
   color:#f2f0ef; border-radius:8px; padding:14px 16px; font-size:14px; box-shadow:var(--e3);
   opacity:0; pointer-events:none; transition:opacity .2s ease; max-width:92vw; }
 .snack.show{ opacity:1; }
+
+/* ===== admin dialog ===== */
+.scrim{ position:fixed; inset:0; background:rgba(0,0,0,.42); z-index:50; }
+.dialog{
+  position:fixed; z-index:51; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(92vw,420px); max-height:86vh; overflow-y:auto;
+  background:var(--surface-container-low,#eef5f2); color:var(--on-surface);
+  border-radius:28px; padding:24px; box-shadow:var(--e3);
+}
+.dialog h3{ font-size:22px; font-weight:400; margin:0 0 6px; display:flex; align-items:center; gap:10px; }
+.dialog h3 .ms{ font-size:24px; color:var(--primary); }
+.dialog .dsub{ font-size:14px; color:var(--on-surface-variant); margin:0 0 14px; }
+.dactions{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin-top:20px; }
+.btn.danger{ background:var(--error-container); color:var(--on-error-container); }
+.pinerr{ color:var(--error); font-size:13px; margin:8px 0 0; }
+#admPeople .item{ padding:8px 2px; }
+#admPeople .item .txt b{ font-size:15px; }
 </style>
 </head>
 <body>
@@ -135,7 +152,7 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
   <a class="iconbtn" href="./" aria-label="Back to the trip guide"><span class="ms" aria-hidden="true">arrow_back</span></a>
   <h1>Trip Expenses</h1>
   <button class="iconbtn" id="shareBtn" aria-label="Copy the share link"><span class="ms" aria-hidden="true">share</span></button>
-  <button class="iconbtn" id="resetAll" aria-label="Reset everything"><span class="ms" aria-hidden="true">delete_sweep</span></button>
+  <button class="iconbtn" id="adminBtn" aria-label="Admin panel" aria-haspopup="dialog"><span class="ms" aria-hidden="true">lock</span></button>
 </header>
 
 <main class="wrap">
@@ -153,8 +170,8 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
 
   <section class="card">
     <h2><span class="ms" aria-hidden="true">group</span> Who is on the trip</h2>
-    <p class="sub">Type a name and press Add. Any number of people.</p>
-    <div class="row">
+    <p class="sub" id="peopleSub">The people any expense can be split between.</p>
+    <div class="row" id="peopleEditor" hidden>
       <div class="field">
         <label for="personName">Name</label>
         <input id="personName" type="text" autocomplete="off" enterkeyhint="done">
@@ -212,6 +229,41 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
   </section>
 
 </main>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="dialog" id="adminDlg" role="dialog" aria-modal="true" aria-labelledby="admTitle" hidden>
+  <h3 id="admTitle"><span class="ms" aria-hidden="true">admin_panel_settings</span> Admin</h3>
+
+  <div id="admLocked">
+    <p class="dsub">Enter the PIN to manage who is on the trip.</p>
+    <div class="field" style="margin-top:6px">
+      <label for="pinInput">PIN</label>
+      <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" enterkeyhint="go">
+    </div>
+    <p class="pinerr" id="pinErr" hidden>Wrong PIN.</p>
+    <div class="dactions">
+      <button class="btn text" data-close>Cancel</button>
+      <button class="btn filled" id="pinGo">Unlock</button>
+    </div>
+  </div>
+
+  <div id="admUnlocked" hidden>
+    <p class="dsub">You can add or remove people, and clear the sheet.</p>
+    <ul class="list" id="admPeople" style="margin:6px 0 4px"></ul>
+    <div class="row" style="margin-top:12px">
+      <div class="field">
+        <label for="admName">Add a person</label>
+        <input id="admName" type="text" autocomplete="off" enterkeyhint="done">
+      </div>
+      <button class="btn filled" id="admAdd"><span class="ms" aria-hidden="true">person_add</span>Add</button>
+    </div>
+    <div class="dactions" style="margin-top:18px">
+      <button class="btn text" id="admLock">Lock</button>
+      <button class="btn danger" id="admReset">Clear sheet</button>
+      <button class="btn filled" data-close>Done</button>
+    </div>
+  </div>
+</div>
 
 <div class="snack" id="snack" role="status" aria-live="polite"></div>
 
@@ -285,18 +337,18 @@ function renderPeople(){
   peopleArr().forEach(function(p){
     const c=document.createElement("span"); c.className="chip";
     c.innerHTML='<span class="avatar" aria-hidden="true" style="width:26px;height:26px;font-size:12px">'+esc(initials(p.name))+
-      '</span><span>'+esc(p.name)+'</span><span class="ms x" role="button" tabindex="0" aria-label="Remove '+esc(p.name)+'">close</span>';
-    const rm=function(){
-      if(!confirm("Remove "+p.name+"? Their expenses stay but will need reassigning.")) return;
-      delete selected[p.name]; removePersonRec(p.k); snack(p.name+" removed");
-    };
-    const x=c.querySelector(".x");
-    x.addEventListener("click",rm);
-    x.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); rm(); } });
+      '</span><span>'+esc(p.name)+'</span>';
     box.appendChild(c);
   });
   const n=peopleArr().length;
-  $("peopleHint").textContent = n ? n+" "+(n===1?"person":"people")+" on the trip" : "No one added yet.";
+  $("peopleEditor").hidden = !isAdmin;
+  $("peopleSub").textContent = isAdmin
+    ? "You are admin - add or remove anyone."
+    : "The people any expense can be split between.";
+  $("peopleHint").textContent = n
+    ? n+" "+(n===1?"person":"people")+" on the trip"
+    : (isAdmin ? "No one added yet - add the first name above."
+               : "No one yet. The trip admin adds people from the lock icon at the top.");
 
   const sel=$("expPayer"); const keep=sel.value; sel.innerHTML="";
   peopleArr().forEach(function(p){ const o=document.createElement("option"); o.value=p.name; o.textContent=p.name; sel.appendChild(o); });
@@ -427,11 +479,6 @@ $("addExpense").addEventListener("click",function(){
   snack("Added "+d+" "+money(a));
 });
 
-$("resetAll").addEventListener("click",function(){
-  if(!confirm("Clear all people and expenses for EVERYONE on this sheet? This cannot be undone.")) return;
-  wipeAll(); snack("Everything cleared");
-});
-
 $("shareBtn").addEventListener("click",async function(){
   const isDefault = CODE === (window.DEFAULT_TRIP || "shared");
   const url = location.origin + location.pathname + (isDefault ? "" : "#trip=" + CODE);
@@ -441,7 +488,87 @@ $("shareBtn").addEventListener("click",async function(){
   }catch(e){ window.prompt("Copy this link and send it to everyone:", url); }
 });
 
+/* ---------- admin panel ---------- */
+const ADMIN_KEY = "slr.admin.v1";
+let isAdmin = false;
+try { isAdmin = localStorage.getItem(ADMIN_KEY) === "1"; } catch(e){}
+
+function setAdminIcon(){
+  $("adminBtn").querySelector(".ms").textContent = isAdmin ? "admin_panel_settings" : "lock";
+  $("adminBtn").setAttribute("aria-label", isAdmin ? "Admin panel (unlocked)" : "Admin panel (locked)");
+}
+function openAdmin(){
+  $("scrim").hidden=false; $("adminDlg").hidden=false;
+  $("admLocked").hidden = isAdmin;
+  $("admUnlocked").hidden = !isAdmin;
+  $("pinErr").hidden = true; $("pinInput").value="";
+  if(isAdmin){ renderAdminPeople(); setTimeout(()=>$("admName").focus(),60); }
+  else setTimeout(()=>$("pinInput").focus(),60);
+}
+function closeAdmin(){ $("scrim").hidden=true; $("adminDlg").hidden=true; $("adminBtn").focus(); }
+
+function renderAdminPeople(){
+  const ul=$("admPeople"); ul.innerHTML="";
+  const list=peopleArr();
+  if(!list.length){
+    const li=document.createElement("li"); li.className="empty"; li.style.padding="14px 0";
+    li.textContent="Nobody on the trip yet."; ul.appendChild(li); return;
+  }
+  list.forEach(function(p){
+    const li=document.createElement("li"); li.className="item";
+    li.innerHTML='<span class="avatar" aria-hidden="true">'+esc(initials(p.name))+'</span>'+
+      '<span class="txt"><b>'+esc(p.name)+'</b></span>';
+    const del=document.createElement("button"); del.className="iconbtn";
+    del.setAttribute("aria-label","Remove "+p.name);
+    del.innerHTML='<span class="ms" aria-hidden="true">person_remove</span>';
+    del.addEventListener("click",function(){
+      if(!confirm("Remove "+p.name+"? Their expenses stay but will need reassigning.")) return;
+      delete selected[p.name]; removePersonRec(p.k); snack(p.name+" removed");
+      setTimeout(renderAdminPeople,400);
+    });
+    li.appendChild(del); ul.appendChild(li);
+  });
+}
+
+function tryUnlock(){
+  const want = String(window.ADMIN_PIN || "");
+  if(!want){ $("pinErr").textContent="No PIN is configured."; $("pinErr").hidden=false; return; }
+  if($("pinInput").value.trim() !== want){
+    $("pinErr").textContent="Wrong PIN."; $("pinErr").hidden=false; $("pinInput").select(); return;
+  }
+  isAdmin=true; try{ localStorage.setItem(ADMIN_KEY,"1"); }catch(e){}
+  setAdminIcon(); renderAll();
+  $("admLocked").hidden=true; $("admUnlocked").hidden=false;
+  renderAdminPeople(); snack("Admin unlocked"); setTimeout(()=>$("admName").focus(),60);
+}
+
+$("adminBtn").addEventListener("click", openAdmin);
+$("pinGo").addEventListener("click", tryUnlock);
+$("pinInput").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); tryUnlock(); } });
+$("scrim").addEventListener("click", closeAdmin);
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("adminDlg").hidden) closeAdmin(); });
+Array.prototype.slice.call(document.querySelectorAll("[data-close]")).forEach(b=>b.addEventListener("click", closeAdmin));
+
+$("admLock").addEventListener("click", function(){
+  isAdmin=false; try{ localStorage.removeItem(ADMIN_KEY); }catch(e){}
+  setAdminIcon(); renderAll(); closeAdmin(); snack("Admin locked");
+});
+$("admReset").addEventListener("click", function(){
+  if(!confirm("Clear all people and expenses for EVERYONE on this sheet? This cannot be undone.")) return;
+  wipeAll(); snack("Everything cleared"); setTimeout(renderAdminPeople,500);
+});
+function admAddPerson(){
+  const i=$("admName"), n=i.value.trim();
+  if(!n) return snack("Type a name first");
+  if(peopleArr().some(function(p){ return p.name.toLowerCase()===n.toLowerCase(); })) return snack(n+" is already on the list");
+  selected[n]=true; i.value=""; i.focus(); addPersonRec(n); snack(n+" added");
+  setTimeout(renderAdminPeople,400);
+}
+$("admAdd").addEventListener("click", admAddPerson);
+$("admName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); admAddPerson(); } });
+
 /* ---------- boot ---------- */
+setAdminIcon();
 loadLocal();
 renderAll();
 
@@ -467,6 +594,7 @@ if(!configured){
         S.people   = v.people   || {};
         S.expenses = v.expenses || {};
         renderAll();
+        if(isAdmin && !$("adminDlg").hidden) renderAdminPeople();
         const isDefault = CODE === (window.DEFAULT_TRIP || "shared");
         setSync("","Shared and live", isDefault
           ? "Everyone who opens Expenses on this site shares this sheet."
