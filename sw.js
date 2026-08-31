@@ -1,5 +1,5 @@
 /* The Saint Lawrence Run - offline service worker */
-const VERSION = 'slr-v2';
+const VERSION = 'slr-v3';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 
@@ -7,6 +7,7 @@ const PRECACHE = [
   './',
   './index.html',
   './expenses.html',
+  './firebase-config.js',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -51,6 +52,10 @@ self.addEventListener('fetch', (e) => {
     })());
     return;
   }
+
+  // Firebase and its SDK must always hit the network, never the cache
+  if (/(^|\.)(firebaseio|firebasedatabase|googleapis|firebaseapp)\.com$/.test(url.hostname)
+      || url.hostname === 'www.gstatic.com') return;
 
   if (url.origin !== self.location.origin) return;
 
