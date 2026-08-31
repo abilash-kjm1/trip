@@ -24,4 +24,4 @@ window.DEFAULT_TRIP = "stlawrence-sep2026";
 // Honest limit: this page is public, so anyone determined can read this file
 // and find the PIN. It stops the other travellers editing the roster by
 // accident - it is a guard rail, not real security.
-window.ADMIN_PIN = "2609";
+window.ADMIN_PIN = "5001";
