@@ -169,6 +169,26 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
   color:var(--on-surface); font-variant-numeric:tabular-nums; white-space:nowrap; }
 @media(max-width:400px){ .barrow .who{ flex-basis:66px; font-size:13px; } }
 
+
+/* ===== site tabs, matching the guide ===== */
+.sitetabs{
+  position:sticky; top:64px; z-index:19;
+  background:var(--surface); border-bottom:1px solid var(--outline-variant);
+}
+.sitetabs .scroller{
+  display:flex; gap:2px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+  scrollbar-width:none; padding:0 8px; max-width:960px; margin:0 auto;
+}
+.sitetabs .scroller::-webkit-scrollbar{ display:none; }
+.sitetabs a{
+  flex:0 0 auto; display:flex; align-items:center; min-height:48px; padding:0 14px;
+  text-decoration:none; font-size:13px; font-weight:500; letter-spacing:.04em;
+  text-transform:uppercase; color:var(--on-surface-variant);
+  border-bottom:3px solid transparent; white-space:nowrap;
+}
+.sitetabs a:hover{ color:var(--primary); }
+.sitetabs a.here{ color:var(--primary); border-bottom-color:var(--primary); font-weight:700; }
+
 /* ===== receipt ===== */
 .dialog.receipt{ width:min(94vw,460px); }
 .rchead{ display:flex; align-items:center; gap:12px; margin-bottom:4px; }
@@ -230,6 +250,20 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
   <button class="iconbtn" id="shareBtn" aria-label="Copy the share link"><span class="ms" aria-hidden="true">share</span></button>
   <button class="iconbtn" id="adminBtn" aria-label="Admin panel" aria-haspopup="dialog"><span class="ms" aria-hidden="true">lock</span></button>
 </header>
+
+<nav class="sitetabs" aria-label="Sections">
+  <div class="scroller">
+    <a href="expenses.html" class="here" aria-current="page">Expenses</a>
+    <a href="index.html#route">Route</a>
+    <a href="index.html#montreal">Montréal</a>
+    <a href="index.html#quebec">Québec</a>
+    <a href="index.html#goblin">Goblin</a>
+    <a href="index.html#photos">Photos</a>
+    <a href="index.html#food">Food</a>
+    <a href="index.html#parking">Parking</a>
+    <a href="index.html#tips">Tips</a>
+  </div>
+</nav>
 
 <main class="wrap">
 
