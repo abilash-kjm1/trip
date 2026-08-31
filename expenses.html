@@ -128,6 +128,25 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
   opacity:0; pointer-events:none; transition:opacity .2s ease; max-width:92vw; }
 .snack.show{ opacity:1; }
 
+/* ===== who-owes-whom graph ===== */
+.owed{ padding:14px 0; border-bottom:1px solid var(--outline-variant); }
+.owed:last-child{ border-bottom:0; }
+.owedhead{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.owedhead .txt{ flex:1; min-width:0; }
+.owedhead .txt b{ display:block; font-weight:500; font-size:16px; }
+.owedhead .txt small{ display:block; font-size:12.5px; color:var(--on-surface-variant); margin-top:1px; }
+.owedhead .amt{ font-family:"Roboto Mono",monospace; font-weight:500; font-size:17px;
+  color:var(--positive); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.barrow{ display:flex; align-items:center; gap:10px; margin:7px 0 0; }
+.barrow .who{ flex:0 0 84px; font-size:14px; color:var(--on-surface-variant);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.barrow .track{ flex:1; height:22px; background:var(--surface-container); border-radius:6px; overflow:hidden; min-width:40px; }
+.barrow .fill{ display:block; height:100%; background:var(--primary); border-radius:6px; min-width:3px;
+  transition:width .3s ease; }
+.barrow .val{ flex:0 0 auto; font-family:"Roboto Mono",monospace; font-size:13.5px; font-weight:500;
+  color:var(--on-surface); font-variant-numeric:tabular-nums; white-space:nowrap; }
+@media(max-width:400px){ .barrow .who{ flex-basis:66px; font-size:13px; } }
+
 /* ===== admin dialog ===== */
 .scrim{ position:fixed; inset:0; background:rgba(0,0,0,.42); z-index:50; }
 .dialog{
@@ -166,20 +185,6 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
     <div class="lbl">Total spent</div>
     <div class="amt" id="grandTotal">$0.00</div>
     <div class="per" id="perHead">Add people to see the split</div>
-  </section>
-
-  <section class="card">
-    <h2><span class="ms" aria-hidden="true">group</span> Who is on the trip</h2>
-    <p class="sub" id="peopleSub">The people any expense can be split between.</p>
-    <div class="row" id="peopleEditor" hidden>
-      <div class="field">
-        <label for="personName">Name</label>
-        <input id="personName" type="text" autocomplete="off" enterkeyhint="done">
-      </div>
-      <button class="btn filled" id="addPerson"><span class="ms" aria-hidden="true">person_add</span>Add</button>
-    </div>
-    <div class="chips" id="peopleList" style="margin-top:14px"></div>
-    <p class="hint" id="peopleHint">No one added yet.</p>
   </section>
 
   <section class="card">
@@ -222,10 +227,10 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
   </section>
 
   <section class="card">
-    <h2><span class="ms" aria-hidden="true">handshake</span> Settle up</h2>
-    <p class="sub">The fewest payments that square everyone off.</p>
-    <div id="settleList"></div>
-    <div class="empty" id="settleEmpty"><span class="ms" aria-hidden="true">check_circle</span>All square.</div>
+    <h2><span class="ms" aria-hidden="true">bar_chart</span> Who owes whom</h2>
+    <p class="sub">Grouped by who gets paid back. Bar length is the amount.</p>
+    <div id="owedList"></div>
+    <div class="empty" id="owedEmpty"><span class="ms" aria-hidden="true">check_circle</span>All square - nobody owes anybody.</div>
   </section>
 
 </main>
@@ -333,22 +338,9 @@ function wipeAll(){
 }
 
 function renderPeople(){
-  const box=$("peopleList"); box.innerHTML="";
-  peopleArr().forEach(function(p){
-    const c=document.createElement("span"); c.className="chip";
-    c.innerHTML='<span class="avatar" aria-hidden="true" style="width:26px;height:26px;font-size:12px">'+esc(initials(p.name))+
-      '</span><span>'+esc(p.name)+'</span>';
-    box.appendChild(c);
-  });
-  const n=peopleArr().length;
-  $("peopleEditor").hidden = !isAdmin;
-  $("peopleSub").textContent = isAdmin
-    ? "You are admin - add or remove anyone."
-    : "The people any expense can be split between.";
-  $("peopleHint").textContent = n
-    ? n+" "+(n===1?"person":"people")+" on the trip"
-    : (isAdmin ? "No one added yet - add the first name above."
-               : "No one yet. The trip admin adds people from the lock icon at the top.");
+  // The roster card was removed from the page; people are managed in the
+  // admin panel and surface through the payer list and split chips below.
+  const n = peopleArr().length;
 
   const sel=$("expPayer"); const keep=sel.value; sel.innerHTML="";
   peopleArr().forEach(function(p){ const o=document.createElement("option"); o.value=p.name; o.textContent=p.name; sel.appendChild(o); });
@@ -432,14 +424,38 @@ function renderBalances(){
     if(deb[i].v<=0.004) i++;
     if(cred[j].v<=0.004) j++;
   }
-  const box=$("settleList"); box.innerHTML="";
+  // group the settlement by who gets paid, so each person sees what is
+  // coming to them and from whom
+  const byCreditor = {};
   out.forEach(function(t){
-    const d=document.createElement("div"); d.className="settle";
-    d.innerHTML='<span class="ms" aria-hidden="true">arrow_forward</span><span><b>'+esc(t.from)+
-      '</b> pays <b>'+esc(t.to)+'</b></span><span class="amt">'+money(t.amt)+'</span>';
-    box.appendChild(d);
+    (byCreditor[t.to] = byCreditor[t.to] || []).push({ from: t.from, amt: t.amt });
   });
-  $("settleEmpty").style.display = out.length ? "none" : "";
+  const creditors = Object.keys(byCreditor).sort(function(a,c){
+    const sa = byCreditor[a].reduce(function(x,y){ return x+y.amt; },0);
+    const sc = byCreditor[c].reduce(function(x,y){ return x+y.amt; },0);
+    return sc - sa;
+  });
+  const widest = out.reduce(function(m,t){ return Math.max(m, t.amt); }, 0) || 1;
+
+  const box=$("owedList"); box.innerHTML="";
+  creditors.forEach(function(name){
+    const rows = byCreditor[name].sort(function(a,c){ return c.amt-a.amt; });
+    const total = rows.reduce(function(x,y){ return x+y.amt; },0);
+    const wrap=document.createElement("div"); wrap.className="owed";
+    let html = '<div class="owedhead"><span class="avatar" aria-hidden="true">'+esc(initials(name))+'</span>'+
+      '<span class="txt"><b>'+esc(name)+'</b><small>is owed by '+rows.length+' '+
+      (rows.length===1?"person":"people")+'</small></span>'+
+      '<span class="amt">'+money(total)+'</span></div>';
+    rows.forEach(function(r){
+      const pct = Math.max(3, Math.round(r.amt/widest*100));
+      html += '<div class="barrow"><span class="who">'+esc(r.from)+'</span>'+
+        '<span class="track"><span class="fill" style="width:'+pct+'%"></span></span>'+
+        '<span class="val">'+money(r.amt)+'</span></div>';
+    });
+    wrap.innerHTML = html;
+    box.appendChild(wrap);
+  });
+  $("owedEmpty").style.display = out.length ? "none" : "";
 }
 
 function renderTotals(){
@@ -449,14 +465,6 @@ function renderTotals(){
   $("perHead").textContent = n ? money(t/n)+" each if split evenly across "+n : "Add people to see the split";
 }
 function renderAll(){ renderPeople(); renderExpenses(); renderBalances(); renderTotals(); }
-
-$("addPerson").addEventListener("click",function(){
-  const i=$("personName"), n=i.value.trim();
-  if(!n) return snack("Type a name first");
-  if(peopleArr().some(function(p){ return p.name.toLowerCase()===n.toLowerCase(); })) return snack(n+" is already on the list");
-  selected[n]=true; i.value=""; i.focus(); addPersonRec(n); snack(n+" added");
-});
-$("personName").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); $("addPerson").click(); } });
 
 $("splitAll").addEventListener("click",function(){
   peopleArr().forEach(function(p){ selected[p.name]=true; });
