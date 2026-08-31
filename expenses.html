@@ -128,6 +128,28 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
   opacity:0; pointer-events:none; transition:opacity .2s ease; max-width:92vw; }
 .snack.show{ opacity:1; }
 
+/* ===== per-person colours ===== */
+.pdot{ width:10px; height:10px; border-radius:50%; flex:0 0 auto; display:inline-block; }
+.swatch{
+  width:34px; height:34px; border-radius:50%; flex:0 0 auto; cursor:pointer;
+  border:2px solid var(--surface); box-shadow:0 0 0 1px var(--outline-variant);
+}
+.swatch:hover,.swatch:focus-visible{ box-shadow:0 0 0 2px var(--primary); }
+.picker{
+  display:flex; flex-wrap:wrap; gap:8px; padding:10px 2px 14px;
+  border-bottom:1px solid var(--outline-variant);
+}
+/* display:flex above would otherwise beat the browser default for [hidden] */
+.picker[hidden]{ display:none; }
+#admLocked[hidden], #admUnlocked[hidden], .row[hidden], .sync[hidden]{ display:none !important; }
+.pchip{
+  width:34px; height:34px; border-radius:50%; cursor:pointer; border:2px solid var(--surface);
+  box-shadow:0 0 0 1px var(--outline-variant);
+}
+.pchip.on{ box-shadow:0 0 0 3px var(--on-surface); }
+.pchip:hover,.pchip:focus-visible{ transform:scale(1.08); }
+.prow .txt small{ font-size:11.5px; }
+
 /* ===== who-owes-whom graph ===== */
 .owed{ padding:14px 0; border-bottom:1px solid var(--outline-variant); }
 .owed:last-child{ border-bottom:0; }
@@ -303,7 +325,40 @@ let snackT;
 function snack(msg){ const s=$("snack"); s.textContent=msg; s.classList.add("show");
   clearTimeout(snackT); snackT=setTimeout(()=>s.classList.remove("show"),2600); }
 
-const peopleArr  = () => Object.entries(S.people).map(([k,v])=>({k,name:v})).sort((a,b)=>a.name.localeCompare(b.name));
+// Twelve well-separated hues, all dark enough for white text on top.
+const PALETTE = ["#006b5d","#1565c0","#6a1b9a","#c62828","#ef6c00","#2e7d32",
+                 "#ad1457","#4527a0","#00838f","#558b2f","#5d4037","#37474f"];
+// A person is stored either as a plain name (older entries) or as {n,c}.
+// Both are read here so nothing already saved is lost.
+function rawName(v){ return (v && typeof v==="object") ? (v.n||"") : String(v); }
+function rawColor(v){ return (v && typeof v==="object" && v.c) ? v.c : null; }
+
+// Colours are handed out by insertion order, not by hashing the name, so no
+// two people can collide while there are unused hues left in the palette.
+function peopleArr(){
+  const keys = Object.keys(S.people).sort();          // push ids are chronological
+  const taken = new Set();
+  keys.forEach(k => { const c = rawColor(S.people[k]); if (c) taken.add(c.toLowerCase()); });
+  let next = 0;
+  const out = keys.map(k => {
+    const v = S.people[k];
+    let color = rawColor(v);
+    if (!color) {
+      while (next < PALETTE.length && taken.has(PALETTE[next].toLowerCase())) next++;
+      color = PALETTE[next % PALETTE.length];
+      taken.add(color.toLowerCase());
+      next++;
+    }
+    return { k, name: rawName(v), color };
+  });
+  return out.sort((a,b) => a.name.localeCompare(b.name));
+}
+function freeColor(){
+  const taken = new Set(peopleArr().map(p => p.color.toLowerCase()));
+  for (const c of PALETTE) if (!taken.has(c.toLowerCase())) return c;
+  return PALETTE[peopleArr().length % PALETTE.length];   // more people than hues
+}
+const colorOf = (name) => { const p=peopleArr().find(x=>x.name===name); return p?p.color:"#37474f"; };
 const expenseArr = () => Object.entries(S.expenses).map(([k,v])=>Object.assign({k},v)).sort((a,b)=>(b.at||0)-(a.at||0));
 
 function setSync(state,title,sub){
@@ -317,8 +372,14 @@ function loadLocal(){ try{ const r=localStorage.getItem(LOCAL_KEY);
 function localKey(){ return "l"+Date.now()+Math.random().toString(36).slice(2,5); }
 
 function addPersonRec(name){
-  if(remote) return remote.push(remote.ref(remote.db,"trips/"+CODE+"/people"), name).catch(e=>snack("Could not save: "+e.message));
-  S.people[localKey()]=name; saveLocal(); renderAll();
+  const rec = { n:name, c:freeColor() };
+  if(remote) return remote.push(remote.ref(remote.db,"trips/"+CODE+"/people"), rec).catch(e=>snack("Could not save: "+e.message));
+  S.people[localKey()]=rec; saveLocal(); renderAll();
+}
+function setPersonColor(key, name, color){
+  const rec = { n:name, c:color };
+  if(remote) return remote.set(remote.ref(remote.db,"trips/"+CODE+"/people/"+key), rec).catch(e=>snack("Could not save: "+e.message));
+  S.people[key]=rec; saveLocal(); renderAll();
 }
 function removePersonRec(key){
   if(remote) return remote.remove(remote.ref(remote.db,"trips/"+CODE+"/people/"+key)).catch(e=>snack("Could not remove: "+e.message));
@@ -352,7 +413,8 @@ function renderPeople(){
     if(!(p.name in selected)) selected[p.name]=true;
     const b=document.createElement("button"); b.type="button"; b.className="chip";
     b.setAttribute("aria-pressed", selected[p.name]?"true":"false");
-    b.innerHTML='<span class="ms" aria-hidden="true" style="font-size:17px">'+(selected[p.name]?"check":"add")+'</span>'+esc(p.name);
+    b.innerHTML='<span class="pdot" aria-hidden="true" style="background:'+p.color+'"></span>'+
+      '<span class="ms" aria-hidden="true" style="font-size:17px">'+(selected[p.name]?"check":"add")+'</span>'+esc(p.name);
     b.addEventListener("click",function(){
       selected[p.name]=!selected[p.name];
       b.setAttribute("aria-pressed", selected[p.name]?"true":"false");
@@ -374,7 +436,7 @@ function renderExpenses(){
   list.forEach(function(e){
     const li=document.createElement("li"); li.className="item";
     const n=(e.between&&e.between.length)?e.between.length:1;
-    li.innerHTML='<span class="avatar" aria-hidden="true">'+esc(initials(e.payer||"?"))+'</span>'+
+    li.innerHTML='<span class="avatar" aria-hidden="true" style="background:'+colorOf(e.payer)+';color:#fff">'+esc(initials(e.payer||"?"))+'</span>'+
       '<span class="txt"><b>'+esc(e.desc)+'</b><small>'+esc(e.payer)+' paid &middot; split '+n+' way'+(n===1?"":"s")+
       ' &middot; '+money(e.amount/n)+' each</small></span><span class="amt">'+money(e.amount)+'</span>';
     const del=document.createElement("button"); del.className="iconbtn";
@@ -405,7 +467,7 @@ function renderBalances(){
   names.forEach(function(n){
     const v=Math.round(b[n]*100)/100;
     const li=document.createElement("li"); li.className="item";
-    li.innerHTML='<span class="avatar" aria-hidden="true">'+esc(initials(n))+'</span>'+
+    li.innerHTML='<span class="avatar" aria-hidden="true" style="background:'+colorOf(n)+';color:#fff">'+esc(initials(n))+'</span>'+
       '<span class="txt"><b>'+esc(n)+'</b><small>'+(v>0.004?"is owed":v<-0.004?"owes":"square")+'</small></span>'+
       '<span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"")+'">'+(v>0.004?"+":"")+money(v)+'</span>';
     ul.appendChild(li);
@@ -442,14 +504,14 @@ function renderBalances(){
     const rows = byCreditor[name].sort(function(a,c){ return c.amt-a.amt; });
     const total = rows.reduce(function(x,y){ return x+y.amt; },0);
     const wrap=document.createElement("div"); wrap.className="owed";
-    let html = '<div class="owedhead"><span class="avatar" aria-hidden="true">'+esc(initials(name))+'</span>'+
+    let html = '<div class="owedhead"><span class="avatar" aria-hidden="true" style="background:'+colorOf(name)+';color:#fff">'+esc(initials(name))+'</span>'+
       '<span class="txt"><b>'+esc(name)+'</b><small>is owed by '+rows.length+' '+
       (rows.length===1?"person":"people")+'</small></span>'+
       '<span class="amt">'+money(total)+'</span></div>';
     rows.forEach(function(r){
       const pct = Math.max(3, Math.round(r.amt/widest*100));
       html += '<div class="barrow"><span class="who">'+esc(r.from)+'</span>'+
-        '<span class="track"><span class="fill" style="width:'+pct+'%"></span></span>'+
+        '<span class="track"><span class="fill" style="width:'+pct+'%;background:'+colorOf(r.from)+'"></span></span>'+
         '<span class="val">'+money(r.amt)+'</span></div>';
     });
     wrap.innerHTML = html;
@@ -523,9 +585,15 @@ function renderAdminPeople(){
     li.textContent="Nobody on the trip yet."; ul.appendChild(li); return;
   }
   list.forEach(function(p){
-    const li=document.createElement("li"); li.className="item";
-    li.innerHTML='<span class="avatar" aria-hidden="true">'+esc(initials(p.name))+'</span>'+
-      '<span class="txt"><b>'+esc(p.name)+'</b></span>';
+    const li=document.createElement("li"); li.className="item prow";
+    li.innerHTML='<span class="avatar" aria-hidden="true" style="background:'+p.color+';color:#fff">'+esc(initials(p.name))+'</span>'+
+      '<span class="txt"><b>'+esc(p.name)+'</b><small>tap the colour to change it</small></span>';
+
+    const sw=document.createElement("button");
+    sw.className="swatch"; sw.type="button"; sw.style.background=p.color;
+    sw.setAttribute("aria-label","Change colour for "+p.name);
+    sw.setAttribute("aria-expanded","false");
+
     const del=document.createElement("button"); del.className="iconbtn";
     del.setAttribute("aria-label","Remove "+p.name);
     del.innerHTML='<span class="ms" aria-hidden="true">person_remove</span>';
@@ -534,7 +602,28 @@ function renderAdminPeople(){
       delete selected[p.name]; removePersonRec(p.k); snack(p.name+" removed");
       setTimeout(renderAdminPeople,400);
     });
-    li.appendChild(del); ul.appendChild(li);
+
+    const pick=document.createElement("div"); pick.className="picker"; pick.hidden=true;
+    PALETTE.forEach(function(col){
+      const d=document.createElement("button");
+      d.type="button"; d.className="pchip"; d.style.background=col;
+      d.setAttribute("aria-label","Use "+col+" for "+p.name);
+      if(col.toLowerCase()===String(p.color).toLowerCase()) d.classList.add("on");
+      d.addEventListener("click",function(){
+        setPersonColor(p.k,p.name,col); snack(p.name+" recoloured");
+        setTimeout(renderAdminPeople,400);
+      });
+      pick.appendChild(d);
+    });
+    sw.addEventListener("click",function(){
+      const open=pick.hidden;
+      Array.prototype.slice.call(ul.querySelectorAll(".picker")).forEach(function(x){ x.hidden=true; });
+      Array.prototype.slice.call(ul.querySelectorAll(".swatch")).forEach(function(x){ x.setAttribute("aria-expanded","false"); });
+      pick.hidden=!open; sw.setAttribute("aria-expanded", open?"true":"false");
+    });
+
+    li.appendChild(sw); li.appendChild(del);
+    ul.appendChild(li); ul.appendChild(pick);
   });
 }
 
@@ -595,7 +684,7 @@ if(!configured){
       const app = appMod.initializeApp(cfg);
       await authMod.signInAnonymously(authMod.getAuth(app));
       const db = dbMod.getDatabase(app);
-      remote = { db:db, ref:dbMod.ref, push:dbMod.push, remove:dbMod.remove };
+      remote = { db:db, ref:dbMod.ref, push:dbMod.push, remove:dbMod.remove, set:dbMod.set };
 
       dbMod.onValue(dbMod.ref(db,"trips/"+CODE), function(snap){
         const v = snap.val() || {};
