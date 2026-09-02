@@ -332,6 +332,24 @@ a{ color:var(--river); }
 }
 .mustbar a:hover,.mustbar a:focus-visible{ background:var(--must); color:#fff; }
 
+
+.brands{ display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; }
+.brand{
+  font-family:var(--f-mono); font-size:10.5px; font-weight:600; letter-spacing:.02em;
+  color:#fff; padding:3px 7px; border-radius:9px; white-space:nowrap;
+}
+.b-tim{background:#C41E3A}.b-bk{background:#D66F1D}.b-pop{background:#ED7C26}
+.b-sbux{background:#00704A}.b-aw{background:#C45614}.b-nyf{background:#C82828}
+.b-wen{background:#BE202D}.b-sub{background:#00853E}.b-mcd{background:#B88C00}
+.b-swiss{background:#963028}
+.twomaps{ display:grid; gap:14px; margin-top:18px; }
+@media(min-width:900px){ .twomaps{ grid-template-columns:1fr 1fr; align-items:start; } }
+.twomaps figure{ margin:0; }
+.twomaps img{ display:block; width:100%; height:auto; border:1px solid var(--rule);
+  border-radius:3px; background:var(--card); }
+.twomaps figcaption{ font-family:var(--f-mono); font-size:11.5px; color:var(--ink-faint);
+  margin-top:8px; text-align:center; }
+
 /* ---------- BACK TO TOP ---------- */
 .totop{
   position:fixed; right:14px; bottom:14px; z-index:60;
@@ -1962,10 +1980,17 @@ details.more > summary:hover, details.more > summary:focus-visible{ color:var(--
       <p>Ontario has proper service centres right on the highway. Québec does not. That single difference is the thing to plan around, and the map below is laid out so you can see it at a glance.</p>
     </div>
 
-    <figure style="margin:0 0 20px">
-      <img src="fuel-map.png" alt="Strip map of fuel and food stops from Scarborough to Quebec City, with eastbound ONroute service centres marked for Saturday, westbound ones for Monday, and Quebec fuel towns marked separately." style="display:block;width:100%;height:auto;border:1px solid var(--rule);border-radius:3px;background:var(--card)">
-      <figcaption style="font-family:var(--f-mono);font-size:11.5px;color:var(--ink-faint);margin-top:8px;text-align:center">Save this to your phone — it works with no signal</figcaption>
-    </figure>
+    <div class="twomaps">
+      <figure>
+        <img src="fuel-map.png" alt="Strip map of fuel stops from Scarborough to Quebec City, showing which ONroute service centres are eastbound and which are westbound." loading="lazy">
+        <figcaption>Map 1 — fuel &amp; the route</figcaption>
+      </figure>
+      <figure>
+        <img src="food-map.png" alt="Restaurant map listing the food brands at each ONroute and town exit along the route, including where to find McDonald's." loading="lazy">
+        <figcaption>Map 2 — restaurants by brand</figcaption>
+      </figure>
+    </div>
+    <p style="font-family:var(--f-mono);font-size:11.5px;color:var(--ink-faint);margin-top:10px;text-align:center">Save both to your phone — they work with no signal</p>
 
     <div class="callout warn">
       <h4>The mistake that catches people</h4>
@@ -1976,41 +2001,50 @@ details.more > summary:hover, details.more > summary:focus-visible{ color:var(--
       </ul>
     </div>
 
+
+    <div class="callout warn">
+      <h4>Looking for McDonald's?</h4>
+      <ul>
+        <li><strong>There isn't one at any ONroute.</strong> Their brands are Tim Hortons, Starbucks, Burger King, Subway, Popeyes, A&amp;W, New York Fries and Booster Juice.</li>
+        <li>For McDonald's you come off at a town — <strong>Cobourg, Belleville, Kingston, Brockville, Cornwall</strong> in Ontario, then <strong>Berthierville and Trois-Rivières</strong> in Québec.</li>
+        <li>It costs about five minutes each way off the highway.</li>
+      </ul>
+    </div>
     <h3 style="font-size:16px;letter-spacing:.1em;text-transform:uppercase;color:var(--route);margin-top:30px;">Saturday, heading east</h3>
     <div class="grid">
       <div class="card">
         <div class="tag">Exit 456 · km 80</div>
-        <h4>ONroute Port Hope</h4>
+        <h4>ONroute Port Hope</h4><div class="brands"><span class="brand b-tim">Tim Hortons</span><span class="brand b-bk">Burger King</span></div>
         <p>Your first eastbound service centre. Petro-Canada, Tim Hortons round the clock, Burger King and an ON Market. Handy if you leave before the Big Apple opens.</p>
         <div class="fact"><span class="factxt"><b>Fuel + 24h food</b> · 50 min from home</span><a class="maplink" href="https://www.google.com/maps/search/?api=1&query=ONroute%20Port%20Hope%2C%20Highway%20401%2C%20Ontario" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg> Map</a></div>
       </div>
       <div class="card">
         <div class="tag">Exit 599 · km 230</div>
-        <h4>ONroute Odessa</h4>
+        <h4>ONroute Odessa</h4><div class="brands"><span class="brand b-tim">Tim Hortons</span><span class="brand b-bk">Burger King</span><span class="brand b-pop">Popeyes</span><span class="brand b-sbux">Starbucks</span></div>
         <p>The best-stocked stop on the Ontario leg — Popeyes, Starbucks, Burger King and Tim Hortons. Ten minutes before Kingston, so use it only if you are skipping the Kingston stop.</p>
         <div class="fact"><span class="factxt"><b>Fuel + most choice</b></span><a class="maplink" href="https://www.google.com/maps/search/?api=1&query=ONroute%20Odessa%2C%20Highway%20401%2C%20Ontario" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg> Map</a></div>
       </div>
       <div class="card">
         <div class="tag">Exit 615 · km 240</div>
-        <h4>Kingston — the real breakfast</h4>
+        <h4>Kingston — the real breakfast</h4><div class="brands"><span class="brand b-mcd">McDonald's</span><span class="brand b-sbux">Starbucks</span><span class="brand b-tim">Tim Hortons</span><span class="brand b-sub">Subway</span></div>
         <p>Get off the highway here rather than eating at a service centre. Springer Market Square has cafés and a Saturday market, and town fuel is cheaper than the ONroutes.</p>
         <div class="fact"><span class="factxt"><b>Your 09:15 stop</b> · 45–60 min</span><a class="maplink" href="https://www.google.com/maps/search/?api=1&query=Springer%20Market%20Square%2C%20Kingston%2C%20Ontario" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg> Map</a></div>
       </div>
       <div class="card">
         <div class="tag">km 305</div>
-        <h4>ONroute Mallorytown South</h4>
+        <h4>ONroute Mallorytown South</h4><div class="brands"><span class="brand b-tim">Tim Hortons</span><span class="brand b-aw">A&amp;W</span><span class="brand b-nyf">New York Fries</span></div>
         <p>Right at the end of the Thousand Islands Parkway, so it lands nicely after the scenic detour. A&amp;W, New York Fries, Tim Hortons.</p>
         <div class="fact"><span class="factxt"><b>Fuel</b> · eastbound side</span><a class="maplink" href="https://www.google.com/maps/search/?api=1&query=ONroute%20Mallorytown%20South%2C%20Highway%20401%2C%20Ontario" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg> Map</a></div>
       </div>
       <div class="card">
         <div class="tag">Exit 750 · km 380</div>
-        <h4>ONroute Morrisburg</h4>
+        <h4>ONroute Morrisburg</h4><div class="brands"><span class="brand b-tim">Tim Hortons</span><span class="brand b-bk">Burger King</span></div>
         <p>Sits beside Upper Canada Village, which is your Monday lunch stop — worth knowing the fuel is there too.</p>
         <div class="fact"><span class="factxt"><b>Fuel + Tim Hortons</b></span><a class="maplink" href="https://www.google.com/maps/search/?api=1&query=ONroute%20Morrisburg%2C%20Highway%20401%2C%20Ontario" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg> Map</a></div>
       </div>
       <div class="card">
         <div class="tag">Exit 792 · km 425</div>
-        <h4>Cornwall — fill the tank here</h4>
+        <h4>Cornwall — fill the tank here</h4><div class="brands"><span class="brand b-mcd">McDonald's</span><span class="brand b-tim">Tim Hortons</span><span class="brand b-aw">A&amp;W</span></div>
         <p>The last town before the border, and Ontario petrol is normally cheaper than Québec. With eight of you and a loaded car, top up properly rather than topping up twice later.</p>
         <div class="fact"><span class="factxt"><b>LAST CHEAP FUEL</b> · 25 min to Québec</span><a class="maplink" href="https://www.google.com/maps/search/?api=1&query=Cornwall%2C%20Ontario" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg> Map</a></div>
       </div>
@@ -2020,19 +2054,19 @@ details.more > summary:hover, details.more > summary:focus-visible{ color:var(--
     <div class="grid">
       <div class="card">
         <div class="tag">A-40 exit 144</div>
-        <h4>Berthierville</h4>
+        <h4>Berthierville</h4><div class="brands"><span class="brand b-mcd">McDonald's</span><span class="brand b-tim">Tim Hortons</span><span class="brand b-sub">Subway</span></div>
         <p>First proper cluster after Montréal — Esso, Tim Hortons, McDonald's, all within sight of the ramp.</p>
         <div class="fact"><span class="factxt"><b>Fuel + food</b> · 45 min from Montréal</span><a class="maplink" href="https://www.google.com/maps/search/?api=1&query=Berthierville%2C%20Quebec" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg> Map</a></div>
       </div>
       <div class="card">
         <div class="tag">A-40 exit 199</div>
-        <h4>Trois-Rivières — the halfway tank</h4>
+        <h4>Trois-Rivières — the halfway tank</h4><div class="brands"><span class="brand b-mcd">McDonald's</span><span class="brand b-tim">Tim Hortons</span><span class="brand b-sbux">Starbucks</span><span class="brand b-sub">Subway</span><span class="brand b-aw">A&amp;W</span></div>
         <p>The best fuel and food cluster between the two cities, and it is almost exactly halfway. If you only stop once on Sunday, stop here.</p>
         <div class="fact"><span class="factxt"><b>HALFWAY</b> · fuel, coffee, washrooms</span><a class="maplink" href="https://www.google.com/maps/search/?api=1&query=Trois-Rivieres%2C%20Quebec" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg> Map</a></div>
       </div>
       <div class="card">
         <div class="tag">A-40 exit 281</div>
-        <h4>Donnacona</h4>
+        <h4>Donnacona</h4><div class="brands"><span class="brand b-tim">Tim Hortons</span><span class="brand b-sub">Subway</span></div>
         <p>Last easy fuel before Québec City. Fill here on Sunday so Monday's 07:00 departure needs no detour.</p>
         <div class="fact"><span class="factxt"><b>Fill before Québec City</b></span><a class="maplink" href="https://www.google.com/maps/search/?api=1&query=Donnacona%2C%20Quebec" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg> Map</a></div>
       </div>
