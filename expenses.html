@@ -189,6 +189,22 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
 .sitetabs a:hover{ color:var(--primary); }
 .sitetabs a.here{ color:var(--primary); border-bottom-color:var(--primary); font-weight:700; }
 
+
+/* ===== expense filter ===== */
+.exfilter{ margin:2px 0 12px; }
+.exsearch{ display:flex; align-items:center; gap:8px; border:1px solid var(--outline);
+  border-radius:8px; padding:0 10px; height:46px; background:var(--surface); }
+.exsearch:focus-within{ border:2px solid var(--primary); padding:0 9px; }
+.exsearch .ms{ color:var(--on-surface-variant); flex:0 0 auto; }
+.exsearch input{ flex:1; min-width:0; border:0; outline:none; background:transparent;
+  font:inherit; font-size:16px; color:var(--on-surface); height:100%; }
+.exsearch .iconbtn{ width:34px; height:34px; }
+.exfilter .chips{ margin-top:10px; }
+.exfilter .chip{ min-height:32px; padding:4px 10px; font-size:13px; }
+.exsum{ margin:10px 0 0; font-family:"Roboto Mono",monospace; font-size:12.5px;
+  color:var(--on-surface-variant); }
+.exsum b{ color:var(--primary); font-weight:500; }
+
 /* ===== receipt ===== */
 .dialog.receipt{ width:min(94vw,460px); }
 .rchead{ display:flex; align-items:center; gap:12px; margin-bottom:4px; }
@@ -306,6 +322,15 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
 
   <section class="card">
     <h2><span class="ms" aria-hidden="true">list_alt</span> Expenses <span id="expCount" style="font-weight:400;color:var(--on-surface-variant)"></span></h2>
+    <div class="exfilter">
+      <div class="exsearch">
+        <span class="ms" aria-hidden="true">search</span>
+        <input id="exq" type="search" placeholder="Search expenses" aria-label="Search expenses" autocomplete="off">
+        <button type="button" id="exclear" class="iconbtn" aria-label="Clear filters" hidden><span class="ms" aria-hidden="true">close</span></button>
+      </div>
+      <div class="chips" id="exchips"></div>
+      <p class="exsum" id="exsum" hidden></p>
+    </div>
     <ul class="list" id="expenseList"></ul>
     <div class="empty" id="expenseEmpty"><span class="ms" aria-hidden="true">receipt</span>Nothing logged yet.</div>
   </section>
@@ -511,9 +536,47 @@ function updateSplitCount(){
   $("splitCount").textContent = all.length ? "("+k+" of "+all.length+")" : "";
 }
 
+let exQuery="", exPayer=null;
+
+function renderExFilters(){
+  const box=$("exchips"); box.innerHTML="";
+  const payers={};
+  expenseArr().forEach(function(e){ payers[e.payer]=(payers[e.payer]||0)+1; });
+  const names=Object.keys(payers).sort();
+  if(names.length<2){ box.innerHTML=""; return; }
+  names.forEach(function(n){
+    const b=document.createElement("button");
+    b.type="button"; b.className="chip";
+    b.setAttribute("aria-pressed", exPayer===n ? "true":"false");
+    b.innerHTML='<span class="pdot" aria-hidden="true" style="background:'+colorOf(n)+'"></span>'+
+                esc(n)+' <span style="opacity:.6">'+payers[n]+'</span>';
+    b.addEventListener("click",function(){
+      exPayer = (exPayer===n) ? null : n;
+      renderExFilters(); renderExpenses();
+    });
+    box.appendChild(b);
+  });
+}
+
+function exMatches(e){
+  if(exPayer && e.payer!==exPayer) return false;
+  if(!exQuery) return true;
+  const hay=(e.desc+" "+e.payer+" "+(e.between||[]).join(" ")).toLowerCase();
+  return hay.indexOf(exQuery)!==-1;
+}
+
 function renderExpenses(){
   const ul=$("expenseList"); ul.innerHTML="";
-  const list=expenseArr();
+  const all=expenseArr();
+  const list=all.filter(exMatches);
+  const filtering = !!exQuery || !!exPayer;
+  $("exclear").hidden = !filtering;
+  const sum=$("exsum");
+  if(filtering){
+    const t=list.reduce(function(a,e){ return a+e.amount; },0);
+    sum.hidden=false;
+    sum.innerHTML='Showing <b>'+list.length+'</b> of '+all.length+' &middot; <b>'+money(t)+'</b> of '+money(all.reduce(function(a,e){return a+e.amount;},0));
+  } else sum.hidden=true;
   list.forEach(function(e){
     const li=document.createElement("li"); li.className="item";
     const n=(e.between&&e.between.length)?e.between.length:1;
@@ -526,8 +589,11 @@ function renderExpenses(){
     del.addEventListener("click",function(){ removeExpenseRec(e.k); snack("Expense deleted"); });
     li.appendChild(del); ul.appendChild(li);
   });
-  $("expenseEmpty").style.display = list.length ? "none" : "";
-  $("expCount").textContent = list.length ? "("+list.length+")" : "";
+  const emptyBox=$("expenseEmpty");
+  emptyBox.style.display = list.length ? "none" : "";
+  emptyBox.lastChild.textContent = all.length ? " Nothing matches that filter." : " Nothing logged yet.";
+  $("expCount").textContent = all.length ? "("+all.length+")" : "";
+  renderExFilters();
 }
 
 function balances(){
@@ -613,6 +679,15 @@ function renderTotals(){
   $("perHead").textContent = n ? money(t/n)+" each if split evenly across "+n : "Add people to see the split";
 }
 function renderAll(){ renderPeople(); renderExpenses(); renderBalances(); renderTotals(); }
+
+let exT;
+$("exq").addEventListener("input", function(){
+  clearTimeout(exT);
+  exT=setTimeout(function(){ exQuery=$("exq").value.trim().toLowerCase(); renderExpenses(); },120);
+});
+$("exclear").addEventListener("click", function(){
+  $("exq").value=""; exQuery=""; exPayer=null; renderExFilters(); renderExpenses(); $("exq").focus();
+});
 
 $("splitAll").addEventListener("click",function(){
   peopleArr().forEach(function(p){ selected[p.name]=true; });
