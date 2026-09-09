@@ -113,7 +113,10 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
 .item .txt{ flex:1; min-width:0; }
 .item .txt b{ font-weight:500; font-size:15px; display:block; }
 .item .txt small{ color:var(--on-surface-variant); font-size:13px; display:block; margin-top:2px; }
-.item .amt{ font-family:"Roboto Mono",monospace; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.item .amt{ font-family:"Roboto Mono",monospace; font-weight:500; font-variant-numeric:tabular-nums;
+  white-space:nowrap; align-self:flex-start; padding-top:2px; }
+#expenseList .item{ align-items:flex-start; }
+#expenseList .avatar{ margin-top:2px; }
 .pos{ color:var(--positive); } .neg{ color:var(--error); }
 
 .settle{ display:flex; align-items:center; gap:10px; padding:12px 14px; margin-bottom:8px;
@@ -189,6 +192,13 @@ body{ margin:0; background:var(--surface); color:var(--on-surface);
 .sitetabs a:hover{ color:var(--primary); }
 .sitetabs a.here{ color:var(--primary); border-bottom-color:var(--primary); font-weight:700; }
 
+
+
+.who{ display:flex; flex-wrap:wrap; gap:4px 6px; margin-top:5px; }
+.wchip{ display:inline-flex; align-items:center; gap:4px; font-size:11px;
+  color:var(--on-surface-variant); background:var(--surface-container);
+  border-radius:8px; padding:1px 6px 1px 4px; white-space:nowrap; }
+.wdot{ width:7px; height:7px; border-radius:50%; flex:0 0 auto; }
 
 /* ===== expense filter ===== */
 .exfilter{ margin:2px 0 12px; }
@@ -612,9 +622,18 @@ function renderExpenses(){
   list.forEach(function(e){
     const li=document.createElement("li"); li.className="item";
     const n=(e.between&&e.between.length)?e.between.length:1;
+    const between=(e.between&&e.between.length)?e.between:[e.payer];
+    const headcount=peopleArr().length;
+    const label = (between.length===1) ? "just them"
+                : (headcount>1 && between.length===headcount) ? "everyone"
+                : between.length+(headcount>between.length ? " of "+headcount : "");
+    const who = between.map(function(nm){
+      return '<span class="wchip"><span class="wdot" style="background:'+colorOf(nm)+'"></span>'+esc(nm)+'</span>';
+    }).join('');
     li.innerHTML='<span class="avatar" aria-hidden="true" style="background:'+colorOf(e.payer)+';color:#fff">'+esc(initials(e.payer||"?"))+'</span>'+
-      '<span class="txt"><b>'+esc(e.desc)+'</b><small>'+esc(e.payer)+' paid &middot; split '+n+' way'+(n===1?"":"s")+
-      ' &middot; '+money(e.amount/n)+' each</small></span><span class="amt">'+money(e.amount)+'</span>';
+      '<span class="txt"><b>'+esc(e.desc)+'</b><small>'+esc(e.payer)+' paid &middot; '+label+
+      (between.length>1 ? ' &middot; '+money(e.amount/n)+' each' : '')+'</small><span class="who">'+who+'</span></span>'+
+      '<span class="amt">'+money(e.amount)+'</span>';
     const del=document.createElement("button"); del.className="iconbtn";
     del.setAttribute("aria-label","Delete "+e.desc);
     del.innerHTML='<span class="ms" aria-hidden="true">delete</span>';
