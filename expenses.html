@@ -640,6 +640,20 @@ function balances(){
   return b;
 }
 
+function paidShare(n){
+  let paid=0, share=0;
+  expenseArr().forEach(function(e){
+    if(e.payer===n) paid+=e.amount;
+    const b=(e.between&&e.between.length)?e.between:[e.payer];
+    if(b.indexOf(n)!==-1) share+=e.amount/b.length;
+  });
+  return {paid:paid, share:share};
+}
+function paidShareLine(n){
+  const x=paidShare(n);
+  return 'paid '+money(x.paid)+' &middot; share '+money(x.share);
+}
+
 function renderBalances(){
   const b=balances(), names=Object.keys(b);
   const ul=$("balanceList"); ul.innerHTML="";
@@ -649,7 +663,7 @@ function renderBalances(){
     li.className="item tappable"; li.setAttribute("role","button"); li.tabIndex=0;
     li.setAttribute("aria-label","Open the receipt for "+n);
     li.innerHTML='<span class="avatar" aria-hidden="true" style="background:'+colorOf(n)+';color:#fff">'+esc(initials(n))+'</span>'+
-      '<span class="txt"><b>'+esc(n)+'</b><small>'+(v>0.004?"is owed - tap for the receipt":v<-0.004?"owes - tap for the receipt":"square")+'</small></span>'+
+      '<span class="txt"><b>'+esc(n)+'</b><small>'+paidShareLine(n)+'</small></span>'+
       '<span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"")+'">'+(v>0.004?"+":"")+money(v)+'</span>'+
       '<span class="ms chev" aria-hidden="true">chevron_right</span>';
     li.addEventListener("click", function(){ openReceipt(n); });
@@ -797,29 +811,55 @@ function renderReceipt(){
   let h='<div class="rc-title">'+esc(rcPerson)+'</div>';
 
   if(rcFilter==="__all__"){
-    $("rcRole").textContent="what everyone owes them";
-    h+='<div class="rc-sub">amounts owed to '+esc(rcPerson)+'</div><div class="rc-rule"></div>';
-    const paid = expenseArr().filter(function(e){ return e.payer===rcPerson; });
+    $("rcRole").textContent="how the balance is worked out";
+    h+='<div class="rc-sub">every line that moves '+esc(rcPerson)+'&rsquo;s balance</div><div class="rc-rule"></div>';
+
+    const all = expenseArr();
+    const paid  = all.filter(function(e){ return e.payer===rcPerson; });
+    const share = all.filter(function(e){
+      const b=(e.between&&e.between.length)?e.between:[e.payer];
+      return b.indexOf(rcPerson)!==-1;
+    });
+
+    // --- what they put in ---
+    let paidTotal=0;
+    h+='<div class="rc-grp">PAID OUT &middot; '+paid.length+' item'+(paid.length===1?"":"s")+'</div>';
     if(!paid.length){
-      h+='<div class="rc-none">'+esc(rcPerson)+' has not paid for anything yet.</div>';
-    } else {
-      let grand=0;
-      paid.forEach(function(e){
-        const b=(e.between&&e.between.length)?e.between:[e.payer];
-        const share=e.amount/b.length;
-        const debtors=b.filter(function(n){ return n!==rcPerson; });
-        h+='<div class="rc-grp">'+esc(e.desc)+' &middot; '+money(e.amount)+' / '+b.length+' ways</div>';
-        if(!debtors.length){
-          h+='<div class="rc-line"><span class="d note">paid for themselves only</span><span class="n">'+money(0)+'</span></div>';
-        }
-        debtors.forEach(function(n,i){
-          grand+=share;
-          h+='<div class="rc-line"><span class="d"><span class="swatch-inline" style="background:'+colorOf(n)+'"></span>'+
-             (i+1)+') '+esc(n)+'</span><span class="n">'+money(share)+'</span></div>';
-        });
-      });
-      h+='<div class="rc-rule solid"></div><div class="rc-tot"><span class="d">TOTAL OWED TO '+esc(rcPerson).toUpperCase()+'</span><span class="n">'+money(grand)+'</span></div>';
+      h+='<div class="rc-line"><span class="d note">nothing</span><span class="n">'+money(0)+'</span></div>';
     }
+    paid.forEach(function(e,i){
+      paidTotal+=e.amount;
+      h+='<div class="rc-line"><span class="d">'+(i+1)+') '+esc(e.desc)+'</span><span class="n">'+money(e.amount)+'</span></div>';
+    });
+    h+='<div class="rc-rule"></div><div class="rc-tot"><span class="d">total paid</span><span class="n">'+money(paidTotal)+'</span></div>';
+
+    // --- what the trip cost them ---
+    let shareTotal=0;
+    h+='<div class="rc-grp">THEIR SHARE &middot; '+share.length+' item'+(share.length===1?"":"s")+'</div>';
+    if(!share.length){
+      h+='<div class="rc-line"><span class="d note">nothing</span><span class="n">'+money(0)+'</span></div>';
+    }
+    share.forEach(function(e,i){
+      const b=(e.between&&e.between.length)?e.between:[e.payer];
+      const cut=e.amount/b.length;
+      shareTotal+=cut;
+      h+='<div class="rc-line"><span class="d">'+(i+1)+') '+esc(e.desc)+
+         ' <span class="note">('+money(e.amount)+' &divide; '+b.length+')</span></span>'+
+         '<span class="n">'+money(cut)+'</span></div>';
+    });
+    h+='<div class="rc-rule"></div><div class="rc-tot"><span class="d">total share</span><span class="n">'+money(shareTotal)+'</span></div>';
+
+    // --- the arithmetic, spelled out ---
+    const net = paidTotal - shareTotal;
+    h+='<div class="rc-rule solid"></div>';
+    h+='<div class="rc-line" style="margin-top:2px"><span class="d">paid</span><span class="n">'+money(paidTotal)+'</span></div>';
+    h+='<div class="rc-line"><span class="d">less their share</span><span class="n">&minus;'+money(shareTotal)+'</span></div>';
+    h+='<div class="rc-rule"></div>';
+    h+='<div class="rc-net">'+ (Math.abs(net)<0.005
+        ? "SQUARE &mdash; paid exactly their share"
+        : (net>0 ? esc(rcPerson).toUpperCase()+" IS OWED "+money(net)
+                 : esc(rcPerson).toUpperCase()+" OWES "+money(-net))) +'</div>';
+    h+='<div class="rc-sub" style="margin-top:8px">Tap a name above to see it split person by person.</div>';
   } else {
     const other=rcFilter;
     $("rcRole").textContent="statement with "+other;
