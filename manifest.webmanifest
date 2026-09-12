@@ -1,13 +1,13 @@
 {
-  "name": "Expenses",
-  "short_name": "Expenses",
-  "description": "A shared expense tracker. Everyone adds from their own phone and it syncs live.",
+  "name": "Settle — shared expenses",
+  "short_name": "Settle",
+  "description": "Split expenses with friends, flatmates and trips. Everyone adds from their own phone and it syncs live.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#073F37",
-  "theme_color": "#073F37",
+  "background_color": "#f6f7f9",
+  "theme_color": "#0f9d76",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

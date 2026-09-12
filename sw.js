@@ -1,5 +1,5 @@
-/* The Saint Lawrence Run - offline service worker */
-const VERSION = 'exp-v1';
+/* Settle - offline service worker */
+const VERSION = 'settle-v1';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 
