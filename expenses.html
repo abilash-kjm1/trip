@@ -458,6 +458,8 @@ body{
     -webkit-print-color-adjust:exact; print-color-adjust:exact;
   }
   .who{ margin-top:3pt; }
+  .added{ margin-top:2pt; font-size:8pt; color:#666 !important; }
+  .added .ms{ display:none !important; }
   .wchip{ background:#f0f0f0 !important; color:#333 !important; font-size:8pt; padding:1pt 5pt; }
   .wdot{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .pos{ color:#0a6b3d !important; } .neg{ color:#a32015 !important; }
@@ -483,6 +485,14 @@ body{
   .sitetabs{ top:70px; }
 }
 
+
+
+.added{
+  display:inline-flex; align-items:center; gap:5px; margin-top:7px;
+  font-family:var(--f-num); font-size:10.5px; font-weight:400; color:var(--ink-faint);
+  white-space:nowrap;
+}
+.added .ms{ font-size:13px; }
 
 /* ---- long list: scroll inside the card, or open it full ---- */
 #expCount{ font-weight:500; color:var(--ink-faint); font-family:var(--f-num); font-size:14px; }
@@ -709,6 +719,17 @@ const CODE = tripCode();
 
 function money(n){ const v = Math.round(n*100)/100; return (v<0?"-$":"$") + Math.abs(v).toFixed(2); }
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function fmtAdded(ts){
+  if(!ts) return "";
+  const d=new Date(ts);
+  if(isNaN(d.getTime())) return "";
+  const o={weekday:"short", day:"numeric", month:"short"};
+  if(d.getFullYear()!==new Date().getFullYear()) o.year="numeric";
+  // strip the locale's commas so it stays on one line
+  const date=d.toLocaleDateString(undefined,o).replace(/,/g,"");
+  const time=d.toLocaleTimeString(undefined,{hour:"2-digit", minute:"2-digit"});
+  return date + " · " + time;
+}
 function initials(n){ const p = String(n).trim().split(/\s+/); return (p[0].charAt(0)+(p[1]?p[1].charAt(0):"")).toUpperCase(); }
 let snackT;
 function snack(msg){ const s=$("snack"); s.textContent=msg; s.classList.add("show");
@@ -901,8 +922,9 @@ function renderExpenses(){
     }).join('');
     li.innerHTML='<span class="avatar" aria-hidden="true" style="background:'+colorOf(e.payer)+';color:#fff">'+esc(initials(e.payer||"?"))+'</span>'+
       '<span class="txt"><b>'+esc(e.desc)+'</b><small>'+esc(e.payer)+' paid &middot; '+label+
-      (between.length>1 ? ' &middot; '+money(e.amount/n)+' each' : '')+'</small><span class="who">'+who+'</span></span>'+
-      '<span class="amt">'+money(e.amount)+'</span>';
+      (between.length>1 ? ' &middot; '+money(e.amount/n)+' each' : '')+'</small><span class="who">'+who+'</span>'+
+      (fmtAdded(e.at) ? '<span class="added"><span class="ms" aria-hidden="true">schedule</span>'+esc(fmtAdded(e.at))+'</span>' : '')+
+      '</span><span class="amt">'+money(e.amount)+'</span>';
     const del=document.createElement("button"); del.className="iconbtn";
     del.setAttribute("aria-label","Delete "+e.desc);
     del.innerHTML='<span class="ms" aria-hidden="true">delete</span>';
