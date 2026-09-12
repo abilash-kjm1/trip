@@ -68,13 +68,22 @@ claimed that name. Each account's own list of groups lives at
 `users/{uid}/groups`, which is why it follows you between devices; a cached
 copy is kept in `localStorage` so the app still opens offline.
 
-The look is Liquid Glass. Panels are translucent material floating over a
-fixed field of soft colour: a heavy backdrop blur with the saturation pushed,
-a bright specular line along the top edge, a hairline rim, and a wide soft
-shadow for separation. Nothing is opaque except text. The colour field is what
-makes the glass read at all — without something behind it to refract, a glass
-panel is just a grey box — so it is a set of low-opacity radial washes with a
-whisper of SVG grain over them to stop the gradients banding.
+The look is Liquid Glass, and the part that makes it glass rather than frost
+is the rim. Each panel carries two pseudo-elements: `::before` is a gradient
+ring masked to the border alone, so the edge reads as the *thickness* of a
+lens catching light from one side, and `::after` is the specular sweep across
+the top of a curved surface.
+
+The fill is nearly clear — around 20% white. It stays readable not by being
+painted over but because the backdrop filter lifts what is behind it
+(`brightness(1.06) saturate(210%)`), which is the trick that lets colour flow
+through a panel while text on top stays legible. Materials come in
+thicknesses, as they do on iOS: panels and the tab bar are thin, form sheets
+are thick so fields read over whatever is blurring beneath them.
+
+That means the colour field behind is load bearing, not decoration — glass
+with nothing to refract is just a grey box — so it is a set of radial washes
+with a whisper of SVG grain to stop them banding.
 
 Type follows the iOS scale (17px body, 34px large titles, tight negative
 tracking, tabular figures for money) in SF Pro on Apple hardware via
