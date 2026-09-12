@@ -389,6 +389,99 @@ body{
 .paper .swatch-inline{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px;
   box-shadow:inset -1px -1px 2px rgba(0,0,0,.28); }
 
+
+/* ============================================================
+   PRINT / SAVE AS PDF
+   Flatten the clay, drop the controls, keep the record.
+   ============================================================ */
+.printhead{ display:none; }
+@media print{
+  @page{ margin:14mm 12mm; }
+
+  html, body{
+    background:#fff !important; color:#111 !important;
+    font-size:11pt; line-height:1.45; font-weight:400;
+  }
+  body{ background-image:none !important; }
+
+  /* nothing interactive belongs on paper */
+  .appbar, .sitetabs, .exfilter, .snack, .scrim, .dialog,
+  #addExpense, #splitAll, .btn, .iconbtn, .chev, .hint,
+  .sync, .card .sub{ display:none !important; }
+  /* the "add an expense" form card is the second card - hide by its heading */
+  .card.noprint{ display:none !important; }
+
+  .printhead{
+    display:block; margin:0 0 14pt; padding:0 0 8pt;
+    border-bottom:2pt solid #111;
+  }
+  .printhead h1{ font-size:20pt; margin:0 0 3pt; font-weight:800; }
+  .printhead p{ margin:0; font-size:10pt; color:#444; }
+  .printhead .printmeta{ margin-top:4pt; font-size:9pt; color:#666; }
+
+  .wrap{ max-width:none; padding:0; }
+
+  /* flatten every clay surface */
+  .card, .item, .owed, .settle, .paper, .total, .wchip, .avatar, .barrow .track{
+    box-shadow:none !important; border-radius:0 !important;
+  }
+  .card{
+    background:#fff !important; padding:0 !important; margin:0 0 16pt !important;
+    break-inside:auto; page-break-inside:auto;
+  }
+  .card h2{
+    font-size:13pt; font-weight:800; margin:0 0 7pt; padding-bottom:3pt;
+    border-bottom:1pt solid #999; color:#111 !important;
+  }
+  .card h2 .ms{ display:none !important; }
+
+  .total{
+    background:#fff !important; color:#111 !important; padding:0 0 10pt !important;
+    margin:0 0 14pt !important; border-bottom:1pt solid #999;
+  }
+  .total .lbl{ font-size:9pt; letter-spacing:.1em; color:#555 !important; }
+  .total .amt{ font-size:24pt; color:#111 !important; text-shadow:none !important; }
+  .total .per{ font-size:10pt; color:#444 !important; }
+
+  .item{
+    background:#fff !important; padding:5pt 0 !important; margin:0 !important;
+    border-bottom:.5pt solid #ccc; gap:8pt;
+    break-inside:avoid; page-break-inside:avoid;
+  }
+  .item .txt b{ font-size:11pt; color:#111 !important; }
+  .item .txt small{ font-size:9pt; color:#555 !important; }
+  .item .amt{ font-size:11pt; color:#111 !important; }
+  .avatar{
+    width:22pt !important; height:22pt !important; font-size:9pt !important;
+    color:#fff !important; border:.5pt solid #999;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .who{ margin-top:3pt; }
+  .wchip{ background:#f0f0f0 !important; color:#333 !important; font-size:8pt; padding:1pt 5pt; }
+  .wdot{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .pos{ color:#0a6b3d !important; } .neg{ color:#a32015 !important; }
+
+  .owed{ background:#fff !important; padding:6pt 0 !important; margin:0 !important;
+    border-bottom:.5pt solid #ccc; break-inside:avoid; page-break-inside:avoid; }
+  .owedhead .txt b{ font-size:11pt; }
+  .owedhead .amt{ font-size:12pt; }
+  .barrow .track{ background:#eee !important; border:.5pt solid #bbb; height:11pt; }
+  .barrow .fill{ -webkit-print-color-adjust:exact; print-color-adjust:exact; box-shadow:none !important; }
+  .settle{ background:#f4f4f4 !important; color:#111 !important; padding:5pt 8pt !important; }
+
+  .empty{ display:none !important; }
+
+  /* keep sections together where they fit */
+  #expenseList, #balanceList, #owedList{ break-inside:auto; }
+}
+
+@media(max-width:400px){
+  .appbar{ gap:5px; padding:14px 12px; }
+  .appbar .iconbtn{ width:42px; height:42px; }
+  /* smaller buttons make a 70px bar, so the tabs must follow */
+  .sitetabs{ top:70px; }
+}
+
 @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 
 </style>
@@ -397,8 +490,9 @@ body{
 
 <header class="appbar">
   <a class="iconbtn" href="./" aria-label="Back to the trip guide"><span class="ms" aria-hidden="true">arrow_back</span></a>
-  <h1>Trip Expenses</h1>
+  <h1>Expenses</h1>
   <button class="iconbtn" id="shareBtn" aria-label="Copy the share link"><span class="ms" aria-hidden="true">share</span></button>
+  <button class="iconbtn" id="printBtn" aria-label="Print or save as PDF"><span class="ms" aria-hidden="true">print</span></button>
   <button class="iconbtn" id="adminBtn" aria-label="Admin panel" aria-haspopup="dialog"><span class="ms" aria-hidden="true">lock</span></button>
 </header>
 
@@ -416,6 +510,12 @@ body{
   </div>
 </nav>
 
+<div class="printhead" aria-hidden="true">
+  <h1>Trip Expenses</h1>
+  <p>The Saint Lawrence Run &middot; Scarborough &rarr; Montr&eacute;al &rarr; Qu&eacute;bec City</p>
+  <p class="printmeta"><span id="printWhen"></span> &middot; <span id="printWho"></span></p>
+</div>
+
 <main class="wrap">
 
   <div class="sync" id="syncBar">
@@ -429,7 +529,7 @@ body{
     <div class="per" id="perHead">Add people to see the split</div>
   </section>
 
-  <section class="card">
+  <section class="card noprint">
     <h2><span class="ms" aria-hidden="true">receipt_long</span> Add an expense</h2>
     <p class="sub">Who paid, how much, and who it was for.</p>
     <div class="row">
@@ -1117,6 +1217,28 @@ function tryUnlock(){
   $("admLocked").hidden=true; $("admUnlocked").hidden=false;
   renderAdminPeople(); snack("Admin unlocked"); setTimeout(()=>$("admName").focus(),60);
 }
+
+$("printBtn").addEventListener("click", function(){
+  // print the whole record, not whatever happens to be filtered on screen
+  const savedQ=exQuery, savedPayer=exPayer, savedWays=exWays, savedVal=$("exq").value;
+  exQuery=""; exPayer=null; exWays=null; $("exq").value="";
+  renderExFilters(); renderExpenses();
+
+  const ppl=peopleArr().map(function(p){ return p.name; });
+  $("printWhen").textContent = new Date().toLocaleDateString(undefined,
+    {day:"numeric", month:"long", year:"numeric"});
+  $("printWho").textContent = ppl.length ? ppl.join(", ") : "no one added yet";
+
+  function restore(){
+    exQuery=savedQ; exPayer=savedPayer; exWays=savedWays; $("exq").value=savedVal;
+    renderExFilters(); renderExpenses();
+    window.removeEventListener("afterprint", restore);
+  }
+  window.addEventListener("afterprint", restore);
+  setTimeout(function(){ window.print(); }, 60);
+  // Safari on iOS does not always fire afterprint
+  setTimeout(restore, 4000);
+});
 
 $("adminBtn").addEventListener("click", openAdmin);
 $("pinGo").addEventListener("click", tryUnlock);
