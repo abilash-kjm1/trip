@@ -1,5 +1,5 @@
 /* The Saint Lawrence Run - offline service worker */
-const VERSION = 'slr-v20';
+const VERSION = 'slr-v21';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 
