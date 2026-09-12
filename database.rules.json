@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "trips": {
+      "$gid": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+      ".read": "auth != null && auth.token.email_verified == true && auth.token.email.lower() == 'abilashkjm01@gmail.com'",
+      ".indexOn": []
+    },
+
+    "users": {
+      "$uid": {
+        ".read":  "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.lower() == 'abilashkjm01@gmail.com'))",
+        ".write": "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.lower() == 'abilashkjm01@gmail.com'))"
+      }
+    }
+  }
+}

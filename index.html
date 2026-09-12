@@ -236,6 +236,42 @@ button, input, select, textarea{ font:inherit; font-family:var(--f); }
 .tag{ display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.05em;
   text-transform:uppercase; padding:2px 7px; border-radius:5px; background:var(--surface-2);
   color:var(--ink-faint); }
+
+/* ---------- sign in ---------- */
+.signin{ text-align:center; padding:30px 22px 24px; margin-top:8vh; }
+.signin .mark{ width:64px; height:64px; border-radius:20px; background:var(--teal-lt);
+  color:var(--teal-dk); display:flex; align-items:center; justify-content:center; margin:0 auto 18px; }
+.signin .mark .ms{ font-size:34px; }
+.signin h2{ font-size:21px; font-weight:800; letter-spacing:-.4px; margin:0 0 8px; }
+.signin p{ font-size:14px; color:var(--ink-soft); margin:0 0 22px; }
+.btn.g{ background:var(--surface); color:#3c4043; box-shadow:inset 0 0 0 1px var(--line), var(--sh1);
+  font-weight:600; min-height:50px; }
+.btn.g:hover{ background:var(--surface-2); }
+.btn.g .glogo{ display:inline-flex; }
+.btn.busy{ opacity:.6; }
+.fine{ font-size:12px; color:var(--ink-faint); margin:16px 0 0; line-height:1.5; }
+.lead{ font-size:13.5px; color:var(--ink-soft); margin:-4px 0 16px; }
+.code{ font-family:ui-monospace, Menlo, Consolas, monospace; font-size:15px;
+  background:var(--surface-2); padding:12px 14px; border-radius:10px; word-break:break-all; margin:0; }
+
+/* ---------- photo avatars ---------- */
+img.av{ object-fit:cover; background:var(--surface-2); }
+
+/* ---------- claim prompt ---------- */
+.notice{ display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap;
+  background:var(--teal-lt); border-radius:14px; padding:14px 16px; margin-bottom:14px;
+  font-size:13.5px; color:var(--teal-dk); }
+.notice .ms{ font-size:22px; flex:0 0 auto; }
+.notice > div{ flex:1; min-width:160px; line-height:1.45; }
+.notice .btn{ min-height:38px; padding:8px 16px; font-size:13.5px; }
+
+.cat.teal{ background:var(--teal-lt); color:var(--teal-dk); }
+.cat.bad{ background:#fdecea; color:var(--danger); }
+.tag.on{ background:var(--teal-lt); color:var(--teal-dk); }
+.tag.admin{ background:#fff2d6; color:#8a5a00; }
+.summary.flat{ box-shadow:none; background:var(--surface-2); }
+.summary.flat .split > div{ background:var(--surface); }
+
 @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 
 /* ---------- printing (kept last so it wins the cascade) ---------- */
@@ -302,11 +338,14 @@ button, input, select, textarea{ font:inherit; font-family:var(--f); }
 /* ===========================================================================
    SETTLE — shared expense app
    Data model (Firebase Realtime Database):
-     trips/{gid}/meta      {name, type, at}
-     trips/{gid}/people/{k}    {n, c}
+     trips/{gid}/meta          {name, type, at, by}
+     trips/{gid}/people/{k}    {n, c, uid?, email?, photo?}
      trips/{gid}/expenses/{k}  {desc, amount, payer, mode, between[], vals{}, cat, note, at, by}
      trips/{gid}/payments/{k}  {from, to, amount, note, at, by}
-   Identity and the list of joined groups live on the device.
+     users/{uid}/profile       {name, email, photo, at}
+     users/{uid}/groups/{gid}  {name, at}      <- which groups this person is in
+   Who you are comes from Google sign-in. Which groups you belong to lives in
+   the database under your own uid, so it follows you to any device.
    =========================================================================== */
 const $  = (id) => document.getElementById(id);
 const el = (t, c, h) => { const n=document.createElement(t); if(c) n.className=c; if(h!=null) n.innerHTML=h; return n; };
@@ -328,17 +367,18 @@ const CATS = [
   {k:"health",   i:"medical_services",n:"Health"}
 ];
 const catOf = (k) => CATS.find(c=>c.k===k) || CATS[0];
+const ADMIN_EMAIL = (window.ADMIN_EMAIL || "").toLowerCase();
 
 /* ---------------- local state ---------------- */
 const LS = {
-  me:  "settle.me.v1",
-  grp: "settle.groups.v1",
-  cur: "settle.cur.v1"
+  grp: "settle.groups.v2",   // cached copy of users/{uid}/groups, for offline
+  cur: "settle.cur.v2"
 };
 function lsGet(k, d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }
 function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 
-let ME       = lsGet(LS.me, null);          // my display name
+let USER     = null;                        // {uid, name, email, photo} from Google
+let ME       = null;                        // my person-name inside CURRENT group
 let JOINED   = lsGet(LS.grp, []);           // [{id,name}]
 let CURRENT  = null;                        // active group id
 let TAB      = "groups";                    // groups | activity | account
@@ -346,6 +386,8 @@ let GTAB     = "expenses";                  // expenses | balances | activity
 let DATA     = {};                          // gid -> {meta, people, expenses, payments}
 let remote   = null;                        // firebase handles
 const subs   = {};                          // gid -> unsubscribe
+
+const isAdmin = () => !!(USER && ADMIN_EMAIL && (USER.email||"").toLowerCase()===ADMIN_EMAIL);
 
 /* ---------------- helpers ---------------- */
 function money(n){ const v=Math.round((n+Number.EPSILON)*100)/100; return (v<0?"-$":"$")+Math.abs(v).toFixed(2); }
@@ -356,7 +398,7 @@ function initials(n){ const p=String(n||"?").trim().split(/\s+/); return (p[0].c
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 let toastT;
 function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("on");
-  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("on"), 2400); }
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("on"), 2600); }
 function fmtDate(ts){
   if(!ts) return "";
   const d=new Date(ts); if(isNaN(d)) return "";
@@ -373,37 +415,50 @@ function dayKey(ts){ const d=new Date(ts||0);
   return isNaN(d) ? "" : d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); }
 function dayLabel(ts){
   const d=new Date(ts||0); if(isNaN(d)) return "Undated";
-  const t=new Date(), y=new Date(Date.now()-864e5);
+  const t=new Date();
   if(dayKey(ts)===dayKey(t)) return "Today";
-  if(dayKey(ts)===dayKey(y)) return "Yesterday";
+  if(dayKey(ts)===dayKey(Date.now()-864e5)) return "Yesterday";
   return d.toLocaleDateString(undefined,{weekday:"long", day:"numeric", month:"long"});
+}
+function avatarHTML(cls, name, colour, photo){
+  if(photo) return '<img class="av '+cls+'" src="'+esc(photo)+'" alt="" referrerpolicy="no-referrer">';
+  return '<span class="av '+cls+'" style="background:'+(colour||"#8e99a6")+'">'+esc(initials(name))+'</span>';
 }
 
 /* ---------------- group data accessors ---------------- */
-const G = () => DATA[CURRENT] || {};
 function membersOf(gid){
   const g=DATA[gid]||{}, raw=g.people||{};
   const keys=Object.keys(raw).sort();
   const taken=new Set(); keys.forEach(k=>{ const c=raw[k] && raw[k].c; if(c) taken.add(c.toLowerCase()); });
   let next=0;
   return keys.map(k=>{
-    const v=raw[k]; const name=(v&&typeof v==="object")?(v.n||""):String(v);
-    let color=(v&&typeof v==="object"&&v.c)?v.c:null;
+    const v=raw[k]; const obj=(v&&typeof v==="object")?v:{n:String(v)};
+    const name=obj.n||"";
+    let color=obj.c||null;
     if(!color){
       while(next<PALETTE.length && taken.has(PALETTE[next].toLowerCase())) next++;
       color=PALETTE[next%PALETTE.length]; taken.add(color.toLowerCase()); next++;
     }
-    return {k, name, color};
+    return {k, name, color, uid:obj.uid||null, email:obj.email||null, photo:obj.photo||null};
   }).sort((a,b)=>a.name.localeCompare(b.name));
 }
 const names   = (gid) => membersOf(gid||CURRENT).map(m=>m.name);
-const colorOf = (n, gid) => { const m=membersOf(gid||CURRENT).find(x=>x.name===n); return m?m.color:"#8e99a6"; };
+const memberOf= (n, gid) => membersOf(gid||CURRENT).find(x=>x.name===n) || null;
+const colorOf = (n, gid) => { const m=memberOf(n, gid); return m?m.color:"#8e99a6"; };
 function listOf(gid, what){
   const raw=(DATA[gid]||{})[what]||{};
   return Object.entries(raw).map(([k,v])=>Object.assign({k},v)).sort((a,b)=>(b.at||0)-(a.at||0));
 }
 const expensesOf = (gid) => listOf(gid||CURRENT, "expenses");
 const paymentsOf = (gid) => listOf(gid||CURRENT, "payments");
+
+// Which person in this group is me? Null until I have claimed a slot.
+function meIn(gid){
+  if(!USER) return null;
+  const m=membersOf(gid).find(x=>x.uid===USER.uid);
+  return m ? m.name : null;
+}
+const loaded = (gid) => !!(DATA[gid] && (DATA[gid].meta || DATA[gid].people || DATA[gid].expenses));
 
 /* ---------------- split maths ---------------- */
 // Returns {name: amountOwed}. Modes: equal | exact | percent | shares
@@ -459,12 +514,13 @@ function settlements(gid){
   }
   return out;
 }
-const myBalance = (gid) => { if(!ME) return 0; const b=balances(gid); return b[ME]||0; };
+const myBalance = (gid) => { const n=meIn(gid); if(!n) return 0; const b=balances(gid); return b[n]||0; };
+function totalOf(gid){ let t=0; expensesOf(gid).forEach(e=> t+=Number(e.amount)||0 ); return t; }
 
 /* ---------------- writes ---------------- */
 function ref(path){ return remote.ref(remote.db, path); }
 function push(path, val){
-  if(!remote){ toast("Not connected yet"); return Promise.resolve(); }
+  if(!remote){ toast("Not signed in yet"); return Promise.resolve(); }
   return remote.push(ref(path), val).catch(e=>toast("Could not save: "+e.message));
 }
 function set(path, val){
@@ -476,16 +532,18 @@ function del(path){
   return remote.remove(ref(path)).catch(e=>toast("Could not remove: "+e.message));
 }
 
-/* ---------------- groups on this device ---------------- */
+/* ---------------- which groups I am in ---------------- */
 function rememberGroup(id, name){
   if(!JOINED.some(g=>g.id===id)) JOINED.push({id, name});
   else JOINED = JOINED.map(g=> g.id===id ? {id, name:name||g.name} : g);
   lsSet(LS.grp, JOINED);
+  if(remote && USER) set("users/"+USER.uid+"/groups/"+id, {name:name||id, at:Date.now()});
 }
 function forgetGroup(id){
   JOINED = JOINED.filter(g=>g.id!==id); lsSet(LS.grp, JOINED);
   if(subs[id]){ subs[id](); delete subs[id]; }
   delete DATA[id];
+  if(remote && USER) del("users/"+USER.uid+"/groups/"+id);
 }
 function groupName(id){
   const g=DATA[id]&&DATA[id].meta&&DATA[id].meta.name;
@@ -495,50 +553,53 @@ function groupName(id){
 }
 
 /* =========================== VIEWS =========================== */
-let WELCOME_UP=null;
+let ADMIN_VIEW = false;      // admin browsing every group in the database
+const claimAsked = {};       // gid -> we have already offered the claim sheet
+
 function render(){
   const main=$("main"); main.innerHTML="";
   $("fab").hidden=true; $("backBtn").hidden=true;
   $("shareBtn").hidden=true; $("printBtn").hidden=true; $("gmenuBtn").hidden=true;
-  $("barSub").hidden=true; $("bar").classList.remove("plain");
-  $("nav").hidden = !ME;
+  $("nav").hidden = !USER;
+  ME = CURRENT ? meIn(CURRENT) : null;
   document.querySelectorAll(".nav button").forEach(b=>{
-    if(b.dataset.tab===TAB && !CURRENT) b.setAttribute("aria-current","page");
+    if(b.dataset.tab===TAB && !CURRENT && !ADMIN_VIEW) b.setAttribute("aria-current","page");
     else b.removeAttribute("aria-current");
   });
 
   const y=window.scrollY;
-  if(!ME)                   viewWelcome(main);
+  if(!USER)                 viewSignIn(main);
   else if(CURRENT)          viewGroup(main);
+  else if(ADMIN_VIEW)       viewAdmin(main);
   else if(TAB==="groups")   viewGroups(main);
   else if(TAB==="activity") viewActivity(main);
   else if(TAB==="account")  viewAccount(main);
   if(y) window.scrollTo(0, Math.min(y, document.body.scrollHeight));
+
+  // Someone opened a group they have not yet identified themselves in.
+  if(USER && CURRENT && loaded(CURRENT) && !ME && !claimAsked[CURRENT] && $("sheet").hidden){
+    claimAsked[CURRENT]=true;
+    setTimeout(()=>{ if(CURRENT && !meIn(CURRENT)) sheetClaim(CURRENT); }, 400);
+  }
 }
 
-/* ---------- first run ---------- */
-function viewWelcome(main){
-  $("barTitle").firstChild.nodeValue="Welcome";
-  // A late sync callback must not wipe out what is being typed.
-  if(WELCOME_UP){ main.appendChild(WELCOME_UP); return; }
-  const c=el("div","card pad");
+/* ---------- sign in ---------- */
+function viewSignIn(main){
+  $("barTitle").firstChild.nodeValue="Settle";
+  const c=el("div","card pad signin");
   c.innerHTML=
-    '<h2 style="margin:0 0 6px;font-size:20px">Who are you?</h2>'+
-    '<p style="margin:0 0 16px;color:var(--ink-soft);font-size:14px">'+
-    'Your name identifies you in every group on this device, so the app can tell you what <em>you</em> owe.</p>'+
-    '<div class="field"><label for="meName">Your name</label>'+
-    '<input id="meName" type="text" autocomplete="name" placeholder="e.g. Abilash"></div>'+
-    '<button class="btn p wide" id="meGo">Continue</button>';
+    '<div class="mark" aria-hidden="true"><span class="ms">account_balance_wallet</span></div>'+
+    '<h2>Split what you spend together</h2>'+
+    '<p>Sign in with Google and you will see every group you are part of, on any '+
+    'device, with your own balance worked out for you.</p>'+
+    '<button class="btn g wide" id="gIn">'+
+      '<span class="glogo" aria-hidden="true">'+
+        '<svg viewBox="0 0 48 48" width="18" height="18"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.1z"/><path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.1H4.3v5.7C7.9 41.1 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.6 28.1c-.4-1.3-.7-2.7-.7-4.1s.2-2.8.7-4.1v-5.7H4.3C2.8 17.1 2 20.4 2 24s.8 6.9 2.3 9.8l7.3-5.7z"/><path fill="#EA4335" d="M24 10.8c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 4.1 30 2 24 2 15.4 2 7.9 6.9 4.3 14.2l7.3 5.7c1.7-5.2 6.6-9.1 12.4-9.1z"/></svg>'+
+      '</span>Continue with Google</button>'+
+    '<p class="fine">We only ever read your name, email and picture — so the group '+
+    'knows who added what. Nothing is posted anywhere.</p>';
   main.appendChild(c);
-  WELCOME_UP=c;
-  const go=()=>{
-    const v=$("meName").value.trim();
-    if(!v) return toast("Enter your name");
-    ME=v; lsSet(LS.me, ME); WELCOME_UP=null; render();
-  };
-  $("meGo").addEventListener("click", go);
-  $("meName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } });
-  setTimeout(()=>$("meName").focus(), 80);
+  $("gIn").addEventListener("click", signIn);
 }
 
 /* ---------- groups list ---------- */
@@ -568,17 +629,31 @@ function viewGroups(main){
     j.style.marginTop="10px"; j.addEventListener("click", sheetGroupJoin);
     e.appendChild(el("div","")); e.appendChild(j);
     main.appendChild(e);
+    if(LEGACY_OK){
+      main.appendChild(el("div","sechead","Were you on this trip?"));
+      const c=el("div","card");
+      const r=el("button","row");
+      r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">luggage</span></span>'+
+        '<span class="body"><span class="t1">St Lawrence trip</span>'+
+        '<span class="t2">The sheet this app started out as — tap to join it</span></span>'+
+        '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--ink-faint)">chevron_right</span></span>';
+      r.addEventListener("click", ()=>{
+        rememberGroup(DEFAULT_GROUP, "St Lawrence trip");
+        watchGroup(DEFAULT_GROUP); openGroup(DEFAULT_GROUP);
+      });
+      c.appendChild(r); main.appendChild(c);
+    }
     return;
   }
 
   const card=el("div","card");
-  JOINED.forEach(g=>{
-    const v=myBalance(g.id), mem=membersOf(g.id).length, ex=expensesOf(g.id).length;
+  JOINED.slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).forEach(g=>{
+    const v=myBalance(g.id), mem=membersOf(g.id).length, tot=totalOf(g.id);
     const r=el("button","row");
     r.innerHTML=
-      '<span class="cat"><span class="ms" aria-hidden="true">'+(g.id===DEFAULT_GROUP?"luggage":"group")+'</span></span>'+
+      '<span class="cat"><span class="ms" aria-hidden="true">'+groupIcon(g.id)+'</span></span>'+
       '<span class="body"><span class="t1">'+esc(groupName(g.id))+'</span>'+
-      '<span class="t2">'+mem+' member'+(mem===1?"":"s")+' · '+ex+' expense'+(ex===1?"":"s")+'</span></span>'+
+      '<span class="t2">'+mem+' member'+(mem===1?"":"s")+' · '+money(tot)+' spent</span></span>'+
       '<span class="right"><span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
         (Math.abs(v)<0.005?"settled":money(Math.abs(v)))+'</span>'+
       '<span class="cap">'+(v>0.004?"you are owed":v<-0.004?"you owe":"")+'</span></span>';
@@ -591,15 +666,23 @@ function viewGroups(main){
   j.addEventListener("click", sheetGroupJoin);
   main.appendChild(j);
 }
+function groupIcon(gid){
+  const t=(DATA[gid]&&DATA[gid].meta&&DATA[gid].meta.type)||"";
+  return t==="home"?"home" : t==="couple"?"favorite" : t==="other"?"group" : "luggage";
+}
 
 /* ---------- one group ---------- */
 function openGroup(id){
   CURRENT=id; GTAB="expenses"; lsSet(LS.cur, id);
-  location.hash="g="+id;
+  if(location.hash!=="#g="+id) location.hash="g="+id;
   watchGroup(id);
   window.scrollTo(0,0); render();
 }
-function closeGroup(){ CURRENT=null; lsSet(LS.cur,null); location.hash=""; window.scrollTo(0,0); render(); }
+function closeGroup(){
+  CURRENT=null; lsSet(LS.cur,null);
+  if(location.hash) location.hash="";
+  window.scrollTo(0,0); render();
+}
 
 function viewGroup(main){
   const gid=CURRENT;
@@ -608,13 +691,28 @@ function viewGroup(main){
   $("printBtn").hidden=false; $("gmenuBtn").hidden=false;
   $("fab").hidden=false; $("fabLabel").textContent="Add expense";
 
-  const v=myBalance(gid);
+  const v=myBalance(gid), tot=totalOf(gid), mem=membersOf(gid).length;
   const s=el("div","summary");
   s.innerHTML =
     '<div class="big '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
-      (Math.abs(v)<0.005?"All settled up":money(Math.abs(v)))+'</div>'+
-    '<div class="lab">'+(v>0.004?"you are owed in this group":v<-0.004?"you owe in this group":"nothing outstanding")+'</div>';
+      (!ME ? money(tot) : Math.abs(v)<0.005?"All settled up":money(Math.abs(v)))+'</div>'+
+    '<div class="lab">'+(!ME ? "spent by the group so far"
+        : v>0.004?"you are owed in this group" : v<-0.004?"you owe in this group" : "nothing outstanding")+'</div>'+
+    '<div class="split">'+
+      (ME ? '<div><div class="k">Total spent</div><div class="v">'+money(tot)+'</div></div>'
+          : '<div><div class="k">People</div><div class="v">'+mem+'</div></div>')+
+    '<div><div class="k">Each if split evenly</div><div class="v">'+money(mem?tot/mem:0)+'</div></div></div>';
   main.appendChild(s);
+
+  if(!ME){
+    const w=el("div","notice");
+    w.innerHTML='<span class="ms" aria-hidden="true">how_to_reg</span>'+
+      '<div><strong>You are not on this list yet</strong><br>'+
+      'Tell the group which name is yours and it will start working out what you owe.</div>';
+    const b=el("button","btn p","That’s me"); b.addEventListener("click", ()=>sheetClaim(gid));
+    w.appendChild(b);
+    main.appendChild(w);
+  }
 
   const seg=el("div","seg");
   [["expenses","Expenses"],["balances","Balances"],["activity","Activity"]].forEach(([k,lab])=>{
@@ -644,14 +742,15 @@ function groupExpenses(main, gid){
     const k=dayKey(e.at);
     if(k!==day){ day=k; card.appendChild(el("div","daygroup", esc(dayLabel(e.at)))); }
     const sh=sharesOf(e), mine=ME?(sh[ME]||0):0;
-    const iPaid=e.payer===ME;
-    const lent=iPaid ? (Number(e.amount)||0)-mine : 0;
+    const iPaid=!!ME && e.payer===ME;
     const c=catOf(e.cat);
     const r=el("button","row"+(iPaid?" mine":""));
     let right;
-    if(!ME || (!iPaid && !mine)) right='<span class="amt zero">not involved</span>';
-    else if(iPaid) right='<span class="amt pos">'+money(lent)+'</span><span class="cap">you lent</span>';
-    else right='<span class="amt neg">'+money(mine)+'</span><span class="cap">you borrowed</span>';
+    if(!ME) right='<span class="amt">'+money(e.amount)+'</span><span class="cap">'+
+        (e.between?e.between.length:1)+' way'+((e.between&&e.between.length===1)?"":"s")+'</span>';
+    else if(iPaid) right='<span class="amt pos">'+money((Number(e.amount)||0)-mine)+'</span><span class="cap">you lent</span>';
+    else if(mine)  right='<span class="amt neg">'+money(mine)+'</span><span class="cap">you borrowed</span>';
+    else           right='<span class="amt zero">not involved</span>';
     r.innerHTML=
       '<span class="cat"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
       '<span class="body"><span class="t1">'+esc(e.desc)+'</span>'+
@@ -678,8 +777,9 @@ function groupBalances(main, gid){
     st.forEach(t=>{
       const involves = t.from===ME || t.to===ME;
       const r=el("button","row"+(involves?" mine":""));
+      const m=memberOf(t.from, gid);
       r.innerHTML=
-        '<span class="av" style="background:'+colorOf(t.from,gid)+'">'+esc(initials(t.from))+'</span>'+
+        avatarHTML("", t.from, m&&m.color, m&&m.photo)+
         '<span class="body"><span class="t1">'+esc(t.from===ME?"You":t.from)+' → '+esc(t.to===ME?"you":t.to)+'</span>'+
         '<span class="t2">tap to record this payment</span></span>'+
         '<span class="right"><span class="amt">'+money(t.amt)+'</span></span>';
@@ -690,12 +790,13 @@ function groupBalances(main, gid){
   }
   main.appendChild(el("div","sechead","Everyone"));
   const c2=el("div","card");
-  ppl.forEach(n=>{
-    const v=Math.round((b[n]||0)*100)/100;
+  membersOf(gid).forEach(m=>{
+    const n=m.name, v=Math.round((b[n]||0)*100)/100;
     const r=el("button","row"+(n===ME?" mine":""));
     r.innerHTML=
-      '<span class="av" style="background:'+colorOf(n,gid)+'">'+esc(initials(n))+'</span>'+
-      '<span class="body"><span class="t1">'+esc(n)+(n===ME?' <span class="tag">you</span>':'')+'</span>'+
+      avatarHTML("", n, m.color, m.photo)+
+      '<span class="body"><span class="t1">'+esc(n)+(n===ME?' <span class="tag on">you</span>':'')+
+        (m.uid&&n!==ME?' <span class="tag">signed in</span>':'')+'</span>'+
       '<span class="t2">'+esc(paidShareLine(n,gid))+'</span></span>'+
       '<span class="right"><span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
         (Math.abs(v)<0.005?"settled":money(Math.abs(v)))+'</span>'+
@@ -735,8 +836,7 @@ function groupActivity(main, gid){
         '<span class="right"><span class="amt">'+money(e.amount)+'</span></span>';
     } else {
       const p=it.p;
-      r.innerHTML='<span class="cat" style="background:var(--teal-lt);color:var(--teal-dk)">'+
-        '<span class="ms" aria-hidden="true">payments</span></span>'+
+      r.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">payments</span></span>'+
         '<span class="body"><span class="t1">'+esc(p.from===ME?"You":p.from)+' paid '+esc(p.to===ME?"you":p.to)+'</span>'+
         '<span class="t2">'+esc(fmtWhen(p.at))+(p.note?" · "+esc(p.note):"")+'</span></span>'+
         '<span class="right"><span class="amt pos">'+money(p.amount)+'</span></span>';
@@ -763,10 +863,10 @@ function viewActivity(main){
   }
   const card=el("div","card");
   items.slice(0,200).forEach(it=>{
-    const r=el("button","row");
+    const r=el("button","row"), me=meIn(it.gid);
     if(it.t==="e"){
-      const e=it.e, c=catOf(e.cat), sh=sharesOf(e), mine=ME?(sh[ME]||0):0;
-      const iPaid=e.payer===ME;
+      const e=it.e, c=catOf(e.cat), sh=sharesOf(e), mine=me?(sh[me]||0):0;
+      const iPaid=!!me && e.payer===me;
       r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="body"><span class="t1">'+esc(e.desc)+'</span>'+
         '<span class="t2">'+esc(groupName(it.gid))+' · '+esc(iPaid?"you":e.payer)+' paid '+money(e.amount)+'</span></span>'+
@@ -775,9 +875,8 @@ function viewActivity(main){
         '<span class="cap">'+esc(fmtDate(e.at))+'</span></span>';
     } else {
       const p=it.p;
-      r.innerHTML='<span class="cat" style="background:var(--teal-lt);color:var(--teal-dk)">'+
-        '<span class="ms" aria-hidden="true">payments</span></span>'+
-        '<span class="body"><span class="t1">'+esc(p.from===ME?"You":p.from)+' paid '+esc(p.to===ME?"you":p.to)+'</span>'+
+      r.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">payments</span></span>'+
+        '<span class="body"><span class="t1">'+esc(p.from===me?"You":p.from)+' paid '+esc(p.to===me?"you":p.to)+'</span>'+
         '<span class="t2">'+esc(groupName(it.gid))+'</span></span>'+
         '<span class="right"><span class="amt pos">'+money(p.amount)+'</span>'+
         '<span class="cap">'+esc(fmtDate(p.at))+'</span></span>';
@@ -793,21 +892,19 @@ function viewAccount(main){
   $("barTitle").firstChild.nodeValue="Account";
   const c=el("div","card");
   const me=el("div","row"); me.style.cursor="default";
-  me.innerHTML='<span class="av lg" style="background:var(--teal)">'+esc(initials(ME))+'</span>'+
-    '<span class="body"><span class="t1" style="font-size:17px">'+esc(ME)+'</span>'+
-    '<span class="t2">this is you on this device</span></span>';
+  me.innerHTML=avatarHTML("lg", USER.name, "var(--teal)", USER.photo)+
+    '<span class="body"><span class="t1" style="font-size:17px">'+esc(USER.name)+
+      (isAdmin()?' <span class="tag admin">admin</span>':'')+'</span>'+
+    '<span class="t2">'+esc(USER.email)+'</span></span>';
   c.appendChild(me);
-  const ren=el("button","row"); ren.innerHTML=
-    '<span class="cat"><span class="ms" aria-hidden="true">edit</span></span>'+
-    '<span class="body"><span class="t1">Change my name</span></span>';
-  ren.addEventListener("click", sheetRename); c.appendChild(ren);
   main.appendChild(c);
 
   main.appendChild(el("div","sechead","Totals across all groups"));
   let owed=0, owe=0, spent=0;
   JOINED.forEach(g=>{
     const v=myBalance(g.id); if(v>0.004) owed+=v; else if(v<-0.004) owe+=-v;
-    expensesOf(g.id).forEach(e=>{ const sh=sharesOf(e); if(ME&&sh[ME]) spent+=sh[ME]; });
+    const n=meIn(g.id);
+    if(n) expensesOf(g.id).forEach(e=>{ const sh=sharesOf(e); if(sh[n]) spent+=sh[n]; });
   });
   const t=el("div","card pad");
   t.innerHTML='<div class="split" style="margin:0"><div><div class="k">Your share of everything</div>'+
@@ -816,23 +913,81 @@ function viewAccount(main){
     money(owed-owe)+'</div></div></div>';
   main.appendChild(t);
 
+  if(isAdmin()){
+    main.appendChild(el("div","sechead","Administration"));
+    const a=el("div","card");
+    const r=el("button","row");
+    r.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">shield_person</span></span>'+
+      '<span class="body"><span class="t1">Every group</span>'+
+      '<span class="t2">Open, edit or delete any group in this app</span></span>'+
+      '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--ink-faint)">chevron_right</span></span>';
+    r.addEventListener("click", ()=>{ ADMIN_VIEW=true; window.scrollTo(0,0); render(); });
+    a.appendChild(r);
+    main.appendChild(a);
+  }
+
   main.appendChild(el("div","sechead","App"));
   const c2=el("div","card");
-  [["Offline","This app works with no signal. Changes sync when you reconnect.","cloud_done",null],
-   ["Reset this device","Forget my name and my joined groups. Nothing is deleted for anyone else.","restart_alt", resetDevice]
-  ].forEach(([t1,t2,icon,fn])=>{
-    const r=el(fn?"button":"div","row"); if(!fn) r.style.cursor="default";
-    r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+icon+'</span></span>'+
-      '<span class="body"><span class="t1">'+t1+'</span><span class="t2">'+t2+'</span></span>';
-    if(fn) r.addEventListener("click", fn);
-    c2.appendChild(r);
-  });
+  const off=el("div","row"); off.style.cursor="default";
+  off.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">cloud_done</span></span>'+
+    '<span class="body"><span class="t1">Works offline</span>'+
+    '<span class="t2">Open it with no signal. Anything you add syncs when you reconnect.</span></span>';
+  c2.appendChild(off);
+  const out=el("button","row");
+  out.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">logout</span></span>'+
+    '<span class="body"><span class="t1">Sign out</span>'+
+    '<span class="t2">'+esc(USER.email)+'</span></span>';
+  out.addEventListener("click", signOutNow);
+  c2.appendChild(out);
   main.appendChild(c2);
 }
-function resetDevice(){
-  if(!confirm("Forget your name and joined groups on this device? Group data stays for everyone else.")) return;
-  try{ localStorage.removeItem(LS.me); localStorage.removeItem(LS.grp); localStorage.removeItem(LS.cur); }catch(e){}
-  location.reload();
+
+/* ---------- admin: every group ---------- */
+function viewAdmin(main){
+  $("barTitle").firstChild.nodeValue="Every group";
+  $("backBtn").hidden=false;
+  const all=ADMIN_GROUPS;
+  if(all===null){
+    main.appendChild(el("div","empty",'<span class="ms" aria-hidden="true">hourglass_top</span><h3>Loading…</h3>'));
+    return;
+  }
+  const keys=Object.keys(all);
+  if(!keys.length){
+    main.appendChild(el("div","empty",
+      '<span class="ms" aria-hidden="true">shield_person</span><h3>Nothing to show</h3>'+
+      '<p>Either there are no groups yet, or the database rules do not grant this account '+
+      'admin read access. Check that the rules name ' + esc(ADMIN_EMAIL) + '.</p>'));
+    return;
+  }
+  main.appendChild(el("div","sechead", keys.length+" group"+(keys.length===1?"":"s")+" in the database"));
+  const card=el("div","card");
+  keys.sort((a,b)=>{
+    const an=(all[a].meta&&all[a].meta.name)||a, bn=(all[b].meta&&all[b].meta.name)||b;
+    return an.localeCompare(bn);
+  }).forEach(gid=>{
+    const g=all[gid]||{};
+    const ex=Object.keys(g.expenses||{}).length, pp=Object.keys(g.people||{}).length;
+    let tot=0; Object.values(g.expenses||{}).forEach(e=> tot+=Number(e.amount)||0 );
+    const mine=JOINED.some(j=>j.id===gid);
+    const r=el("button","row");
+    r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+
+        ((g.meta&&g.meta.type==="home")?"home":(g.meta&&g.meta.type==="couple")?"favorite":"luggage")+'</span></span>'+
+      '<span class="body"><span class="t1">'+esc((g.meta&&g.meta.name)||gid)+
+        (mine?' <span class="tag on">joined</span>':'')+'</span>'+
+      '<span class="t2">'+pp+(pp===1?' person':' people')+' · '+ex+' expense'+(ex===1?"":"s")+' · '+esc(gid)+'</span></span>'+
+      '<span class="right"><span class="amt">'+money(tot)+'</span></span>';
+    r.addEventListener("click", ()=>{
+      DATA[gid]=g;
+      if(!mine) rememberGroup(gid, (g.meta&&g.meta.name)||gid);
+      ADMIN_VIEW=false; openGroup(gid);
+    });
+    card.appendChild(r);
+  });
+  main.appendChild(card);
+  const note=el("p","fine");
+  note.style.cssText="text-align:center;color:var(--ink-faint);font-size:12px;margin:16px 4px";
+  note.textContent="Opening a group here adds it to your own list so you can work in it.";
+  main.appendChild(note);
 }
 
 /* =========================== SHEETS =========================== */
@@ -868,6 +1023,57 @@ function tsFromDate(v, old){
   return isNaN(d)?(old||Date.now()):d.getTime();
 }
 
+/* ---------- "which one of these is me?" ---------- */
+function sheetClaim(gid){
+  const free=membersOf(gid).filter(m=>!m.uid);
+  openSheet("Which one is you?", (b)=>{
+    b.innerHTML=
+      '<p class="lead">'+esc(groupName(gid))+' keeps its own list of names. Pick yours and '+
+      'this account takes it over, so the app can tell you what <em>you</em> owe.</p>'+
+      '<div id="clList"></div>'+
+      '<div class="sechead">Not on the list?</div>'+
+      '<div class="field"><label for="clNew">Add yourself with this name</label>'+
+      '<div style="display:flex;gap:8px"><input id="clNew" type="text">'+
+      '<button class="btn p" id="clAdd" style="flex:0 0 auto">Add me</button></div></div>';
+    $("clNew").value = USER.name || "";
+    const host=$("clList");
+    if(!free.length){
+      host.innerHTML='<p class="fine">Every name here already belongs to someone.</p>';
+    } else {
+      const card=el("div","card"); card.style.marginBottom="4px";
+      free.forEach(m=>{
+        const r=el("button","row");
+        r.innerHTML='<span class="av" style="background:'+m.color+'">'+esc(initials(m.name))+'</span>'+
+          '<span class="body"><span class="t1">'+esc(m.name)+'</span>'+
+          '<span class="t2">'+esc(paidShareLine(m.name,gid))+'</span></span>'+
+          '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--teal)">how_to_reg</span></span>';
+        r.addEventListener("click", ()=>claim(gid, m.k, m.name));
+        card.appendChild(r);
+      });
+      host.appendChild(card);
+    }
+    $("clAdd").addEventListener("click", ()=>{
+      const v=$("clNew").value.trim();
+      if(!v) return toast("Enter a name");
+      if(names(gid).some(n=>n.toLowerCase()===v.toLowerCase()))
+        return toast(v+" is already on the list — pick that name above");
+      push("trips/"+gid+"/people", {n:v, c:freeColour(gid), uid:USER.uid, email:USER.email, photo:USER.photo||null})
+        .then(()=>{ rememberGroup(gid, groupName(gid)); closeSheet(); toast("You are in"); });
+    });
+  });
+  function claim(gid, key, name){
+    set("trips/"+gid+"/people/"+key+"/uid",   USER.uid)
+      .then(()=> set("trips/"+gid+"/people/"+key+"/email", USER.email))
+      .then(()=> USER.photo ? set("trips/"+gid+"/people/"+key+"/photo", USER.photo) : null)
+      .then(()=>{ rememberGroup(gid, groupName(gid)); closeSheet(); toast("You are "+name+" in this group"); });
+  }
+}
+function freeColour(gid){
+  const used={}; membersOf(gid).forEach(m=>{ used[m.color.toLowerCase()]=1; });
+  for(let i=0;i<PALETTE.length;i++){ if(!used[PALETTE[i].toLowerCase()]) return PALETTE[i]; }
+  return PALETTE[membersOf(gid).length%PALETTE.length];
+}
+
 /* ---------- add / edit an expense ---------- */
 function sheetExpense(existing){
   const gid=CURRENT, ppl=names(gid);
@@ -879,7 +1085,7 @@ function sheetExpense(existing){
   if(!between.length) between=ppl.slice();
   let vals = Object.assign({}, (existing&&existing.vals)||{});
   let cat  = existing ? (existing.cat||"general") : "general";
-  const payerDefault = existing ? existing.payer : (ppl.indexOf(ME)>-1 ? ME : ppl[0]);
+  const payerDefault = existing ? existing.payer : (ME && ppl.indexOf(ME)>-1 ? ME : ppl[0]);
 
   openSheet(existing?"Edit expense":"Add an expense", (b)=>{
     b.innerHTML =
@@ -905,7 +1111,7 @@ function sheetExpense(existing){
       '<textarea id="exNote" placeholder="Anything worth remembering">'+esc(existing?(existing.note||""):"")+'</textarea></div>'+
       '<div class="btnrow"><button class="btn p" id="exSave">'+(existing?"Save changes":"Add expense")+'</button></div>'+
       (existing?'<button class="btn d wide" id="exDel" style="margin-top:10px">Delete this expense</button>':'')+
-      (existing?'<p class="help" style="text-align:center;margin-top:12px;color:var(--ink-faint);font-size:12px">Added by '+
+      (existing?'<p class="fine" style="text-align:center;margin-top:12px">Added by '+
         esc(existing.by||existing.payer)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
 
     const cats=$("exCats");
@@ -1039,7 +1245,7 @@ function sheetExpense(existing){
         desc: desc, amount: amt, payer: $("exPayer").value, mode: mode,
         between: eff, vals: v, cat: cat, note: $("exNote").value.trim(),
         at: tsFromDate($("exDate").value, existing?existing.at:null),
-        by: existing ? (existing.by||ME) : ME
+        by: existing ? (existing.by||ME||USER.name) : (ME||USER.name)
       };
       if(existing) set("trips/"+gid+"/expenses/"+existing.k, rec);
       else push("trips/"+gid+"/expenses", rec);
@@ -1053,12 +1259,11 @@ function sheetExpense(existing){
 function sheetSettle(from, to, amt){
   const gid=CURRENT, ppl=names(gid);
   if(ppl.length<2){ toast("You need at least two people"); return; }
-  from = from || (ppl.indexOf(ME)>-1?ME:ppl[0]);
+  from = from || (ME && ppl.indexOf(ME)>-1 ? ME : ppl[0]);
   to   = to   || ppl.filter(n=>n!==from)[0] || ppl[0];
   openSheet("Record a payment", (b)=>{
     b.innerHTML=
-      '<p class="help" style="margin:-4px 0 16px;color:var(--ink-soft);font-size:13.5px">'+
-      'Use this when cash or a transfer has actually changed hands.</p>'+
+      '<p class="lead">Use this when cash or a transfer has actually changed hands.</p>'+
       '<div class="field"><label for="stFrom">Who paid</label><select id="stFrom">'+
         ppl.map(n=>'<option value="'+esc(n)+'"'+(n===from?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
       '</select></div>'+
@@ -1077,7 +1282,7 @@ function sheetSettle(from, to, amt){
       if(f===t) return toast("Pick two different people");
       if(!(a>0)) return toast("Enter an amount");
       push("trips/"+gid+"/payments", {from:f, to:t, amount:a,
-        note:$("stNote").value.trim(), at:tsFromDate($("stDate").value,null), by:ME});
+        note:$("stNote").value.trim(), at:tsFromDate($("stDate").value,null), by:ME||USER.name});
       closeSheet(); toast("Payment recorded");
     });
   });
@@ -1085,7 +1290,7 @@ function sheetSettle(from, to, amt){
 
 /* ---------- one person's detail ---------- */
 function sheetPerson(n){
-  const gid=CURRENT, b0=balances(gid), v=b0[n]||0;
+  const gid=CURRENT, b0=balances(gid), v=b0[n]||0, m=memberOf(n,gid);
   openSheet(n===ME?"You":n, (b)=>{
     let paid=0, share=0; const lines=[];
     expensesOf(gid).forEach(e=>{
@@ -1104,14 +1309,15 @@ function sheetPerson(n){
       '<span class="calc" style="width:96px">'+money(p.amount)+'</span></div>');
 
     b.innerHTML=
-      '<div class="summary" style="margin-bottom:16px;box-shadow:none;background:var(--surface-2)">'+
+      '<div class="summary flat" style="margin-bottom:16px">'+
       '<div class="big '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
         (Math.abs(v)<0.005?"All settled up":money(Math.abs(v)))+'</div>'+
       '<div class="lab">'+(v>0.004?(n===ME?"you are owed":esc(n)+" is owed"):v<-0.004?(n===ME?"you owe":esc(n)+" owes"):"nothing outstanding")+'</div>'+
-      '<div class="split"><div style="background:var(--surface)"><div class="k">Paid out</div><div class="v">'+money(paid)+'</div></div>'+
-      '<div style="background:var(--surface)"><div class="k">Share of costs</div><div class="v">'+money(share)+'</div></div></div></div>'+
+      (m&&m.email?'<div class="lab" style="margin-top:6px">'+esc(m.email)+'</div>':'')+
+      '<div class="split"><div><div class="k">Paid out</div><div class="v">'+money(paid)+'</div></div>'+
+      '<div><div class="k">Share of costs</div><div class="v">'+money(share)+'</div></div></div></div>'+
       '<div class="sechead" style="margin-top:0">Expenses involved in</div>'+
-      (lines.length?lines.join(""):'<p class="help">None yet.</p>')+
+      (lines.length?lines.join(""):'<p class="fine">None yet.</p>')+
       (pays.length?'<div class="sechead">Payments</div>'+pays.join(""):"")+
       '<button class="btn p wide" id="pSettle" style="margin-top:18px">Settle up</button>';
     $("pSettle").addEventListener("click", ()=>{
@@ -1136,38 +1342,38 @@ function sheetMembers(){
         '<div class="field"><label for="mName">Add someone</label>'+
         '<div style="display:flex;gap:8px"><input id="mName" type="text" placeholder="Their name">'+
         '<button class="btn p" id="mAdd" style="flex:0 0 auto">Add</button></div>'+
-        '<div class="help">Names only — nobody needs an account.</div></div>'+
+        '<div class="help">Add the name now; they take it over when they sign in and open your link.</div></div>'+
         (list.length?'<div class="sechead" style="margin-top:18px">'+list.length+' member'+(list.length===1?"":"s")+'</div>':"")+
         '<div id="mList"></div>';
       const host=$("mList");
       list.forEach(m=>{
-        const v=bal[m.name]||0;
+        const v=bal[m.name]||0, isMe=m.name===ME;
         const r=el("div","splitrow");
-        r.innerHTML='<span class="av sm" style="background:'+m.color+'">'+esc(initials(m.name))+'</span>'+
-          '<span class="nm">'+esc(m.name)+(m.name===ME?' <span class="tag">you</span>':'')+'</span>'+
+        r.innerHTML=avatarHTML("sm", m.name, m.color, m.photo)+
+          '<span class="nm">'+esc(m.name)+(isMe?' <span class="tag on">you</span>':'')+
+          '<span style="display:block;font-size:11.5px;color:var(--ink-faint)">'+
+            (m.email?esc(m.email):"not signed in yet")+'</span></span>'+
           '<span class="calc">'+(Math.abs(v)<0.005?"settled":money(v))+'</span>';
-        const x=el("button","ibtn");
-        x.style.cssText="color:var(--danger);width:38px;height:38px";
-        x.setAttribute("aria-label","Remove "+m.name);
-        x.innerHTML='<span class="ms" aria-hidden="true" style="font-size:20px">close</span>';
-        x.addEventListener("click", ()=>{
-          const used=expensesOf(gid).some(e=>e.payer===m.name||(e.between||[]).indexOf(m.name)>-1)
-                  || paymentsOf(gid).some(p=>p.from===m.name||p.to===m.name);
-          if(used) return toast("Remove or edit their expenses first");
-          del("trips/"+gid+"/people/"+m.k).then(()=>setTimeout(draw,150));
-        });
-        r.appendChild(x);
+        if(isAdmin() || isMe || !m.uid){
+          const x=el("button","ibtn");
+          x.style.cssText="color:var(--danger);width:38px;height:38px";
+          x.setAttribute("aria-label","Remove "+m.name);
+          x.innerHTML='<span class="ms" aria-hidden="true" style="font-size:20px">close</span>';
+          x.addEventListener("click", ()=>{
+            const used=expensesOf(gid).some(e=>e.payer===m.name||(e.between||[]).indexOf(m.name)>-1)
+                    || paymentsOf(gid).some(p=>p.from===m.name||p.to===m.name);
+            if(used) return toast("Remove or edit their expenses first");
+            del("trips/"+gid+"/people/"+m.k).then(()=>setTimeout(draw,150));
+          });
+          r.appendChild(x);
+        }
         host.appendChild(r);
       });
       const add=()=>{
         const v=$("mName").value.trim();
         if(!v) return toast("Enter a name");
         if(names(gid).some(n=>n.toLowerCase()===v.toLowerCase())) return toast(v+" is already in this group");
-        const used={}; membersOf(gid).forEach(m=>{ used[m.color.toLowerCase()]=1; });
-        let c=null;
-        for(let i=0;i<PALETTE.length;i++){ if(!used[PALETTE[i].toLowerCase()]){ c=PALETTE[i]; break; } }
-        if(!c) c=PALETTE[membersOf(gid).length%PALETTE.length];
-        push("trips/"+gid+"/people", {n:v, c:c}).then(()=>setTimeout(draw,150));
+        push("trips/"+gid+"/people", {n:v, c:freeColour(gid)}).then(()=>setTimeout(draw,150));
       };
       $("mAdd").addEventListener("click", add);
       $("mName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } });
@@ -1186,11 +1392,11 @@ function sheetGroupNew(){
       '<div class="field"><label for="gName">Group name</label>'+
       '<input id="gName" type="text" placeholder="Montréal trip, Flat 4B, Sunday football…"></div>'+
       '<div class="field"><label>What is it for?</label><div class="chips" id="gType"></div></div>'+
-      '<div class="field"><label for="gPeople">People (one per line)</label>'+
-      '<textarea id="gPeople" rows="5" placeholder="One name per line"></textarea>'+
-      '<div class="help">You can add more later.</div></div>'+
+      '<div class="field"><label for="gPeople">Everyone else (one name per line)</label>'+
+      '<textarea id="gPeople" rows="4" placeholder="One name per line"></textarea>'+
+      '<div class="help">You are added automatically. Each of them claims their name when they '+
+      'sign in and open your link — you can add more later.</div></div>'+
       '<button class="btn p wide" id="gGo">Create group</button>';
-    $("gPeople").value = ME ? ME+"\n" : "";
     let type="trip";
     const types=[["trip","Trip","luggage"],["home","Home","home"],["couple","Couple","favorite"],["other","Other","group"]];
     types.forEach(t=>{
@@ -1206,14 +1412,15 @@ function sheetGroupNew(){
       const nm=$("gName").value.trim();
       if(!nm) return toast("Give the group a name");
       const gid=slug(nm)+"-"+Math.random().toString(36).slice(2,6);
-      const typed=$("gPeople").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      const seen={}, people={};
-      typed.forEach((n,i)=>{
+      const people={};
+      people["m0"+uid().slice(-4)]={n:USER.name, c:PALETTE[0], uid:USER.uid, email:USER.email, photo:USER.photo||null};
+      const seen={}; seen[(USER.name||"").toLowerCase()]=1;
+      $("gPeople").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).forEach((n,i)=>{
         const key=n.toLowerCase(); if(seen[key]) return; seen[key]=1;
-        people["m"+i+uid().slice(-4)]={n:n, c:PALETTE[i%PALETTE.length]};
+        people["m"+(i+1)+uid().slice(-4)]={n:n, c:PALETTE[(i+1)%PALETTE.length]};
       });
-      set("trips/"+gid, {meta:{name:nm, type:type, at:Date.now(), by:ME}, people:people}).then(()=>{
-        rememberGroup(gid, nm); watchGroup(gid); closeSheet();
+      set("trips/"+gid, {meta:{name:nm, type:type, at:Date.now(), by:USER.name, byUid:USER.uid}, people:people}).then(()=>{
+        rememberGroup(gid, nm); watchGroup(gid); claimAsked[gid]=true; closeSheet();
         setTimeout(()=>{ openGroup(gid); toast("Group created — share the link to invite people"); }, 260);
       });
     });
@@ -1223,8 +1430,7 @@ function sheetGroupNew(){
 function sheetGroupJoin(){
   openSheet("Join a group", (b)=>{
     b.innerHTML=
-      '<p class="help" style="margin:-4px 0 16px;color:var(--ink-soft);font-size:13.5px">'+
-      'Paste the link someone shared, or type the group code from the end of it.</p>'+
+      '<p class="lead">Paste the link someone shared, or type the group code from the end of it.</p>'+
       '<div class="field"><label for="jCode">Link or code</label>'+
       '<input id="jCode" type="text" placeholder="https://…/#g=montreal-trip-4f2a" autocapitalize="off" autocorrect="off"></div>'+
       '<button class="btn p wide" id="jGo">Join</button>';
@@ -1234,7 +1440,7 @@ function sheetGroupJoin(){
       if(m) v=m[1];
       v=v.replace(/^.*\//,"").replace(/[^A-Za-z0-9_-]/g,"");
       if(!v) return toast("Paste a link or code");
-      if(!remote) return toast("Not connected yet — try again in a moment");
+      if(!remote) return toast("Not signed in yet — try again in a moment");
       remote.get(ref("trips/"+v+"/meta")).then(snap=>{
         if(!snap.exists()) return toast("No group with that code");
         const meta=snap.val()||{};
@@ -1250,15 +1456,14 @@ function sheetShare(){
   const gid=CURRENT, url=shareURL(gid);
   openSheet("Invite people", (b)=>{
     b.innerHTML=
-      '<p class="help" style="margin:-4px 0 14px;color:var(--ink-soft);font-size:13.5px">'+
-      'Anyone who opens this link joins “'+esc(groupName(gid))+'” and sees the same expenses, live.</p>'+
+      '<p class="lead">Anyone who opens this link signs in with Google, picks their name '+
+      'from the list, and sees the same expenses as you — live.</p>'+
       '<div class="field"><label for="shUrl">Link</label>'+
       '<input id="shUrl" type="text" readonly value="'+esc(url)+'"></div>'+
       '<div class="btnrow"><button class="btn p" id="shCopy">Copy link</button>'+
       (navigator.share?'<button class="btn s" id="shNative">Share…</button>':'')+'</div>'+
       '<div class="sechead">Group code</div>'+
-      '<p style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;background:var(--surface-2);'+
-      'padding:12px 14px;border-radius:10px;word-break:break-all;margin:0">'+esc(gid)+'</p>';
+      '<p class="code">'+esc(gid)+'</p>';
     $("shCopy").addEventListener("click", ()=>{
       const i=$("shUrl"); i.select(); i.setSelectionRange(0,9999);
       const done=()=>toast("Link copied");
@@ -1273,6 +1478,8 @@ function sheetShare(){
 }
 function sheetGroupMenu(){
   const gid=CURRENT;
+  const meta=(DATA[gid]&&DATA[gid].meta)||{};
+  const canDelete = isAdmin() || (meta.byUid && meta.byUid===USER.uid);
   openSheet(groupName(gid), (b)=>{
     const items=[
       ["People in this group","Add or remove members","group", sheetMembers],
@@ -1280,20 +1487,22 @@ function sheetGroupMenu(){
       ["Rename group","","edit", sheetGroupRename],
       ["Invite people","Share the link or code","person_add", sheetShare],
       ["Print / save as PDF","A full statement of this group","print", doPrint],
-      ["Leave group","Remove it from this device only","logout", function(){
-          if(!confirm("Remove “"+groupName(gid)+"” from this device? Everyone else keeps it.")) return;
+      ["Leave group","Remove it from your list. Everyone else keeps it.","logout", function(){
+          if(!confirm("Remove “"+groupName(gid)+"” from your groups? Everyone else keeps it.")) return;
           forgetGroup(gid); closeGroup();
-      }],
-      ["Delete group","Permanently delete it for everyone","delete_forever", function(){
-          if(!confirm("Permanently delete “"+groupName(gid)+"” and every expense in it, for everyone? This cannot be undone.")) return;
-          del("trips/"+gid).then(()=>{ forgetGroup(gid); closeGroup(); toast("Group deleted"); });
       }]
     ];
+    if(!meIn(gid)) items.unshift(["Tell them which one is you","Claim your name in this group","how_to_reg",
+      function(){ sheetClaim(gid); }]);
+    if(canDelete) items.push(["Delete group","Permanently delete it for everyone","delete_forever", function(){
+          if(!confirm("Permanently delete “"+groupName(gid)+"” and every expense in it, for everyone? This cannot be undone.")) return;
+          del("trips/"+gid).then(()=>{ forgetGroup(gid); closeGroup(); toast("Group deleted"); });
+      }]);
     const c=el("div","card"); c.style.cssText="margin:-16px -16px 0;box-shadow:none";
     items.forEach(it=>{
       const danger = it[2]==="delete_forever";
       const r=el("button","row");
-      r.innerHTML='<span class="cat"'+(danger?' style="background:#fdecea;color:var(--danger)"':'')+'>'+
+      r.innerHTML='<span class="cat'+(danger?" bad":it[2]==="how_to_reg"?" teal":"")+'">'+
         '<span class="ms" aria-hidden="true">'+it[2]+'</span></span>'+
         '<span class="body"><span class="t1"'+(danger?' style="color:var(--danger)"':'')+'>'+it[0]+'</span>'+
         (it[1]?'<span class="t2">'+it[1]+'</span>':'')+'</span>';
@@ -1301,6 +1510,13 @@ function sheetGroupMenu(){
       c.appendChild(r);
     });
     b.appendChild(c);
+    if(canDelete){
+      const f=el("p","fine");
+      f.style.cssText="text-align:center;margin:14px 0 0";
+      f.textContent = isAdmin() ? "You can delete this because you are the administrator."
+                                : "You can delete this because you created it.";
+      b.appendChild(f);
+    }
   });
 }
 function sheetGroupRename(){
@@ -1314,18 +1530,6 @@ function sheetGroupRename(){
     });
   });
 }
-function sheetRename(){
-  openSheet("Change my name", (b)=>{
-    b.innerHTML=fieldHTML("myName","Your name","text", ME)+
-      '<div class="help" style="margin:-8px 0 14px">This changes who the app treats as “you” on this device. '+
-      'To rename yourself inside a group, use that group’s people list.</div>'+
-      '<button class="btn p wide" id="myGo">Save</button>';
-    $("myGo").addEventListener("click", ()=>{
-      const v=$("myName").value.trim(); if(!v) return toast("Enter a name");
-      ME=v; lsSet(LS.me, ME); closeSheet(); render(); toast("Saved");
-    });
-  });
-}
 
 /* =========================== PRINT =========================== */
 function doPrint(){
@@ -1333,7 +1537,7 @@ function doPrint(){
   const old=document.getElementById("printArea"); if(old) old.remove();
   const area=el("div"); area.id="printArea";
   const b=balances(gid), st=settlements(gid), ppl=names(gid);
-  let total=0; expensesOf(gid).forEach(e=> total+=Number(e.amount)||0 );
+  const total=totalOf(gid);
 
   let h='<h1>'+esc(groupName(gid))+'</h1>'+
     '<p class="pmeta">Statement printed '+esc(fmtWhen(Date.now()))+' · '+ppl.length+
@@ -1393,7 +1597,10 @@ function doPrint(){
 }
 
 /* =========================== WIRING =========================== */
-$("backBtn").addEventListener("click", closeGroup);
+$("backBtn").addEventListener("click", ()=>{
+  if(ADMIN_VIEW && !CURRENT){ ADMIN_VIEW=false; TAB="account"; window.scrollTo(0,0); render(); return; }
+  closeGroup();
+});
 $("shareBtn").addEventListener("click", sheetShare);
 $("printBtn").addEventListener("click", doPrint);
 $("gmenuBtn").addEventListener("click", sheetGroupMenu);
@@ -1402,7 +1609,8 @@ $("scrim").addEventListener("click", closeSheet);
 $("fab").addEventListener("click", ()=>{ CURRENT ? sheetExpense(null) : sheetGroupNew(); });
 document.querySelectorAll(".nav button").forEach(b=>{
   b.addEventListener("click", ()=>{
-    if(CURRENT){ CURRENT=null; lsSet(LS.cur,null); location.hash=""; }
+    ADMIN_VIEW=false;
+    if(CURRENT){ CURRENT=null; lsSet(LS.cur,null); if(location.hash) location.hash=""; }
     TAB=b.dataset.tab; window.scrollTo(0,0); render();
   });
 });
@@ -1415,7 +1623,7 @@ window.addEventListener("hashchange", ()=>{
   else if(CURRENT){ CURRENT=null; lsSet(LS.cur,null); render(); }
 });
 
-/* =========================== FIREBASE =========================== */
+/* =========================== SYNC =========================== */
 function setSync(state, msg){
   const s=$("syncBar");
   if(!msg){ s.hidden=true; return; }
@@ -1427,13 +1635,18 @@ function watchGroup(gid){
   const cb=remote.onValue(r, snap=>{
     const v=snap.val();
     if(v===null){
-      // deleted upstream, or a code that does not exist
-      if(DATA[gid]){ toast("“"+groupName(gid)+"” was deleted"); forgetGroup(gid); if(CURRENT===gid) closeGroup(); }
+      if(DATA[gid] && Object.keys(DATA[gid]).length){
+        toast("“"+groupName(gid)+"” was deleted");
+        forgetGroup(gid); if(CURRENT===gid) closeGroup();
+      }
       DATA[gid]={};
       render(); return;
     }
     DATA[gid]=v;
-    if(v.meta && v.meta.name) rememberGroup(gid, v.meta.name);
+    if(v.meta && v.meta.name){
+      const j=JOINED.find(x=>x.id===gid);
+      if(j && j.name!==v.meta.name){ j.name=v.meta.name; lsSet(LS.grp, JOINED); }
+    }
     render();
   }, err=>{
     setSync("bad","Cannot read this group — "+(err&&err.message?err.message:"check the database rules"));
@@ -1443,71 +1656,184 @@ function watchGroup(gid){
 function watchAll(){ JOINED.slice().forEach(g=>watchGroup(g.id)); }
 
 const DEFAULT_GROUP = window.DEFAULT_TRIP || "stlawrence-sep2026";
+let ADMIN_GROUPS = null;   // admin only: every group in the database
+let LEGACY_OK    = false;  // the original shared sheet is there to be joined
 
-// The original single-sheet app wrote people + expenses under this same path but
-// with no meta node. Nothing needs moving — it only needs a name, added once.
+/* =========================== AUTH =========================== */
+let fb = null;             // {app, auth, authMod, dbMod}
+let signingIn = false;
+
+// Ask Google whether this project actually offers Google sign-in. Doing this
+// first means a project with the provider switched off says so plainly,
+// instead of failing silently behind a blocked popup.
+function providerReady(){
+  const key=(window.FIREBASE_CONFIG||{}).apiKey;
+  if(!key) return Promise.resolve(true);
+  return fetch("https://identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key="+key, {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({providerId:"google.com", continueUri: location.origin+location.pathname})
+  }).then(r=>r.json()).then(j=>{
+    const m=(j && j.error && j.error.message) || "";
+    if(m.indexOf("OPERATION_NOT_ALLOWED")>-1) return "auth/operation-not-allowed";
+    if(m.indexOf("UNAUTHORIZED_DOMAIN")>-1 || m.indexOf("INVALID_CONTINUE")>-1) return "auth/unauthorized-domain";
+    return true;
+  }).catch(()=>true);   // offline or blocked: let the SDK have its go anyway
+}
+
+function signIn(){
+  if(!fb){ toast("Still starting up — try again in a second"); return; }
+  if(signingIn) return;
+  signingIn = true;
+  const btn=$("gIn"); if(btn){ btn.disabled=true; btn.classList.add("busy"); }
+  const done=()=>{ signingIn=false; const b=$("gIn"); if(b){ b.disabled=false; b.classList.remove("busy"); } };
+
+  providerReady().then(ready=>{
+    if(ready!==true){ authFailed({code:ready}); done(); return; }
+    const provider = new fb.authMod.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    return fb.authMod.signInWithPopup(fb.auth, provider).catch(err=>{
+      const code = (err && err.code) || "";
+      // Popups are blocked in plenty of in-app and mobile browsers; fall back.
+      if(code.indexOf("popup")>-1 || code.indexOf("operation-not-supported")>-1){
+        if(code==="auth/popup-closed-by-user" || code==="auth/cancelled-popup-request"){ authFailed(err); return; }
+        return fb.authMod.signInWithRedirect(fb.auth, provider).catch(authFailed);
+      }
+      authFailed(err);
+    }).finally(done);
+  });
+}
+function authFailed(err){
+  const code=(err&&err.code)||"", msg=(err&&err.message)||"Sign-in failed";
+  if(code==="auth/popup-closed-by-user" || code==="auth/cancelled-popup-request"){
+    toast("Sign-in cancelled"); return;
+  }
+  if(code==="auth/operation-not-allowed")
+    setSync("bad","Google sign-in is switched off for this Firebase project. Turn it on under Authentication → Sign-in method.");
+  else if(code==="auth/unauthorized-domain")
+    setSync("bad","“"+location.hostname+"” is not in the Firebase authorised domains list.");
+  else if(code==="auth/network-request-failed")
+    setSync("bad","No connection — sign-in needs to reach Google.");
+  else
+    setSync("bad", msg);
+  toast("Could not sign in");
+}
+function signOutNow(){
+  if(!fb) return;
+  if(!confirm("Sign out of Settle on this device?")) return;
+  Object.keys(subs).forEach(k=>{ subs[k](); delete subs[k]; });
+  fb.authMod.signOut(fb.auth).then(()=>{
+    try{ localStorage.removeItem(LS.grp); localStorage.removeItem(LS.cur); }catch(e){}
+    location.hash=""; location.reload();
+  });
+}
+
+function onSignedIn(u){
+  USER = { uid:u.uid, name:u.displayName || (u.email||"").split("@")[0] || "You",
+           email:u.email || "", photo:u.photoURL || null };
+  setSync(null);
+
+  // Keep a profile record so the admin can see who is who.
+  set("users/"+USER.uid+"/profile", {name:USER.name, email:USER.email, photo:USER.photo||null, at:Date.now()});
+
+  // My groups live in the database, so they follow me to any device.
+  remote.onValue(ref("users/"+USER.uid+"/groups"), snap=>{
+    const v=snap.val()||{};
+    const ids=Object.keys(v);
+    JOINED = ids.map(id=>({id, name:(v[id]&&v[id].name)||id}));
+    lsSet(LS.grp, JOINED);
+    Object.keys(subs).forEach(gid=>{ if(ids.indexOf(gid)<0 && gid!==CURRENT){ subs[gid](); delete subs[gid]; delete DATA[gid]; } });
+    watchAll();
+    render();
+  }, err=>{
+    setSync("bad","Cannot read your groups — "+(err&&err.message?err.message:"check the database rules"));
+    render();
+  });
+
+  if(isAdmin()){
+    remote.onValue(ref("trips"), snap=>{ ADMIN_GROUPS = snap.val() || {}; if(ADMIN_VIEW) render(); },
+      ()=>{ ADMIN_GROUPS = {}; if(ADMIN_VIEW) render(); });
+  }
+
+  openFromURL();
+  render();
+}
+
+function openFromURL(){
+  const m = location.hash.match(/g=([A-Za-z0-9_-]+)/) || location.search.match(/[?&]g=([A-Za-z0-9_-]+)/);
+  if(m){
+    const gid=m[1], known=JOINED.some(g=>g.id===gid);
+    remote.get(ref("trips/"+gid+"/meta")).then(snap=>{
+      if(!snap.exists() && !known){ toast("That group link no longer works"); location.hash=""; return; }
+      const meta=snap.val()||{};
+      rememberGroup(gid, meta.name||"Group");
+      watchGroup(gid);
+      if(!known) toast("You joined “"+(meta.name||"the group")+"”");
+      openGroup(gid);
+    }).catch(()=>{ if(known) openGroup(gid); });
+    return;
+  }
+  const last=lsGet(LS.cur,null);
+  if(last && JOINED.some(g=>g.id===last)) openGroup(last);
+}
+
+// The original single-sheet app wrote people + expenses under this same path
+// with no meta node. It only needs a name, added once.
 function adoptLegacy(){
   return remote.get(ref("trips/"+DEFAULT_GROUP)).then(s=>{
     if(!s.exists()) return false;
     const v=s.val()||{};
     if(!v.people && !v.expenses) return false;
     if(v.meta && v.meta.name) return true;
-    return remote.set(ref("trips/"+DEFAULT_GROUP+"/meta"),
-      {name:"St Lawrence trip", type:"trip", at:Date.now(), by:"the original sheet"}
-    ).then(()=>true).catch(()=>true);
+    return set("trips/"+DEFAULT_GROUP+"/meta",
+      {name:"St Lawrence trip", type:"trip", at:Date.now(), by:"the original sheet"}).then(()=>true);
   }).catch(()=>false);
 }
 
+/* =========================== BOOT =========================== */
 (function boot(){
   render();
   const cfg=window.FIREBASE_CONFIG;
   const ok = cfg && cfg.apiKey && cfg.apiKey.indexOf("PASTE_")!==0 && cfg.databaseURL;
-  if(!ok){ setSync("warn","Not connected — add your Firebase settings to sync between phones."); return; }
-  setSync("","Connecting…");
+  if(!ok){ setSync("bad","Firebase is not configured — sign-in and syncing are unavailable."); return; }
+  setSync("","Starting…");
   (async function(){
     try{
       const appMod  = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
       const authMod = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
       const dbMod   = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
       const app=appMod.initializeApp(cfg);
-      await authMod.signInAnonymously(authMod.getAuth(app));
+      const auth=authMod.getAuth(app);
       const db=dbMod.getDatabase(app);
+      fb = {app, auth, authMod, dbMod};
       remote={ db:db, ref:dbMod.ref, push:dbMod.push, set:dbMod.set, remove:dbMod.remove,
                onValue:dbMod.onValue, off:dbMod.off, get:dbMod.get };
 
-      const exists = await adoptLegacy();
-      if(exists && !JOINED.length) rememberGroup(DEFAULT_GROUP, "St Lawrence trip");
+      // If we came back from a redirect sign-in, surface any failure.
+      authMod.getRedirectResult(auth).catch(authFailed);
 
-      watchAll();
-
-      const m=location.hash.match(/g=([A-Za-z0-9_-]+)/) || location.search.match(/[?&]g=([A-Za-z0-9_-]+)/);
-      if(m){
-        const gid=m[1];
-        const known=JOINED.some(g=>g.id===gid);
-        const snap=await remote.get(ref("trips/"+gid+"/meta"));
-        if(snap.exists()){
-          rememberGroup(gid, (snap.val()||{}).name||"Group");
-          watchGroup(gid);
-          if(!known) toast("You joined “"+((snap.val()||{}).name||"the group")+"”");
-          openGroup(gid);
+      authMod.onAuthStateChanged(auth, u=>{
+        // Earlier versions of this app signed people in anonymously. Those
+        // sessions are not a Google identity, so clear them out.
+        if(u && u.isAnonymous){ authMod.signOut(auth); return; }
+        if(u){
+          if(!USER || USER.uid!==u.uid){
+            onSignedIn(u);
+            adoptLegacy().then(exists=>{ LEGACY_OK = exists; render(); });
+          }
         } else {
-          toast("That group link no longer works");
-          location.hash="";
+          USER=null; CURRENT=null; JOINED=[]; DATA={};
+          Object.keys(subs).forEach(k=>{ subs[k](); delete subs[k]; });
+          setSync(null); render();
         }
-      } else if(lsGet(LS.cur,null) && JOINED.some(g=>g.id===lsGet(LS.cur,null))){
-        openGroup(lsGet(LS.cur,null));
-      }
-
-      setSync("ok","Live — everyone in your groups sees changes instantly");
-      setTimeout(()=>setSync(null), 3500);
+      });
 
       dbMod.onValue(dbMod.ref(db,".info/connected"), s=>{
+        if(!USER) return;
         if(s.val()===false) setSync("warn","Offline — your changes will sync when signal returns");
         else setSync(null);
       });
-      render();
     }catch(err){
-      setSync("bad","Sync unavailable — "+((err&&err.message)?err.message:"working on this device only"));
+      setSync("bad","Could not start — "+((err&&err.message)?err.message:"check your connection"));
     }
   })();
 })();

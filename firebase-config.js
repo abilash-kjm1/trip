@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Firebase config for shared, live-syncing trip expenses.
+// Firebase config for shared, live-syncing expenses.
 //
 // These values are NOT secrets. Every Firebase web app ships them in its
 // client code; they identify the project, they do not grant access.
@@ -16,12 +16,13 @@ window.FIREBASE_CONFIG = {
   appId:             "1:644066919088:web:dab7148befb81935a63175"
 };
 
-// The one shared sheet everybody lands on when they open Expenses from the
-// site menu. Change this string if you ever want a clean sheet for a new trip.
+// The group a first-time visitor is offered when they have none of their own.
 window.DEFAULT_TRIP = "stlawrence-sep2026";
 
-// PIN for the admin panel on the Expenses page. Change it to whatever you like.
-// Honest limit: this page is public, so anyone determined can read this file
-// and find the PIN. It stops the other travellers editing the roster by
-// accident - it is a guard rail, not real security.
-window.ADMIN_PIN = "5001";
+// The Google account that administers this app. It can open any group, edit or
+// delete anything in one, and delete groups outright.
+//
+// Changing it here changes what the app offers. It does NOT change what the
+// database allows - the same address has to be named in the Realtime Database
+// rules in the Firebase console, which is what actually enforces it.
+window.ADMIN_EMAIL = "abilashkjm01@gmail.com";
