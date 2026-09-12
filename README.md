@@ -68,6 +68,15 @@ claimed that name. Each account's own list of groups lives at
 `users/{uid}/groups`, which is why it follows you between devices; a cached
 copy is kept in `localStorage` so the app still opens offline.
 
+The look is claymorphism: every surface is an inflated shape built from one
+wide coloured drop shadow, a pale highlight from the top-left, and a pair of
+insets that round the edge over. Those four shadow recipes live as CSS
+variables (`--sh-out`, `--sh-in`, `--sh-press`, `--sh-sunk`) and everything
+else is assembled from them, so the whole feel can be retuned in one place.
+Raised means tappable; sunken means an input or a value you cannot press.
+Headings are centred throughout, including the app bar title, which sits dead
+centre between a single button on each side.
+
 The theme is locked light (`color-scheme: light`, plus the same tokens
 re-declared under `prefers-color-scheme: dark`) so a phone's dark mode cannot
 invert it.
