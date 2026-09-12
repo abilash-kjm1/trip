@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap">
 <style>
 /* ============================================================
    THE LEDGER — claymorphic skin
@@ -43,7 +43,8 @@
   --puff: inset -4px -4px 10px rgba(28,58,48,.07), inset 4px 4px 11px rgba(255,255,255,.95);
   --press: inset 5px 5px 12px rgba(28,58,48,.15), inset -4px -4px 10px rgba(255,255,255,.92);
 
-  --f:"Nunito", ui-rounded, "Segoe UI", system-ui, sans-serif;
+  --f:"Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-num:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark){ :root{
   color-scheme: light;
@@ -60,7 +61,7 @@ html{ -webkit-text-size-adjust:100%; }
 
 body{
   margin:0; color:var(--ink); font-family:var(--f);
-  font-size:16px; line-height:1.6; font-weight:600; overflow-x:hidden;
+  font-size:16px; line-height:1.6; font-weight:500; overflow-x:hidden;
   background-color:var(--bg);
   background-image:
     radial-gradient(820px 540px at 84% -8%, rgba(210,234,226,.75), transparent 64%),
@@ -146,7 +147,7 @@ body{
 }
 .total .lbl{ font-size:12px; letter-spacing:.16em; text-transform:uppercase; font-weight:800; opacity:.92; }
 .total .amt{
-  font-size:42px; font-weight:800; margin-top:6px; letter-spacing:-1px;
+  font-family:var(--f-num); font-size:38px; font-weight:600; margin-top:6px; letter-spacing:-1.5px;
   font-variant-numeric:tabular-nums; text-shadow:0 2px 6px rgba(8,50,44,.30);
 }
 .total .per{ font-size:14.5px; margin-top:8px; opacity:.95; font-weight:700; }
@@ -236,7 +237,7 @@ body{
 .item .txt{ flex:1; min-width:0; }
 .item .txt b{ font-weight:800; font-size:16px; display:block; color:var(--ink); }
 .item .txt small{ color:var(--ink-soft); font-size:13px; display:block; margin-top:3px; font-weight:600; }
-.item .amt{ font-weight:800; font-size:16.5px; font-variant-numeric:tabular-nums;
+.item .amt{ font-family:var(--f-num); font-weight:600; font-size:15.5px; font-variant-numeric:tabular-nums;
   white-space:nowrap; color:var(--ink); }
 .pos{ color:var(--pos); } .neg{ color:var(--neg); }
 .item.tappable{ cursor:pointer; transition:transform .12s ease; }
@@ -269,7 +270,7 @@ body{
 .exrow .exlbl{ flex:0 0 52px; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
   color:var(--ink-faint); padding-top:12px; font-weight:800; }
 .exrow .chips{ flex:1; min-width:0; }
-.exsum{ margin:14px 0 0; font-size:13px; color:var(--ink-soft); font-weight:700; }
+.exsum{ margin:14px 0 0; font-family:var(--f-num); font-size:12.5px; color:var(--ink-soft); font-weight:500; }
 .exsum b{ color:var(--accent-dk); font-weight:800; }
 
 /* ---- who owes whom ---- */
@@ -280,7 +281,7 @@ body{
 .owedhead .txt{ flex:1; min-width:0; }
 .owedhead .txt b{ display:block; font-weight:800; font-size:17px; color:var(--ink); }
 .owedhead .txt small{ display:block; font-size:12.5px; color:var(--ink-soft); font-weight:600; }
-.owedhead .amt{ font-weight:800; font-size:18px; color:var(--pos);
+.owedhead .amt{ font-family:var(--f-num); font-weight:600; font-size:17px; color:var(--pos);
   font-variant-numeric:tabular-nums; white-space:nowrap; }
 .barrow{ display:flex; align-items:center; gap:11px; margin:10px 0 0; }
 .barrow .who{ flex:0 0 84px; margin:0; display:block; font-size:13.5px; color:var(--ink-soft);
@@ -291,7 +292,7 @@ body{
 }
 .barrow .fill{ display:block; height:100%; min-width:8px; border-radius:13px;
   box-shadow:inset -3px -3px 7px rgba(0,0,0,.20), inset 3px 3px 8px rgba(255,255,255,.4); }
-.barrow .val{ flex:0 0 auto; font-size:13.5px; font-weight:800; color:var(--ink);
+.barrow .val{ flex:0 0 auto; font-family:var(--f-num); font-size:13px; font-weight:600; color:var(--ink);
   font-variant-numeric:tabular-nums; white-space:nowrap; }
 @media(max-width:400px){ .barrow .who{ flex-basis:66px; font-size:12.5px; } }
 
@@ -300,7 +301,7 @@ body{
   border-radius:22px; font-size:15px; font-weight:700; color:var(--ok-dk);
   background:var(--ok); box-shadow:var(--puff);
 }
-.settle .amt{ margin-left:auto; font-weight:800; }
+.settle .amt{ margin-left:auto; font-family:var(--f-num); font-weight:600; }
 
 .empty{ text-align:center; color:var(--ink-faint); padding:30px 10px; font-size:14.5px; font-weight:700; }
 .empty .ms{ font-size:46px; display:block; margin-bottom:10px; opacity:.5; }
@@ -364,7 +365,7 @@ body{
   position:relative; margin-top:18px; padding:22px 20px; border-radius:26px;
   background:var(--surface-2); color:var(--ink);
   box-shadow:var(--press);
-  font-size:13.5px; line-height:1.85; font-weight:700; overflow-x:auto;
+  font-family:var(--f-num); font-size:12.5px; line-height:1.8; font-weight:400; overflow-x:auto;
 }
 .paper .rc-title{ text-align:center; font-weight:800; letter-spacing:.1em; text-transform:uppercase; font-size:15px; }
 .paper .rc-sub{ text-align:center; font-size:12px; color:var(--ink-faint); margin-bottom:12px; font-weight:600; }
@@ -482,6 +483,45 @@ body{
   .sitetabs{ top:70px; }
 }
 
+
+/* ---- long list: scroll inside the card, or open it full ---- */
+#expCount{ font-weight:500; color:var(--ink-faint); font-family:var(--f-num); font-size:14px; }
+.fulllink{
+  margin-left:auto; display:inline-flex; align-items:center; gap:5px;
+  font-size:12.5px; font-weight:600; letter-spacing:.01em; text-decoration:none;
+  color:var(--accent-dk); padding:7px 12px; border-radius:16px;
+  background:var(--surface-2); box-shadow:var(--puff); white-space:nowrap;
+}
+.fulllink .ms{ font-size:15px; }
+.fulllink:hover{ background:var(--ok); }
+.listwrap{ position:relative; }
+.listwrap.capped #expenseList{
+  max-height:58vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding-right:6px; margin-right:-6px;
+  scrollbar-width:thin; scrollbar-color:var(--accent-lt) transparent;
+}
+.listwrap.capped #expenseList::-webkit-scrollbar{ width:8px; }
+.listwrap.capped #expenseList::-webkit-scrollbar-thumb{
+  background:var(--accent-lt); border-radius:4px; }
+.listwrap.capped #expenseList::-webkit-scrollbar-track{ background:transparent; }
+.listwrap.capped::after{
+  content:""; position:absolute; left:0; right:6px; bottom:0; height:34px;
+  pointer-events:none; border-radius:0 0 18px 18px;
+  background:linear-gradient(180deg, rgba(255,255,255,0), var(--surface) 88%);
+}
+.scrollnote{
+  margin:10px 0 0; font-size:12px; color:var(--ink-faint); font-weight:500;
+  display:flex; align-items:center; gap:6px;
+}
+.scrollnote .ms{ font-size:15px; }
+/* the standalone full view */
+body.fullview .card:not(#expensesCard),
+body.fullview .total, body.fullview .sync, body.fullview .sitetabs{ display:none !important; }
+body.fullview .listwrap.capped #expenseList{ max-height:none; overflow:visible; }
+body.fullview .listwrap.capped::after{ display:none; }
+body.fullview .fulllink{ display:none; }
+body.fullview .scrollnote{ display:none; }
+
 @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 
 </style>
@@ -555,8 +595,10 @@ body{
     </div>
   </section>
 
-  <section class="card">
-    <h2><span class="ms" aria-hidden="true">list_alt</span> Expenses <span id="expCount" style="font-weight:400;color:var(--on-surface-variant)"></span></h2>
+  <section class="card" id="expensesCard">
+    <h2><span class="ms" aria-hidden="true">list_alt</span> Expenses <span id="expCount"></span>
+      <a id="fullLink" class="fulllink" href="#" target="_blank" rel="noopener">Open full list<span class="ms" aria-hidden="true">open_in_new</span></a>
+    </h2>
     <div class="exfilter">
       <div class="exsearch">
         <span class="ms" aria-hidden="true">search</span>
@@ -567,7 +609,8 @@ body{
       <div class="exrow" id="exwaysrow"><span class="exlbl">Split</span><div class="chips" id="exways"></div></div>
       <p class="exsum" id="exsum" hidden></p>
     </div>
-    <ul class="list" id="expenseList"></ul>
+    <div class="listwrap" id="listwrap"><ul class="list" id="expenseList"></ul></div>
+    <p class="scrollnote" id="scrollnote" hidden><span class="ms" aria-hidden="true">swipe_vertical</span><span></span></p>
     <div class="empty" id="expenseEmpty"><span class="ms" aria-hidden="true">receipt</span>Nothing logged yet.</div>
   </section>
 
@@ -642,6 +685,10 @@ body{
 // Shared expenses. With Firebase configured, every device on the same link
 // sees one live sheet. Without it the page still works, on this device only.
 // ---------------------------------------------------------------------------
+// Read before anything touches the URL: tripCode() rewrites it with
+// history.replaceState, which drops the query string.
+const FULLVIEW = /[?&]full=1/.test(location.search);
+
 const $ = (id) => document.getElementById(id);
 const LOCAL_KEY = "slr.expenses.v2";
 
@@ -862,6 +909,16 @@ function renderExpenses(){
     del.addEventListener("click",function(){ removeExpenseRec(e.k); snack("Expense deleted"); });
     li.appendChild(del); ul.appendChild(li);
   });
+  // long lists scroll inside the card instead of stretching the page
+  const CAP = 6;
+  const wrap=$("listwrap"), note=$("scrollnote");
+  const capped = !FULLVIEW && list.length > CAP;
+  wrap.classList.toggle("capped", capped);
+  note.hidden = !capped;
+  // the cap is by height, not by count, so do not claim how many are visible
+  if(capped) note.lastElementChild.textContent =
+    list.length + " expenses — scroll the list, or open it full";
+
   const emptyBox=$("expenseEmpty");
   emptyBox.style.display = list.length ? "none" : "";
   emptyBox.lastChild.textContent = all.length ? " Nothing matches that filter." : " Nothing logged yet.";
@@ -1264,6 +1321,14 @@ function admAddPerson(){
 }
 $("admAdd").addEventListener("click", admAddPerson);
 $("admName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); admAddPerson(); } });
+
+/* ---------- full-list view ---------- */
+if(FULLVIEW){
+  document.body.classList.add("fullview");
+  document.title = "All expenses — The Saint Lawrence Run";
+}
+// the link must carry the sheet code, or the new tab opens a different sheet
+$("fullLink").href = location.pathname + "?full=1" + location.hash;
 
 /* ---------- boot ---------- */
 setAdminIcon();
