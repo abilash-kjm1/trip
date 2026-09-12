@@ -368,6 +368,13 @@ const CATS = [
 ];
 const catOf = (k) => CATS.find(c=>c.k===k) || CATS[0];
 const ADMIN_EMAIL = (window.ADMIN_EMAIL || "").toLowerCase();
+const PEOPLE_LINKS = (function(){
+  const src=window.PEOPLE_LINKS||{}, out={};
+  Object.keys(src).forEach(k=> out[k.toLowerCase()]=src[k] );
+  return out;
+})();
+// The name this account always goes by, if it has been pinned to one.
+const linkedName = (email) => PEOPLE_LINKS[String(email||"").toLowerCase()] || null;
 
 /* ---------------- local state ---------------- */
 const LS = {
@@ -531,6 +538,39 @@ function del(path){
   if(!remote) return Promise.resolve();
   return remote.remove(ref(path)).catch(e=>toast("Could not remove: "+e.message));
 }
+function upd(path, obj){
+  if(!remote) return Promise.resolve();
+  return remote.update(ref(path), obj).catch(e=>toast("Could not save: "+e.message));
+}
+
+/* ---------------- linking an account to a name ---------------- */
+function linkPerson(gid, key){
+  return upd("trips/"+gid+"/people/"+key,
+    {uid:USER.uid, email:USER.email, photo:USER.photo||null});
+}
+function unlinkPerson(gid, key){
+  return upd("trips/"+gid+"/people/"+key, {uid:null, email:null, photo:null});
+}
+
+// Renaming has to move the name everywhere it is used as a key, or the
+// balances stop adding up. One atomic update so it cannot half-apply.
+function renamePerson(gid, key, from, to){
+  const u={}; u["people/"+key+"/n"]=to;
+  expensesOf(gid).forEach(e=>{
+    if(e.payer===from) u["expenses/"+e.k+"/payer"]=to;
+    if(e.between && e.between.indexOf(from)>-1)
+      u["expenses/"+e.k+"/between"]=e.between.map(n=> n===from?to:n );
+    if(e.vals && Object.prototype.hasOwnProperty.call(e.vals, from)){
+      const v={}; Object.keys(e.vals).forEach(n=> v[n===from?to:n]=e.vals[n] );
+      u["expenses/"+e.k+"/vals"]=v;
+    }
+  });
+  paymentsOf(gid).forEach(p=>{
+    if(p.from===from) u["payments/"+p.k+"/from"]=to;
+    if(p.to===from)   u["payments/"+p.k+"/to"]=to;
+  });
+  return upd("trips/"+gid, u);
+}
 
 /* ---------------- which groups I am in ---------------- */
 function rememberGroup(id, name){
@@ -555,6 +595,20 @@ function groupName(id){
 /* =========================== VIEWS =========================== */
 let ADMIN_VIEW = false;      // admin browsing every group in the database
 const claimAsked = {};       // gid -> we have already offered the claim sheet
+const autoLinked = {};       // gid -> the silent link has been attempted
+
+// An account pinned to a name in PEOPLE_LINKS takes that name without being
+// asked, as long as it is on the list and nobody else has it.
+function autoLink(gid){
+  if(!USER || !remote || autoLinked[gid] || meIn(gid)) return false;
+  const want = linkedName(USER.email);
+  if(!want) return false;
+  const m = membersOf(gid).find(x=> !x.uid && x.name.toLowerCase()===want.toLowerCase() );
+  if(!m) return false;
+  autoLinked[gid]=true; claimAsked[gid]=true;
+  linkPerson(gid, m.k);
+  return true;
+}
 
 function render(){
   const main=$("main"); main.innerHTML="";
@@ -577,6 +631,7 @@ function render(){
   if(y) window.scrollTo(0, Math.min(y, document.body.scrollHeight));
 
   // Someone opened a group they have not yet identified themselves in.
+  if(USER && CURRENT && loaded(CURRENT) && !ME && autoLink(CURRENT)) return;
   if(USER && CURRENT && loaded(CURRENT) && !ME && !claimAsked[CURRENT] && $("sheet").hidden){
     claimAsked[CURRENT]=true;
     setTimeout(()=>{ if(CURRENT && !meIn(CURRENT)) sheetClaim(CURRENT); }, 400);
@@ -1040,11 +1095,19 @@ function sheetClaim(gid){
     if(!free.length){
       host.innerHTML='<p class="fine">Every name here already belongs to someone.</p>';
     } else {
+      const first=String(USER.name||"").trim().split(/\s+/)[0].toLowerCase();
+      const pinned=(linkedName(USER.email)||"").toLowerCase();
+      free.sort((a,c)=>{
+        const rank=x=> x.name.toLowerCase()===pinned ? 0 : x.name.toLowerCase()===first ? 1 : 2;
+        return rank(a)-rank(c) || a.name.localeCompare(c.name);
+      });
       const card=el("div","card"); card.style.marginBottom="4px";
       free.forEach(m=>{
+        const hit = m.name.toLowerCase()===pinned || m.name.toLowerCase()===first;
         const r=el("button","row");
         r.innerHTML='<span class="av" style="background:'+m.color+'">'+esc(initials(m.name))+'</span>'+
-          '<span class="body"><span class="t1">'+esc(m.name)+'</span>'+
+          '<span class="body"><span class="t1">'+esc(m.name)+
+            (hit?' <span class="tag on">probably you</span>':'')+'</span>'+
           '<span class="t2">'+esc(paidShareLine(m.name,gid))+'</span></span>'+
           '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--teal)">how_to_reg</span></span>';
         r.addEventListener("click", ()=>claim(gid, m.k, m.name));
@@ -1347,21 +1410,27 @@ function sheetMembers(){
         '<div id="mList"></div>';
       const host=$("mList");
       list.forEach(m=>{
-        const v=bal[m.name]||0, isMe=m.name===ME;
+        const v=bal[m.name]||0, isMe=m.name===ME, mayEdit=isAdmin()||isMe||!m.uid;
         const r=el("div","splitrow");
         r.innerHTML=avatarHTML("sm", m.name, m.color, m.photo)+
           '<span class="nm">'+esc(m.name)+(isMe?' <span class="tag on">you</span>':'')+
           '<span style="display:block;font-size:11.5px;color:var(--ink-faint)">'+
             (m.email?esc(m.email):"not signed in yet")+'</span></span>'+
           '<span class="calc">'+(Math.abs(v)<0.005?"settled":money(v))+'</span>';
-        if(isAdmin() || isMe || !m.uid){
+        if(mayEdit){
+          const p=el("button","ibtn");
+          p.style.cssText="color:var(--ink-soft);width:38px;height:38px";
+          p.setAttribute("aria-label","Edit "+m.name);
+          p.innerHTML='<span class="ms" aria-hidden="true" style="font-size:19px">edit</span>';
+          p.addEventListener("click", ()=> sheetPersonEdit(gid, m, draw) );
+          r.appendChild(p);
           const x=el("button","ibtn");
           x.style.cssText="color:var(--danger);width:38px;height:38px";
           x.setAttribute("aria-label","Remove "+m.name);
           x.innerHTML='<span class="ms" aria-hidden="true" style="font-size:20px">close</span>';
           x.addEventListener("click", ()=>{
             const used=expensesOf(gid).some(e=>e.payer===m.name||(e.between||[]).indexOf(m.name)>-1)
-                    || paymentsOf(gid).some(p=>p.from===m.name||p.to===m.name);
+                    || paymentsOf(gid).some(p2=>p2.from===m.name||p2.to===m.name);
             if(used) return toast("Remove or edit their expenses first");
             del("trips/"+gid+"/people/"+m.k).then(()=>setTimeout(draw,150));
           });
@@ -1380,6 +1449,50 @@ function sheetMembers(){
     };
     draw();
   }, render);
+}
+
+/* ---------- rename a person / move an account between names ---------- */
+function sheetPersonEdit(gid, m, after){
+  const isMe = m.uid && USER && m.uid===USER.uid;
+  const free = membersOf(gid).filter(x=> !x.uid && x.k!==m.k );
+  openSheet(m.name, (b)=>{
+    b.innerHTML=
+      fieldHTML("pnName","Name","text", m.name)+
+      '<div class="help" style="margin:-8px 0 16px">Changing this renames them on every expense and '+
+      'payment in the group, so the balances stay right.</div>'+
+      '<button class="btn p wide" id="pnSave">Save name</button>'+
+      (m.email?'<div class="sechead">Account</div>'+
+        '<p class="fine" style="margin:0 0 12px">'+esc(m.name)+' is signed in as '+esc(m.email)+'.</p>':'')+
+      (isMe?'<button class="btn s wide" id="pnFree">This is not me — release this name</button>'+
+        '<p class="fine">You will be asked which name is yours next time you open the group.</p>':'')+
+      ((!m.uid && free.length>=0 && USER)?'<div class="sechead">Or</div>'+
+        '<button class="btn s wide" id="pnMine">This one is me</button>':'');
+
+    $("pnSave").addEventListener("click", ()=>{
+      const v=$("pnName").value.trim();
+      if(!v) return toast("Enter a name");
+      if(v===m.name){ closeSheet(); return; }
+      if(names(gid).some(n=>n.toLowerCase()===v.toLowerCase()))
+        return toast("Someone in this group is already called "+v);
+      renamePerson(gid, m.k, m.name, v).then(()=>{
+        closeSheet(); toast("Renamed to "+v); if(after) setTimeout(after,200);
+      });
+    });
+    if($("pnFree")) $("pnFree").addEventListener("click", ()=>{
+      unlinkPerson(gid, m.k).then(()=>{
+        claimAsked[gid]=false; autoLinked[gid]=true;   // do not silently retake it
+        closeSheet(); toast("Released — pick your name again"); render();
+      });
+    });
+    if($("pnMine")) $("pnMine").addEventListener("click", ()=>{
+      const had = meIn(gid);
+      const mine = had ? membersOf(gid).find(x=>x.uid===USER.uid) : null;
+      const go = mine ? unlinkPerson(gid, mine.k) : Promise.resolve();
+      go.then(()=> linkPerson(gid, m.k) ).then(()=>{
+        closeSheet(); toast("You are "+m.name+" in this group"); render();
+      });
+    });
+  });
 }
 
 /* ---------- create / join / share a group ---------- */
@@ -1805,7 +1918,7 @@ function adoptLegacy(){
       const auth=authMod.getAuth(app);
       const db=dbMod.getDatabase(app);
       fb = {app, auth, authMod, dbMod};
-      remote={ db:db, ref:dbMod.ref, push:dbMod.push, set:dbMod.set, remove:dbMod.remove,
+      remote={ db:db, ref:dbMod.ref, push:dbMod.push, set:dbMod.set, remove:dbMod.remove, update:dbMod.update,
                onValue:dbMod.onValue, off:dbMod.off, get:dbMod.get };
 
       // If we came back from a redirect sign-in, surface any failure.

@@ -16,6 +16,9 @@ own Google account.
   those are is stored against your account, not against the device.
 - **Claiming your name** — a group keeps its own list of names. The first time
   you open one, you pick which name is yours and your account takes it over.
+  Regulars can be pinned to a name in `PEOPLE_LINKS`, and are linked silently
+  without being asked. Names can be changed afterwards, and an account can be
+  released or moved to a different name, from the group's people list.
 - **Four ways to split** — equally between the people you tick, exact amounts,
   percentages, or shares (2 shares pays twice what 1 does). The editor shows
   each person's figure as you type and refuses to save a split that does not

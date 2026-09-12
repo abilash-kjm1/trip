@@ -26,3 +26,13 @@ window.DEFAULT_TRIP = "stlawrence-sep2026";
 // database allows - the same address has to be named in the Realtime Database
 // rules in the Firebase console, which is what actually enforces it.
 window.ADMIN_EMAIL = "abilashkjm01@gmail.com";
+
+// People who always map to the same name in a group.
+//
+// When one of these accounts signs in and opens a group that has that name on
+// its list and nobody has claimed it, the app links the two silently instead
+// of asking. It stops the regulars having to identify themselves over and
+// over, and stops a second copy of them being created by accident.
+window.PEOPLE_LINKS = {
+  "abilashkjm01@gmail.com": "Abilash"
+};
