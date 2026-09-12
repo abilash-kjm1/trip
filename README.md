@@ -1,14 +1,17 @@
-# The Saint Lawrence Run
+# Expenses
 
-A stop-by-stop road-trip guide: **Scarborough → Montréal → Québec City**, 5–7 September 2026 (Labour Day weekend).
+A shared expense tracker. Everyone opens the same link, adds what they
+spent from their own phone, and it syncs live across every device.
 
-- 46 numbered stops in the exact order you drive past them
-- Must-visit picks colour-coded in amber
-- The *Goblin* filming trail through Old Québec
-- Photo spots with the best time of day to shoot each
-- Must-eat food in both cities
-- Parking rules, sign decoding, and the cheapest options
+- Add people once from the PIN-protected admin panel, each with their own colour
+- Log an expense: who paid, how much, and who it was split between
+- Balances show what each person paid against their share, so the figure is checkable
+- Tap a name for an itemised receipt, or a two-way statement with anyone else
+- "Who owes whom" settles everyone up in the fewest payments
+- Filter by text, by payer, or by how many ways an expense was split
+- Print or save the whole record as a PDF
+- Works offline; changes sync when signal returns
 
-Single self-contained `index.html` — no build step, no dependencies. All photographs are
-embedded and come from Wikimedia Commons under free licences (CC0, public domain, CC BY,
-CC BY-SA); each photographer and licence is credited in the page footer.
+Static HTML with no build step. Live sync is Firebase Realtime Database;
+put your own project's values in `firebase-config.js`, which also holds the
+admin PIN and the id of the shared sheet.

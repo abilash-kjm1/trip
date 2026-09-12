@@ -1,5 +1,5 @@
 /* The Saint Lawrence Run - offline service worker */
-const VERSION = 'slr-v28';
+const VERSION = 'exp-v1';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 
@@ -7,10 +7,7 @@ const PRECACHE = [
   './',
   './index.html',
   './expenses.html',
-  './guide.html',
   './firebase-config.js',
-  './fuel-map.png',
-  './food-map.png',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
