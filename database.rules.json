@@ -1,7 +1,7 @@
 {
   "rules": {
     "trips": {
-      ".read": "auth != null && auth.token.email_verified == true && auth.token.email.lower() == 'abilashkjm01@gmail.com'",
+      ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
       "$gid": {
         ".read": "auth != null",
         ".write": "auth != null"
@@ -10,8 +10,8 @@
 
     "users": {
       "$uid": {
-        ".read":  "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.lower() == 'abilashkjm01@gmail.com'))",
-        ".write": "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.lower() == 'abilashkjm01@gmail.com'))"
+        ".read":  "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
+        ".write": "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
       }
     }
   }
