@@ -1,7 +1,7 @@
 {
-  "name": "The Saint Lawrence Run",
-  "short_name": "St Lawrence",
-  "description": "Scarborough to Montreal and Quebec City, 5-7 September. Every stop in driving order.",
+  "name": "Expenses",
+  "short_name": "Expenses",
+  "description": "A shared expense tracker. Everyone adds from their own phone and it syncs live.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
