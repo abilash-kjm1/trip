@@ -1008,6 +1008,7 @@ button, input, select, textarea{ font-family:var(--f); }
 }
 
 
+
 /* ============================================================
    THEMES
 
@@ -1080,8 +1081,23 @@ button, input, select, textarea{ font-family:var(--f); }
 .theme .swatch{ display:flex; gap:5px; margin-bottom:var(--s2); }
 .theme .swatch i{ width:22px; height:22px; border-radius:7px; display:block;
   border:1px solid rgba(0,0,0,.06); }
-.theme .n{ display:block; font-size:14px; font-weight:600; color:var(--ink); }
-.theme .m{ display:block; font-size:12px; color:var(--ink-3); margin-top:2px; }
+.theme .n{ font-size:14px; font-weight:600; color:var(--ink); }
+.theme .m{ font-size:12px; color:var(--ink-3); margin-top:2px; }
+
+/* An engraved motif, purple only. Drawn here rather than photographed: the
+   seven of them are real people and their pictures are not ours to ship, so
+   this says the same thing in line art - a heart, seven dots, two notes. It
+   sits under the words at low opacity and never competes with them. */
+:root[data-theme="purple"] .hero{
+  background-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20320%20240'%20fill='none'%20stroke='%232A1F3D'%20stroke-width='1.5'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%20%3Cg%20opacity='.30'%3E%20%3Cpath%20d='M196%2074c-9-13-31-9-31%207%200%2015%2018%2026%2031%2037%2013-11%2031-22%2031-37%200-16-22-20-31-7z'/%3E%20%3Cpath%20d='M188%2084c-3-5-11-3-11%203%200%205%206%209%2011%2013'%20opacity='.55'/%3E%20%3C/g%3E%20%3Cg%20opacity='.26'%3E%20%3Ccircle%20cx='142'%20cy='150'%20r='3.4'/%3E%3Ccircle%20cx='160'%20cy='143'%20r='3.4'/%3E%20%3Ccircle%20cx='179'%20cy='139'%20r='3.4'/%3E%3Ccircle%20cx='198'%20cy='138'%20r='3.4'/%3E%20%3Ccircle%20cx='217'%20cy='139'%20r='3.4'/%3E%3Ccircle%20cx='236'%20cy='143'%20r='3.4'/%3E%20%3Ccircle%20cx='254'%20cy='150'%20r='3.4'/%3E%20%3C/g%3E%20%3Cg%20opacity='.22'%3E%20%3Cpath%20d='M262%2056v34'/%3E%3Cpath%20d='M262%2056c9%202%2015%206%2017%2012'/%3E%20%3Cellipse%20cx='256'%20cy='92'%20rx='7'%20ry='5.4'%20transform='rotate(-18%20256%2092)'/%3E%20%3Cpath%20d='M292%2092v26'/%3E%3Cpath%20d='M292%2092c7%202%2012%205%2013%209'/%3E%20%3Cellipse%20cx='287'%20cy='120'%20rx='5.6'%20ry='4.4'%20transform='rotate(-18%20287%20120)'/%3E%20%3C/g%3E%20%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right -18px top -10px;
+  background-size:250px auto;
+}
+@media (max-width:560px){
+  :root[data-theme="purple"] .hero{ background-size:176px auto;
+    background-position:right -26px top -6px; }
+}
 
 
 /* ---------- printing (kept last so it wins the cascade) ---------- */
@@ -1255,7 +1271,7 @@ const subs   = {};                          // gid -> unsubscribe
    on the first paint rather than flickering once the database answers. */
 const THEMES = [
   {k:"warm",   n:"Warm",   m:"Cream and apricot", sw:["#F4EEE6","#EEB586","#2F332D"]},
-  {k:"purple", n:"Purple", m:"Borahae",           sw:["#F8F5FD","#C4AEEF","#2A1F3D"]}
+  {k:"purple", n:"Purple", m:"Borahae \u{1F49C}",  sw:["#F8F5FD","#C4AEEF","#2A1F3D"]}
 ];
 let THEME = lsGet(LS.theme, "warm");
 function applyTheme(k){
