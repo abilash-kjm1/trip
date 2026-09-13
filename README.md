@@ -29,8 +29,13 @@ own Google account.
   each person's figure as you type and refuses to save a split that does not
   add up.
 - **Categories** — twelve of them, so the feed is readable at a glance.
-- **Balances** — what everyone paid against their share, plus "settle up":
-  the fewest payments that clear the whole group.
+- **Filters** — search the expenses, or narrow them to who paid, or to how
+  many ways they were split. Each expense also names who it was split
+  between rather than only counting them.
+- **Balances** — what everyone paid against their share, and "who pays whom":
+  the fewest payments that settle the whole group. Anyone carried on the
+  expenses is listed, including a name that is no longer a member, so the
+  figures always add up.
 - **Record a payment** — when cash or a transfer actually changes hands, log
   it and the balances move. Tap it again in Activity to correct or delete it;
   a payment entered twice is otherwise invisible and doubles what someone
@@ -99,6 +104,10 @@ Accessibility is part of the spec, not an afterthought: `prefers-reduced-
 transparency` turns every glass surface opaque, `prefers-contrast: more`
 darkens the label hierarchy and thickens separators, and an `@supports` block
 covers browsers with no `backdrop-filter` at all.
+
+Wording avoids "owed" and "owing" throughout — a balance reads as *gets back*
+or *pays*, and *you get back* or *you pay* for the person looking at it, which
+is unambiguous in a way the passive forms are not.
 
 The theme is locked light (`color-scheme: light`, plus the same tokens
 re-declared under `prefers-color-scheme: dark`) so a phone's dark mode cannot

@@ -308,6 +308,31 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 .nav button .ms{ font-size:25px; }
 .nav button[aria-current="page"]{ color:var(--green-dk); background:var(--green-lt); }
 
+/* ---------- expense filters ---------- */
+.filters{ margin:0 0 14px; }
+.filters input[type="search"]{
+  width:100%; min-height:44px; padding:11px 16px; font-size:16px; color:var(--label);
+  background:var(--fill-1); border:0; border-radius:13px; appearance:none;
+  -webkit-appearance:none; letter-spacing:-.01em; margin-bottom:10px;
+}
+.filters input[type="search"]::placeholder{ color:var(--label-3); }
+.filters input[type="search"]:focus{ outline:none; background:var(--surface); box-shadow:inset 0 0 0 2px var(--tint); }
+.frow{
+  display:flex; gap:7px; overflow-x:auto; padding:2px 0 8px;
+  scrollbar-width:none; -ms-overflow-style:none;
+}
+.frow::-webkit-scrollbar{ display:none; }
+.frow .chip{ min-height:34px; padding:6px 13px; font-size:14px; flex:0 0 auto; border-radius:17px; }
+.fcount{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  font-size:13px; color:var(--label-2); padding:2px 6px 10px;
+}
+.fcount button{
+  border:0; background:transparent; color:var(--blue); font-size:15px; font-weight:600;
+  cursor:pointer; padding:4px 2px; letter-spacing:-.01em;
+}
+.tag.warn{ background:rgba(255,149,0,.2); color:#8a5200; }
+
 /* ---------- forms: content layer ---------- */
 .field{ margin-bottom:18px; }
 .field label{ display:block; font-size:13px; font-weight:500; color:var(--label-2);
@@ -691,6 +716,15 @@ function meIn(gid){
 }
 const loaded = (gid) => !!(DATA[gid] && (DATA[gid].meta || DATA[gid].people || DATA[gid].expenses));
 
+// Everyone the money actually involves. An expense can name someone who is no
+// longer on the members list; they still hold a balance, so any screen that
+// claims to show "everyone" has to include them or the figures will not add up.
+function everyoneIn(gid){
+  const out=names(gid).slice();
+  Object.keys(balances(gid)).forEach(n=>{ if(out.indexOf(n)<0) out.push(n); });
+  return out;
+}
+
 /* ---------------- split maths ---------------- */
 // Returns {name: amountOwed}. Modes: equal | exact | percent | shares
 function sharesOf(e){
@@ -870,6 +904,7 @@ function setTitle(main, text){
   if(main) main.appendChild(el("h1","ltitle", esc(text)));
 }
 let ADMIN_VIEW = false;      // admin browsing every group in the database
+let FILT = {q:"", payer:"", ways:0};   // expense filters, reset per group
 const claimAsked = {};       // gid -> we have already offered the claim sheet
 const autoLinked = {};       // gid -> the silent link has been attempted
 
@@ -945,9 +980,9 @@ function viewGroups(main){
   const s=el("div","summary");
   s.innerHTML =
     '<div class="big '+(net>0.004?"pos":net<-0.004?"neg":"zero")+'">'+money(net)+'</div>'+
-    '<div class="lab">'+(net>0.004?"you are owed overall":net<-0.004?"you owe overall":"you are all settled up")+'</div>'+
-    '<div class="split"><div><div class="k">You are owed</div><div class="v pos">'+money(owed)+'</div></div>'+
-    '<div><div class="k">You owe</div><div class="v neg">'+money(owe)+'</div></div></div>';
+    '<div class="lab">'+(net>0.004?"you get back overall":net<-0.004?"you pay overall":"everything is settled")+'</div>'+
+    '<div class="split"><div><div class="k">You get back</div><div class="v pos">'+money(owed)+'</div></div>'+
+    '<div><div class="k">You pay</div><div class="v neg">'+money(owe)+'</div></div></div>';
   main.appendChild(s);
 
   if(!JOINED.length){
@@ -987,7 +1022,7 @@ function viewGroups(main){
       '<span class="t2">'+mem+' member'+(mem===1?"":"s")+' · '+money(tot)+' spent</span></span>'+
       '<span class="right"><span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
         (Math.abs(v)<0.005?"settled":money(Math.abs(v)))+'</span>'+
-      '<span class="cap">'+(v>0.004?"you are owed":v<-0.004?"you owe":"")+'</span></span>';
+      '<span class="cap">'+(v>0.004?"you get back":v<-0.004?"you pay":"")+'</span></span>';
     r.addEventListener("click", ()=>openGroup(g.id));
     card.appendChild(r);
   });
@@ -1004,6 +1039,7 @@ function groupIcon(gid){
 
 /* ---------- one group ---------- */
 function openGroup(id){
+  if(CURRENT!==id) FILT={q:"", payer:"", ways:0};
   CURRENT=id; GTAB="expenses"; lsSet(LS.cur, id);
   if(location.hash!=="#g="+id) location.hash="g="+id;
   watchGroup(id);
@@ -1021,13 +1057,13 @@ function viewGroup(main){
   $("backBtn").hidden=false; $("gmenuBtn").hidden=false;
   $("fab").hidden=false; $("fabLabel").textContent="Add expense";
 
-  const v=myBalance(gid), tot=totalOf(gid), mem=membersOf(gid).length;
+  const v=myBalance(gid), tot=totalOf(gid), mem=everyoneIn(gid).length;
   const s=el("div","summary");
   s.innerHTML =
     '<div class="big '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
       (!ME ? money(tot) : Math.abs(v)<0.005?"All settled up":money(Math.abs(v)))+'</div>'+
     '<div class="lab">'+(!ME ? "spent by the group so far"
-        : v>0.004?"you are owed in this group" : v<-0.004?"you owe in this group" : "nothing outstanding")+'</div>'+
+        : v>0.004?"you get back" : v<-0.004?"you pay" : "everything is settled")+'</div>'+
     '<div class="split">'+
       (ME ? '<div><div class="k">Total spent</div><div class="v">'+money(tot)+'</div></div>'
           : '<div><div class="k">People</div><div class="v">'+mem+'</div></div>')+
@@ -1060,49 +1096,132 @@ function viewGroup(main){
 }
 
 function groupExpenses(main, gid){
-  const list=expensesOf(gid);
-  if(!list.length){
-    const e=el("div","empty");
-    e.innerHTML='<span class="ms" aria-hidden="true">receipt_long</span><h3>No expenses yet</h3>'+
-      '<p>Add the first one and everyone in the group will see it.</p>';
-    main.appendChild(e); return;
-  }
-  const card=el("div","card"); let day=null;
-  list.forEach(e=>{
-    const k=dayKey(e.at);
-    if(k!==day){ day=k; card.appendChild(el("div","daygroup", esc(dayLabel(e.at)))); }
-    const sh=sharesOf(e), mine=ME?(sh[ME]||0):0;
-    const iPaid=!!ME && e.payer===ME;
-    const c=catOf(e.cat);
-    const r=el("button","row"+(iPaid?" mine":""));
-    let right;
-    if(!ME) right='<span class="amt">'+money(e.amount)+'</span><span class="cap">'+
-        (e.between?e.between.length:1)+' way'+((e.between&&e.between.length===1)?"":"s")+'</span>';
-    else if(iPaid) right='<span class="amt pos">'+money((Number(e.amount)||0)-mine)+'</span><span class="cap">you lent</span>';
-    else if(mine)  right='<span class="amt neg">'+money(mine)+'</span><span class="cap">you borrowed</span>';
-    else           right='<span class="amt zero">not involved</span>';
-    r.innerHTML=
-      '<span class="cat"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
-      '<span class="body"><span class="t1">'+esc(e.desc)+'</span>'+
-      '<span class="t2">'+esc(iPaid?"You":e.payer)+' paid '+money(e.amount)+'</span></span>'+
-      '<span class="right">'+right+'</span>';
-    r.addEventListener("click", ()=>sheetExpense(e));
-    card.appendChild(r);
+  const all=expensesOf(gid), ppl=names(gid);
+
+  // ---- filters, carried over from the original tracker ----
+  const wrap=el("div","filters");
+  wrap.innerHTML=
+    '<input id="fq" type="search" placeholder="Search expenses" aria-label="Search expenses" autocomplete="off">'+
+    '<div class="frow" id="fPayer" role="group" aria-label="Who paid"></div>'+
+    '<div class="frow" id="fWays" role="group" aria-label="How many ways it was split"></div>';
+  main.appendChild(wrap);
+
+  const q=$("fq"); q.value=FILT.q;
+  let t;
+  q.addEventListener("input", ()=>{ clearTimeout(t); t=setTimeout(()=>{ FILT.q=q.value; draw(); }, 140); });
+
+  const payers=["" ].concat(ppl);
+  payers.forEach(n=>{
+    const c=el("button","chip"); c.type="button";
+    c.textContent = n || "Anyone";
+    c.setAttribute("aria-pressed", FILT.payer===n ? "true":"false");
+    c.addEventListener("click", ()=>{ FILT.payer = (FILT.payer===n && n) ? "" : n; refreshChips(); draw(); });
+    $("fPayer").appendChild(c);
   });
-  main.appendChild(card);
+  const maxWays=Math.max(2, ppl.length);
+  const ways=[0]; for(let i=2;i<=maxWays;i++) ways.push(i);
+  ways.forEach(w=>{
+    const c=el("button","chip"); c.type="button";
+    c.textContent = w ? ("split "+w) : "Any split";
+    c.setAttribute("aria-pressed", FILT.ways===w ? "true":"false");
+    c.addEventListener("click", ()=>{ FILT.ways = (FILT.ways===w && w) ? 0 : w; refreshChips(); draw(); });
+    $("fWays").appendChild(c);
+  });
+  function refreshChips(){
+    [].forEach.call($("fPayer").children,(c,i)=> c.setAttribute("aria-pressed", FILT.payer===payers[i]?"true":"false"));
+    [].forEach.call($("fWays").children,(c,i)=> c.setAttribute("aria-pressed", FILT.ways===ways[i]?"true":"false"));
+  }
+
+  const host=el("div"); host.id="expList"; main.appendChild(host);
+  draw();
+
+  function matches(e){
+    if(FILT.payer && e.payer!==FILT.payer) return false;
+    const b=(e.between&&e.between.length)?e.between:[e.payer];
+    if(FILT.ways && b.length!==FILT.ways) return false;
+    const needle=FILT.q.trim().toLowerCase();
+    if(needle){
+      const hay=(e.desc+" "+e.payer+" "+(e.note||"")+" "+b.join(" ")).toLowerCase();
+      if(hay.indexOf(needle)<0) return false;
+    }
+    return true;
+  }
+
+  function draw(){
+    const list=all.filter(matches);
+    host.innerHTML="";
+    const on = FILT.q.trim() || FILT.payer || FILT.ways;
+    if(on){
+      let sum=0; list.forEach(e=> sum+=Number(e.amount)||0 );
+      const line=el("div","fcount");
+      line.innerHTML='<span>'+list.length+' of '+all.length+' · '+money(sum)+'</span>';
+      const clr=el("button",null,"Clear");
+      clr.addEventListener("click", ()=>{
+        FILT.q=""; FILT.payer=""; FILT.ways=0; $("fq").value=""; refreshChips(); draw();
+      });
+      line.appendChild(clr);
+      host.appendChild(line);
+    }
+    if(!all.length){
+      const e=el("div","empty");
+      e.innerHTML='<span class="ms" aria-hidden="true">receipt_long</span><h3>No expenses yet</h3>'+
+        '<p>Add the first one and everyone in the group will see it.</p>';
+      host.appendChild(e); return;
+    }
+    if(!list.length){
+      const e=el("div","empty");
+      e.innerHTML='<span class="ms" aria-hidden="true">search_off</span><h3>Nothing matches</h3>'+
+        '<p>Try a different search, or clear the filters.</p>';
+      host.appendChild(e); return;
+    }
+    const card=el("div","card"); let day=null;
+    list.forEach(e=>{
+      const k=dayKey(e.at);
+      if(k!==day){ day=k; card.appendChild(el("div","daygroup", esc(dayLabel(e.at)))); }
+      const sh=sharesOf(e), mine=ME?(sh[ME]||0):0;
+      const iPaid=!!ME && e.payer===ME;
+      const c=catOf(e.cat);
+      const r=el("button","row"+(iPaid?" mine":""));
+      let right;
+      if(!ME) right='<span class="amt">'+money(e.amount)+'</span>';
+      else if(iPaid) right='<span class="amt pos">'+money((Number(e.amount)||0)-mine)+'</span><span class="cap">you get back</span>';
+      else if(mine)  right='<span class="amt neg">'+money(mine)+'</span><span class="cap">your share</span>';
+      else           right='<span class="amt zero">not yours</span>';
+      r.innerHTML=
+        '<span class="cat"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
+        '<span class="body"><span class="t1">'+esc(e.desc)+'</span>'+
+        '<span class="t2">'+esc(iPaid?"You":e.payer)+' paid '+money(e.amount)+'</span>'+
+        '<span class="t2">split between '+esc(splitWho(e, gid))+'</span></span>'+
+        '<span class="right">'+right+'</span>';
+      r.addEventListener("click", ()=>sheetExpense(e));
+      card.appendChild(r);
+    });
+    host.appendChild(card);
+  }
+}
+// Who an expense was split between, in words rather than a bare count.
+function splitWho(e, gid){
+  const b=(e.between&&e.between.length)?e.between:[e.payer];
+  const everyone=names(gid);
+  if(everyone.length>1 && b.length===everyone.length) return "everyone ("+b.length+")";
+  const shown=b.map(n=> n===ME ? "you" : n );
+  if(shown.length<=3) return shown.join(", ");
+  return shown.slice(0,2).join(", ")+" and "+(shown.length-2)+" more";
 }
 
 function groupBalances(main, gid){
-  const b=balances(gid), ppl=names(gid);
-  if(!ppl.length){
+  const b=balances(gid), all=everyoneIn(gid);
+  if(!all.length){
     const e=el("div","empty");
-    e.innerHTML='<span class="ms" aria-hidden="true">group</span><h3>No members yet</h3><p>Add people to start splitting.</p>';
+    e.innerHTML='<span class="ms" aria-hidden="true">group</span><h3>Nobody here yet</h3>'+
+      '<p>Add people to start splitting.</p>';
     const btn=el("button","btn p","Add people"); btn.addEventListener("click", sheetMembers);
     e.appendChild(btn); main.appendChild(e); return;
   }
+
   const st=settlements(gid);
   if(st.length){
-    main.appendChild(el("div","sechead","Settle up"));
+    main.appendChild(el("div","sechead","Who pays whom"));
     const c=el("div","card");
     st.forEach(t=>{
       const involves = t.from===ME || t.to===ME;
@@ -1110,32 +1229,43 @@ function groupBalances(main, gid){
       const m=memberOf(t.from, gid);
       r.innerHTML=
         avatarHTML("", t.from, m&&m.color, m&&m.photo)+
-        '<span class="body"><span class="t1">'+esc(t.from===ME?"You":t.from)+' → '+esc(t.to===ME?"you":t.to)+'</span>'+
-        '<span class="t2">tap to record this payment</span></span>'+
+        '<span class="body"><span class="t1">'+esc(t.from===ME?"You":t.from)+
+          ' '+(t.from===ME?"pay":"pays")+' '+esc(t.to===ME?"you":t.to)+'</span>'+
+        '<span class="t2">tap when this is paid</span></span>'+
         '<span class="right"><span class="amt">'+money(t.amt)+'</span></span>';
       r.addEventListener("click", ()=>sheetSettle(t.from, t.to, t.amt));
       c.appendChild(r);
     });
     main.appendChild(c);
+  } else {
+    const e=el("div","notice");
+    e.innerHTML='<span class="ms" aria-hidden="true">check_circle</span>'+
+      '<div><strong>Everything is settled</strong><br>Nobody owes anybody anything.</div>';
+    main.appendChild(e);
   }
+
   main.appendChild(el("div","sechead","Everyone"));
   const c2=el("div","card");
-  membersOf(gid).forEach(m=>{
-    const n=m.name, v=Math.round((b[n]||0)*100)/100;
+  all.forEach(n=>{
+    const m=memberOf(n, gid);
+    const v=Math.round((b[n]||0)*100)/100;
     const r=el("button","row"+(n===ME?" mine":""));
     r.innerHTML=
-      avatarHTML("", n, m.color, m.photo)+
+      avatarHTML("", n, m&&m.color, m&&m.photo)+
       '<span class="body"><span class="t1">'+esc(n)+(n===ME?' <span class="tag on">you</span>':'')+
-        (m.uid&&n!==ME?' <span class="tag">signed in</span>':'')+'</span>'+
+        (!m ? ' <span class="tag warn">not on the list</span>'
+            : (m.uid&&n!==ME ? ' <span class="tag">signed in</span>' : ''))+'</span>'+
       '<span class="t2">'+esc(paidShareLine(n,gid))+'</span></span>'+
       '<span class="right"><span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
         (Math.abs(v)<0.005?"settled":money(Math.abs(v)))+'</span>'+
-      '<span class="cap">'+(v>0.004?"is owed":v<-0.004?"owes":"")+'</span></span>';
+      '<span class="cap">'+(v>0.004?(n===ME?"you get back":"gets back")
+                           :v<-0.004?(n===ME?"you pay":"pays"):"")+'</span></span>';
     r.addEventListener("click", ()=>sheetPerson(n));
     c2.appendChild(r);
   });
   main.appendChild(c2);
 }
+
 function paidShareLine(n, gid){
   let paid=0, share=0;
   expensesOf(gid).forEach(e=>{
@@ -1239,10 +1369,11 @@ function viewAccount(main){
     if(n) expensesOf(g.id).forEach(e=>{ const sh=sharesOf(e); if(sh[n]) spent+=sh[n]; });
   });
   const t=el("div","card pad");
-  t.innerHTML='<div class="split" style="margin:0"><div><div class="k">Your share</div>'+
+  const net=owed-owe;
+  t.innerHTML='<div class="split" style="margin:0"><div><div class="k">Your share of everything</div>'+
     '<div class="v">'+money(spent)+'</div></div>'+
-    '<div><div class="k">Net position</div><div class="v '+((owed-owe)>0.004?"pos":(owed-owe)<-0.004?"neg":"")+'">'+
-    money(owed-owe)+'</div></div></div>';
+    '<div><div class="k">'+(net>0.004?"You get back":net<-0.004?"You pay":"Settled")+'</div>'+
+    '<div class="v '+(net>0.004?"pos":net<-0.004?"neg":"")+'">'+money(Math.abs(net))+'</div></div></div>';
   main.appendChild(t);
 
   if(isAdmin()){
@@ -1668,11 +1799,11 @@ function sheetPerson(n){
       '<div class="summary flat" style="margin-bottom:16px">'+
       '<div class="big '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
         (Math.abs(v)<0.005?"All settled up":money(Math.abs(v)))+'</div>'+
-      '<div class="lab">'+(v>0.004?(n===ME?"you are owed":esc(n)+" is owed"):v<-0.004?(n===ME?"you owe":esc(n)+" owes"):"nothing outstanding")+'</div>'+
+      '<div class="lab">'+(v>0.004?(n===ME?"you get back":esc(n)+" gets back"):v<-0.004?(n===ME?"you pay":esc(n)+" pays"):"everything is settled")+'</div>'+
       (m&&m.email?'<div class="lab" style="margin-top:6px">'+esc(m.email)+'</div>':'')+
-      '<div class="split"><div><div class="k">Paid out</div><div class="v">'+money(paid)+'</div></div>'+
-      '<div><div class="k">Share of costs</div><div class="v">'+money(share)+'</div></div></div></div>'+
-      '<div class="sechead" style="margin-top:0">Expenses involved in</div>'+
+      '<div class="split"><div><div class="k">Paid so far</div><div class="v">'+money(paid)+'</div></div>'+
+      '<div><div class="k">'+(n===ME?"Your share":"Their share")+'</div><div class="v">'+money(share)+'</div></div></div></div>'+
+      '<div class="sechead" style="margin-top:0">What they were part of</div>'+
       (lines.length?lines.join(""):'<p class="fine">None yet.</p>')+
       (pays.length?'<div class="sechead">Payments</div>'+pays.join(""):"")+
       '<button class="btn p wide" id="pSettle" style="margin-top:18px">Settle up</button>';
@@ -1967,7 +2098,7 @@ function doPrint(){
   const gid=CURRENT; if(!gid) return;
   const old=document.getElementById("printArea"); if(old) old.remove();
   const area=el("div"); area.id="printArea";
-  const b=balances(gid), st=settlements(gid), ppl=names(gid);
+  const b=balances(gid), st=settlements(gid), ppl=everyoneIn(gid);
   const total=totalOf(gid);
 
   let h='<h1>'+esc(groupName(gid))+'</h1>'+
@@ -1975,8 +2106,8 @@ function doPrint(){
     ' member'+(ppl.length===1?"":"s")+' · '+expensesOf(gid).length+' expense'+
     (expensesOf(gid).length===1?"":"s")+' · '+money(total)+' in total</p>';
 
-  h+='<h2>Who owes what</h2><table><thead><tr><th>Person</th><th class="r">Paid</th>'+
-     '<th class="r">Share</th><th class="r">Balance</th></tr></thead><tbody>';
+  h+='<h2>Where everyone stands</h2><table><thead><tr><th>Person</th><th class="r">Paid</th>'+
+     '<th class="r">Their share</th><th class="r">Gets back / pays</th></tr></thead><tbody>';
   ppl.forEach(n=>{
     let paid=0, share=0;
     expensesOf(gid).forEach(e=>{ if(e.payer===n) paid+=Number(e.amount)||0;
@@ -1988,12 +2119,12 @@ function doPrint(){
   h+='</tbody></table>';
 
   if(st.length){
-    h+='<h2>Settling up — the fewest payments that clear everyone</h2><ul>';
+    h+='<h2>Who pays whom — the fewest payments that settle everyone</h2><ul>';
     st.forEach(t=> h+='<li><strong>'+esc(t.from)+'</strong> pays <strong>'+esc(t.to)+
       '</strong> '+money(t.amt)+'</li>' );
     h+='</ul>';
   } else {
-    h+='<h2>Settling up</h2><p>Everyone is square — no payments needed.</p>';
+    h+='<h2>Who pays whom</h2><p>Everything is settled — nobody owes anybody anything.</p>';
   }
 
   h+='<h2>Every expense</h2><table><thead><tr><th>Date</th><th>What</th><th>Paid by</th>'+
