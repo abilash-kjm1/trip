@@ -1082,12 +1082,28 @@ function notify(kind, gid, what){
 }
 
 /* ---------------- linking an account to a name ---------------- */
+/* trips/{gid}/uids is the membership list the database rules read. The people
+   records already carry a uid, but rules cannot scan a list, so the same fact
+   is kept in a shape a rule can ask about in one step. Anything that attaches
+   an account to a name has to keep this in step, or that person can no longer
+   open the group. */
+function joinUid(gid, uid){
+  return uid ? set("trips/"+gid+"/uids/"+uid, true) : Promise.resolve();
+}
+function dropUid(gid, uid){
+  return uid ? del("trips/"+gid+"/uids/"+uid) : Promise.resolve();
+}
+
 function linkPerson(gid, key){
   return upd("trips/"+gid+"/people/"+key,
-    {uid:USER.uid, email:USER.email, photo:USER.photo||null});
+    {uid:USER.uid, email:USER.email, photo:USER.photo||null})
+    .then(()=> joinUid(gid, USER.uid) );
 }
 function unlinkPerson(gid, key){
-  return upd("trips/"+gid+"/people/"+key, {uid:null, email:null, photo:null});
+  const m = membersOf(gid).find(x=>x.k===key);
+  const gone = m && m.uid;
+  return upd("trips/"+gid+"/people/"+key, {uid:null, email:null, photo:null})
+    .then(()=> dropUid(gid, gone) );
 }
 
 // Fold one person into another: everything `from` paid, owed or was split
@@ -2054,6 +2070,7 @@ function sheetClaim(gid){
       if(names(gid).some(n=>n.toLowerCase()===v.toLowerCase()))
         return toast(v+" is already on the list — pick that name above");
       push("trips/"+gid+"/people", {n:v, c:freeColour(gid), uid:USER.uid, email:USER.email, photo:USER.photo||null})
+        .then(()=> joinUid(gid, USER.uid) )
         .then(()=>{ rememberGroup(gid, groupName(gid)); closeSheet(); toast("You are in"); });
     });
   });
@@ -2061,6 +2078,7 @@ function sheetClaim(gid){
     set("trips/"+gid+"/people/"+key+"/uid",   USER.uid)
       .then(()=> set("trips/"+gid+"/people/"+key+"/email", USER.email))
       .then(()=> USER.photo ? set("trips/"+gid+"/people/"+key+"/photo", USER.photo) : null)
+      .then(()=> joinUid(gid, USER.uid))
       .then(()=>{ rememberGroup(gid, groupName(gid)); closeSheet(); toast("You are "+name+" in this group"); });
   }
 }
@@ -2538,10 +2556,12 @@ function addFromDirectory(gid, person){
 
   if(seat){
     return upd("trips/"+gid+"/people/"+seat.k,
-      {uid:person.uid, email:mail||null, photo:person.photo||null}).then(after);
+      {uid:person.uid, email:mail||null, photo:person.photo||null})
+      .then(()=> joinUid(gid, person.uid) ).then(after);
   }
   return push("trips/"+gid+"/people", {n:person.name, c:freeColour(gid), uid:person.uid,
-    email:mail||null, photo:person.photo||null}).then(after);
+    email:mail||null, photo:person.photo||null})
+    .then(()=> joinUid(gid, person.uid) ).then(after);
 }
 
 /* ---------- members ---------- */
@@ -2617,7 +2637,9 @@ function sheetMembers(){
             const used=expensesOf(gid).some(e=>e.payer===m.name||(e.between||[]).indexOf(m.name)>-1)
                     || paymentsOf(gid).some(p2=>p2.from===m.name||p2.to===m.name);
             if(used) return toast("Remove or edit their expenses first");
-            del("trips/"+gid+"/people/"+m.k).then(()=>setTimeout(draw,150));
+            del("trips/"+gid+"/people/"+m.k)
+              .then(()=> dropUid(gid, m.uid) )
+              .then(()=>setTimeout(draw,150));
           });
           r.appendChild(x);
         }
@@ -3138,7 +3160,11 @@ function sheetGroupNew(){
         const key=n.toLowerCase(); if(seen[key]) return; seen[key]=1;
         people["m"+(i+1)+uid().slice(-4)]={n:n, c:PALETTE[(i+1)%PALETTE.length]};
       });
-      set("trips/"+gid, {meta:{name:nm, type:type, at:Date.now(), by:USER.name, byUid:USER.uid}, people:people}).then(()=>{
+      // The person creating it is its first member, in the index the rules read
+      // as well as in the people list - otherwise they cannot open what they
+      // have just made.
+      set("trips/"+gid, {meta:{name:nm, type:type, at:Date.now(), by:USER.name, byUid:USER.uid},
+                         people:people, uids:{[USER.uid]:true}}).then(()=>{
         rememberGroup(gid, nm); watchGroup(gid); claimAsked[gid]=true; closeSheet();
         setTimeout(()=>{ openGroup(gid); toast("Group created — share the link to invite people"); }, 260);
       });
@@ -3558,14 +3584,16 @@ function openFromURL(){
       if(!snap.exists() && !known){ toast("That group link no longer works"); location.hash=""; return; }
       const meta=snap.val()||{};
       // Following a link used to join you on the spot, with nothing but a
-      // toast to say so. An address left in the bar by whoever used this
-      // device last is not a decision, so ask before acting on it.
-      if(!known && !confirm('Join "'+(meta.name||"this group")+'"? You will see everything it has spent and everyone in it, and they will see you.')){
+      // toast to say so. It no longer joins anybody. Reading a group needs a
+      // place on its membership list, and only somebody already in it can
+      // put you there - which is the whole point. Say so plainly rather
+      // than opening a group that will fail to load.
+      if(!known){
+        toast("Ask someone in that group to add you");
         location.hash=""; render(); return;
       }
       rememberGroup(gid, meta.name||"Group");
       watchGroup(gid);
-      if(!known) toast("You joined “"+(meta.name||"the group")+"”");
       openGroup(gid);
     }).catch(()=>{ if(known) openGroup(gid); });
     return;

@@ -1,18 +1,24 @@
-// STEP 2 of 2, and the version to keep.
-// 
-// Publish database.rules.step1.json first and approve everyone already using
-// Settle under Account > Requests to join. Only then publish this.
-// 
-// It adds the approval gate: from here on, signing in with Google gets somebody
-// an account and nothing else until the administrator lets them in. The
-// administrator is exempt, so they can never lock themselves out.
+// STEP 3. Publish this AFTER the app has been open once on every device,
+// and after the scheduler has had one pass (five minutes) to fill in each
+// group's membership list.
+//
+// Being approved is no longer enough to read a group: you have to be in it.
+// Membership lives at trips/{gid}/uids, because a rule cannot scan a list of
+// people looking for an account. The scheduler keeps that list in step with
+// the people records, so nothing has to be filled in by hand.
+//
+// A group's name stays readable to anyone approved, so somebody following a
+// link is told what they are asking to be added to rather than nothing at all.
 {
   "rules": {
     "trips": {
-      ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
+      ".read": "auth != null && (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com')",
       "$gid": {
-        ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
-        ".write": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
+        ".read": "auth != null && (data.child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
+        ".write": "auth != null && (data.child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (!data.exists() && newData.child('uids').child(auth.uid).exists()))",
+        "meta": {
+          ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
+        }
       }
     },
     "access": {
@@ -30,7 +36,6 @@
         ".validate": "newData.hasChildren(['name']) && newData.child('name').isString()"
       }
     },
-
     "config": {
       ".read": "auth != null",
       ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'"

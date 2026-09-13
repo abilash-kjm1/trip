@@ -122,6 +122,34 @@ export default async function handler(req, res) {
       }
     }
 
+    // Keep each group's membership index in step with its people records.
+    // The rules read trips/{gid}/uids to decide who may open a group, because
+    // a rule cannot scan a list of people looking for a uid. Every group that
+    // existed before that index did has none, and its members would be shut
+    // out of their own ledger, so fill it in from what the people records
+    // already say.
+    if (!dry) {
+      const trips = await readPath("trips");
+      for (const gid of Object.keys(trips)) {
+        const g = trips[gid] || {};
+        const people = g.people || {};
+        const want = {};
+        Object.keys(people).forEach((k) => {
+          const uid = people[k] && people[k].uid;
+          if (typeof uid === "string" && uid) want[uid] = true;
+        });
+        const have = g.uids || {};
+        const patch = {};
+        Object.keys(want).forEach((u) => { if (!have[u]) patch[u] = true; });
+        // Somebody whose account was unlinked keeps no place on the list.
+        Object.keys(have).forEach((u) => { if (!want[u]) patch[u] = null; });
+        if (Object.keys(patch).length) {
+          await database().ref("trips/" + gid + "/uids").update(patch);
+          console.log("[members] " + gid + ": " + Object.keys(patch).length + " change(s)");
+        }
+      }
+    }
+
     const beat = await readPath("config/heartbeat");
     if (!dry) {
       await database().ref("config/heartbeat")
