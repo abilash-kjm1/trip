@@ -98,8 +98,22 @@ export default async function handler(req, res) {
     if (!dueNow.length) {
       log.considered = Object.keys(users).length;
       console.log("[reminder] nobody due; skipped reading the expenses");
+      // "Nothing sent" is the same answer whether the scheduler is working
+      // perfectly or is not being called at all. Saying when each account was
+      // last written to tells the two apart without waiting for the window to
+      // come round again.
+      const detail = dry ? Object.keys(users).map((uid) => {
+        const prefs = (users[uid] || {}).prefs || {};
+        const last = Number(prefs.lastWeekly) || 0;
+        return {
+          uid,
+          email: String(((users[uid] || {}).profile || {}).email || ""),
+          lastSent: last ? new Date(last).toISOString() : "never",
+          why: isDue(cfg, tzOf(prefs), prefs, at).why
+        };
+      }) : undefined;
       return res.status(200).json({ ok: true, ms: Date.now() - started, ...log,
-                                    ...(dry ? { detail: [{ skipped: "nobody is due at this hour" }] } : {}) });
+                                    ...(dry ? { detail } : {}) });
     }
 
     const trips = await readPath("trips");
