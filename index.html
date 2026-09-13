@@ -956,6 +956,18 @@ button, input, select, textarea{ font-family:var(--f); }
 .card.addform .chip[aria-pressed="true"]{ background:var(--ink); border-color:var(--ink);
   color:var(--cream); }
 
+
+/* The wordmark, and a small line of credit under it. */
+.brandwrap{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.byline{ font-size:10.5px; font-weight:500; letter-spacing:.02em; color:var(--ink-3); }
+.side .byline{ color:rgba(252,250,245,.42); padding:0 10px var(--s5); margin-top:-16px; }
+
+/* Anything that used to borrow the iOS blue now takes the accent, so a link
+   and a button belong to the same palette as everything around them. */
+.linkbtn, a, .more, .textbtn{ color:var(--apricot-dk); }
+.linkbtn{ font-weight:600; }
+:focus-visible{ outline:3px solid var(--apricot-dk); outline-offset:3px; }
+
 /* ---- desktop --------------------------------------------------------- */
 @media (min-width:1000px){
   body{ background:var(--cream); }
@@ -1028,7 +1040,8 @@ button, input, select, textarea{ font-family:var(--f); }
 <!-- The rail is the wide-screen form of the bar at the bottom of a phone.
      Both carry the same places, so neither is the only way anywhere. -->
 <aside class="side" id="side" aria-label="Sections">
-  <div class="brand">split<i>ter</i></div>
+  <div class="brand">Set<i>tle</i></div>
+  <div class="byline">Created by Abilash</div>
   <div class="grp">Home</div>
   <button data-tab="home"><span class="ms" aria-hidden="true">explore</span>Today</button>
   <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
@@ -1043,7 +1056,7 @@ button, input, select, textarea{ font-family:var(--f); }
 
 <header class="bar" id="bar">
   <button class="ibtn glass" id="backBtn" aria-label="Back" hidden><span class="ms" aria-hidden="true">arrow_back</span></button>
-  <span class="brand" id="barBrand">split<i>ter</i></span>
+  <span class="brandwrap" id="barBrand"><span class="brand">Set<i>tle</i></span><span class="byline">Created by Abilash</span></span>
   <h1 id="barTitle" hidden>Today</h1>
   <span class="spacer"></span>
   <button class="ibtn glass" id="gmenuBtn" aria-label="Group settings" hidden><span class="ms" aria-hidden="true">more_horiz</span></button>
@@ -2408,6 +2421,20 @@ function whatFor(gid, who){
   return both.length ? both[0].desc : null;
 }
 
+/* Ask somebody to settle up. The email goes out on the scheduler's next pass,
+   like everything else the app sends, and the button says so rather than
+   claiming the message has already arrived. */
+function sendNudge(gid, who, amount, btn){
+  const seat = membersOf(gid).find(x=>x.name===who);
+  if(!seat || !seat.uid){
+    toast(who+" has not signed in yet, so there is nowhere to send it");
+    return;
+  }
+  if(btn){ btn.disabled=true; btn.textContent="Reminder sent"; }
+  notify("nudge", gid, {desc: who, amount: amount});
+  toast("Reminder on its way to "+who+" · "+callGap());
+}
+
 function addExpenseAnywhere(){
   if(!JOINED.length) return sheetGroupNew();
   if(JOINED.length===1){ openGroup(JOINED[0].id); setTimeout(()=>sheetExpense(null), 260); return; }
@@ -2469,10 +2496,16 @@ function viewHome(main){
     const b=el("button","btn dark",
       (first.dir==="pay" ? "Pay " : "Remind ")+esc(first.who)+" "+money(first.amt));
     b.addEventListener("click", ()=>{
-      const me = meIn(first.gid);
-      openGroup(first.gid);
-      setTimeout(()=> sheetSettle(first.dir==="pay" ? me : first.who,
-                                  first.dir==="pay" ? first.who : me, first.amt, null), 260);
+      if(first.dir==="pay"){
+        // I owe them: the thing to do is record that I paid.
+        const me = meIn(first.gid);
+        openGroup(first.gid);
+        setTimeout(()=> sheetSettle(me, first.who, first.amt, null), 260);
+        return;
+      }
+      // They owe me. Recording a payment they have not made would be a lie,
+      // so this asks them for it instead.
+      sendNudge(first.gid, first.who, first.amt, b);
     });
     $("heroAct").appendChild(b);
   }

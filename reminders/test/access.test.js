@@ -1,7 +1,8 @@
 /* Joining Settle: the signed link, and the request reaching the administrator. */
 import { makeToken, readToken, normaliseAccess, isApproved, TOKEN_TTL_MS,
          decisionPage, outcomePage } from "../lib/access.js";
-import { runActivity, JOIN_KIND, INVITE_KIND } from "../lib/activity.js";
+import { runActivity, JOIN_KIND, INVITE_KIND, NUDGE_KIND, NUDGE_GUARD_MS }
+  from "../lib/activity.js";
 
 let bad = 0;
 const is = (a, e, w) => {
@@ -169,6 +170,55 @@ is(/Kelvin Raj was approved/.test(outcomePage({ name: "Kelvin Raj" }, true, "Tol
    "the outcome page says what happened");
 is(/was declined/.test(outcomePage({ name: "Kelvin Raj" }, false, "Told them.")), true,
    "both ways");
+
+console.log("\nasking somebody to settle up");
+const nudgeGroup = {
+  meta: { name: "Montreal" },
+  people: { a: { n: "Kalai", uid: "u1" }, b: { n: "Abilash KJM", uid: "u2" },
+            c: { n: "Kelvin" } },                       // never signed in
+  nudges: {}
+};
+const nudgeUsers = {
+  u1: { profile: { name: "Kalai", email: "kalai@example.com" } },
+  u2: { profile: { name: "Abilash", email: "abi@example.com" } }
+};
+function nudgeDb(queue, group){
+  const wrote = {};
+  return { wrote,
+    read: async (p) => (p === "mail/queue" ? queue : (p === "trips/g1" ? group : {})),
+    remove: async () => {},
+    set: async (p, v) => { wrote[p] = v; } };
+}
+async function runNudge(note, group = nudgeGroup){
+  const db = nudgeDb({ n1: note }, group);
+  const out = [];
+  const log = await runActivity({
+    users: nudgeUsers, at: new Date(NOW), dry: false, appUrl: "https://app.test/", db,
+    send: async (m) => { out.push(m); },
+    adminEmail: "admin@example.com", secret: SECRET, apiBase: "https://api.test/"
+  });
+  return { log, sent: out, wrote: db.wrote };
+}
+const nudge = { kind: NUDGE_KIND, gid: "g1", actorUid: "u1", actor: "Kalai",
+                desc: "Abilash KJM", amount: 50, at: NOW - 1000 };
+
+let k = await runNudge(nudge);
+is(k.log.nudges, 1, "one reminder goes out");
+is(k.sent[0].to, "abi@example.com", "to the account behind that name in the group");
+is(k.sent[0].subject, "Kalai is asking you to settle up", "and says who is asking");
+is(/\$50\.00/.test(k.sent[0].text), true, "with the amount");
+is(k.wrote["trips/g1/nudges/u2"], NOW, "and the time is kept, so it cannot repeat");
+
+k = await runNudge({ ...nudge, desc: "Kelvin" });
+is([k.log.nudges, k.log.dropped], [0, 1], "somebody with no account cannot be emailed");
+k = await runNudge({ ...nudge, desc: "A Stranger" });
+is([k.log.nudges, k.log.dropped], [0, 1], "nor a name that is not in the group");
+k = await runNudge({ ...nudge, actorUid: "u9" });
+is([k.log.nudges, k.log.dropped], [0, 1], "nor can somebody outside the group send one");
+k = await runNudge(nudge, { ...nudgeGroup, nudges: { u2: NOW - 1000 } });
+is([k.log.nudges, k.log.dropped], [0, 1], "and not twice in one day");
+k = await runNudge(nudge, { ...nudgeGroup, nudges: { u2: NOW - NUDGE_GUARD_MS - 1000 } });
+is(k.log.nudges, 1, "but again the day after");
 
 console.log(bad ? "\n" + bad + " FAILED" : "\nall good");
 process.exit(bad ? 1 : 0);

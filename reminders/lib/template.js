@@ -369,3 +369,48 @@ export function groupInviteEmail({ name, inviter, group, appUrl }) {
 
   return { subject: headline, html, text };
 }
+
+/** A nudge: somebody is asking to be paid back. */
+export function nudgeEmail({ name, from, group, amount, appUrl }) {
+  const headline = from + " is asking you to settle up";
+
+  const html = `<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>${esc(headline)}</title>
+</head><body style="margin:0;padding:0;background:#FCFAF5">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FCFAF5;padding:24px 12px">
+<tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="max-width:560px;background:#ffffff;border-radius:16px;padding:28px 26px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+    <tr><td>
+      <p style="margin:0 0 4px;font-size:14px;color:${SOFT}">Settle</p>
+      <h1 style="margin:0 0 2px;font-size:26px;line-height:1.2;color:${INK}">Hello ${esc(name)},</h1>
+      <p style="margin:10px 0 0;font-size:21px;font-weight:700;color:${INK}">${esc(headline)}</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="border-collapse:collapse;margin-top:18px">
+        ${row("Group", esc(group))}
+        ${row("What you owe " + esc(from), money(amount), RED)}
+      </table>
+      <p style="margin:22px 0 0;font-size:14px;line-height:1.55;color:${SOFT}">
+        Once you have paid, open Settle and record it so everybody's balance is
+        right. Nothing has been taken from anywhere - this is only a reminder.
+      </p>
+      <p style="margin:26px 0 0">
+        <a href="${esc(appUrl)}" style="display:inline-block;background:#2F332D;color:#FCFAF5;text-decoration:none;
+           font-size:16px;font-weight:600;padding:13px 24px;border-radius:999px">Open Settle</a>
+      </p>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+
+  const text = `Hello ${name},\n\n${headline}\n\nGroup: ${group}\n` +
+    `What you owe ${from}: ${money(amount)}\n\n` +
+    `Once you have paid, open Settle and record it so everybody's balance is right. ` +
+    `This is only a reminder - nothing has been taken from anywhere.\n\nOpen Settle: ${appUrl}\n`;
+
+  return { subject: headline, html, text };
+}

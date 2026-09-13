@@ -186,7 +186,8 @@ export default async function handler(req, res) {
     try {
       log.activity = await runActivity({
         users, at, dry, appUrl: APP_URL,
-        db: { read: readPath, remove: removePath },
+        db: { read: readPath, remove: removePath,
+              set: (path, v) => database().ref(path).set(v) },
         send: sendEmail,
         adminEmail: process.env.ADMIN_EMAIL || "",
         secret,

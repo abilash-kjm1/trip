@@ -11,7 +11,7 @@
    nobody its author could not already reach.
    --------------------------------------------------------------------------- */
 import { money } from "./ledger.js";
-import { activityEmail, accessRequestEmail, groupInviteEmail } from "./template.js";
+import { activityEmail, accessRequestEmail, groupInviteEmail, nudgeEmail } from "./template.js";
 import { makeToken, normaliseAccess } from "./access.js";
 
 /* Asking to join is not activity in a group - there is no group yet - so it
@@ -19,8 +19,11 @@ import { makeToken, normaliseAccess } from "./access.js";
    rather than to members. */
 export const JOIN_KIND = "access.request";
 export const INVITE_KIND = "group.invite";
+export const NUDGE_KIND = "nudge";
 export const MAX_JOINS = 20;             // per run; a ceiling on invitation spam
 export const MAX_INVITES = 20;
+export const MAX_NUDGES = 20;
+export const NUDGE_GUARD_MS = 20 * 3600 * 1000;  // one a day, per person, per group
 
 /* What each kind of note is, and which switch on the Account screen governs
    it. The keys match the rows the app shows, so what somebody turns off is
@@ -50,7 +53,7 @@ export function normaliseEntry(key, raw, now) {
   if (!raw || typeof raw !== "object") return null;
 
   const kind = str(raw.kind, 40);
-  if (!KINDS[kind] && kind !== JOIN_KIND && kind !== INVITE_KIND) return null;
+  if (!KINDS[kind] && kind !== JOIN_KIND && kind !== INVITE_KIND && kind !== NUDGE_KIND) return null;
 
   // A group id is a database key. Anything that could climb out of the path
   // is not one. A request to join names no group.
@@ -137,7 +140,7 @@ export function lineFor(e) {
 export async function runActivity({ users, at, dry, appUrl, db, send,
                                     adminEmail, secret, apiBase }) {
   const now = at.getTime();
-  const log = { queued: 0, dropped: 0, sent: 0, failed: 0, joins: 0, invites: 0, errors: [] };
+  const log = { queued: 0, dropped: 0, sent: 0, failed: 0, joins: 0, invites: 0, nudges: 0, errors: [] };
 
   const raw = await db.read("mail/queue");
   const keys = Object.keys(raw || {});
@@ -215,8 +218,52 @@ export async function runActivity({ users, at, dry, appUrl, db, send,
     }
   }
 
+  // ---- a nudge: pay me back ---------------------------------------------
+  // The note names a person by the name the group calls them; who that is
+  // gets looked up here, from the group's own people list. So a nudge can
+  // reach nobody but a member of a group the sender is also in.
+  const nudges = batch.filter((e) => e.kind === NUDGE_KIND);
+  for (const e of nudges.slice(0, MAX_NUDGES)) {
+    try {
+      const g = await db.read("trips/" + e.gid);
+      if (!g || !isMember(g, e.actorUid)) { log.dropped++; continue; }
+
+      const who = String(e.desc || "").trim();
+      const seat = Object.keys(g.people || {}).map((k) => g.people[k])
+        .find((p) => p && String(p.n || "").trim() === who && p.uid);
+      if (!who || !seat) { log.dropped++; continue; }
+
+      const them = users[seat.uid];
+      const to = String(((them || {}).profile || {}).email || "").trim().toLowerCase();
+      if (!looksLikeEmail(to)) { log.dropped++; continue; }
+
+      // Being owed money is not a reason to be written to every five minutes.
+      const last = Number(((g.nudges || {})[seat.uid]) || 0);
+      if (last && now - last < NUDGE_GUARD_MS) { log.dropped++; continue; }
+
+      const mail = nudgeEmail({
+        name: String((them.profile || {}).name || who),
+        from: e.actor,
+        group: (g.meta && g.meta.name) || e.gid,
+        amount: e.amount != null ? e.amount : 0,
+        appUrl
+      });
+      if (!dry) {
+        await send({ to, ...mail });
+        await db.set("trips/" + e.gid + "/nudges/" + seat.uid, now);
+      }
+      log.nudges++;
+      console.log("[nudge] " + (dry ? "DRY " : "") + e.actor + " nudged " + to);
+    } catch (err) {
+      log.failed++;
+      log.errors.push({ gid: e.gid, error: ((err && err.message) || String(err)).slice(0, 600) });
+      console.error("[nudge] could not nudge for", e.gid, err);
+    }
+  }
+
   // ---- notices about a group --------------------------------------------
-  const notes = batch.filter((e) => e.kind !== JOIN_KIND && e.kind !== INVITE_KIND);
+  const notes = batch.filter((e) => e.kind !== JOIN_KIND && e.kind !== INVITE_KIND
+                                 && e.kind !== NUDGE_KIND);
 
   // A group is read once however many notes mention it.
   const groups = {};
