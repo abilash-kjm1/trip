@@ -2739,7 +2739,8 @@ const SCHED_DEFAULT = { enabled:true, days:[0], hour:16, windowHours:5, callEver
    warning about unreachable send times, and every promise the app makes
    about how long an email takes to arrive. */
 const CALL_CHOICES = [[1440,"Once a day"],[60,"Every hour"],[30,"Every 30 minutes"],
-                      [15,"Every 15 minutes"],[5,"Every 5 minutes"]];
+                      [15,"Every 15 minutes"],[10,"Every 10 minutes"],[5,"Every 5 minutes"],
+                      [2,"Every 2 minutes"],[1,"Every minute"]];
 
 function schedNow(){
   const c = (SCHED && typeof SCHED === "object") ? SCHED : {};
@@ -2771,6 +2772,7 @@ function callGap(){
   const m = schedNow().callEveryMins;
   if(m >= 1440) return "on the next daily run";
   if(m === 60)  return "within the hour";
+  if(m === 1)   return "within a minute";
   return "within about "+m+" minutes";
 }
 
