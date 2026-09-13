@@ -83,6 +83,27 @@ export default async function handler(req, res) {
     // locked out of an app that was working a minute ago.
     const access = dry ? await readPath("access") : {};
 
+    // A heartbeat, so "how often is this actually being called" stops being a
+    // matter of inference. Nothing in here can see cron-job.org's settings;
+    // it can see when it was last woken, and the gap between the last two
+    // wakings is the interval, measured rather than believed.
+    const beat = await readPath("config/heartbeat");
+    if (!dry) {
+      await database().ref("config/heartbeat")
+        .set({ at: at.getTime(), prevAt: Number(beat.at) || 0 });
+    } else {
+      const last = Number(beat.at) || 0;
+      const gapMins = last && beat.prevAt ? Math.round((last - Number(beat.prevAt)) / 60000) : null;
+      const dir = await readPath("directory");
+      log.directory = Object.keys(dir).length + " listed: " +
+        (Object.keys(dir).map((u) => (dir[u] || {}).name).filter(Boolean).join(", ") || "nobody yet");
+      log.heartbeat = {
+        lastRun: last ? new Date(last).toISOString() : "never",
+        agoMins: last ? Math.round((at.getTime() - last) / 60000) : null,
+        measuredIntervalMins: gapMins
+      };
+    }
+
     // ---- activity notices ------------------------------------------------
     // Drained on every pass, whatever the weekly schedule says: these are
     // individually opted into, default to off, and are about something that
