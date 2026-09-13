@@ -744,6 +744,7 @@ img.av{ object-fit:cover; background:var(--fill-1); }
      trips/{gid}/payments/{k}  {from, to, amount, note, at, by}
      users/{uid}/profile       {name, email, photo, at}
      users/{uid}/prefs         {weekly, newExpense, updates, payments, tz, lastWeekly}
+     config/reminders          {enabled, days[], hour, windowHours}  <- admin only
      users/{uid}/groups/{gid}  {name, at}      <- which groups this person is in
    Who you are comes from Google sign-in. Which groups you belong to lives in
    the database under your own uid, so it follows you to any device.
@@ -791,6 +792,7 @@ function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e)
 
 let USER     = null;                        // {uid, name, email, photo} from Google
 let PREFS    = {};                          // users/{uid}/prefs - notification settings
+let SCHED    = {};                          // config/reminders - when the email goes out
 let ME       = null;                        // my person-name inside CURRENT group
 let JOINED   = lsGet(LS.grp, []);           // [{id,name}]
 let CURRENT  = null;                        // active group id
@@ -1721,6 +1723,15 @@ function viewAccount(main){
       '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--label-3)">chevron_right</span></span>';
     r.addEventListener("click", ()=>{ ADMIN_VIEW=true; window.scrollTo(0,0); render(); });
     a.appendChild(r);
+
+    const sr=el("button","row");
+    sr.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">schedule</span></span>'+
+      '<span class="body"><span class="t1">Reminder schedule</span>'+
+      '<span class="t2">'+esc(schedLine())+'</span></span>'+
+      '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--label-3)">chevron_right</span></span>';
+    sr.addEventListener("click", sheetSchedule);
+    a.appendChild(sr);
+
     main.appendChild(a);
   }
 
@@ -1732,8 +1743,8 @@ function viewAccount(main){
     (weeklyOn?"notifications_active":"notifications_off")+'</span></span>'+
     '<span class="body"><span class="t1">Email reminders</span>'+
     '<span class="t2">'+(weeklyOn
-      ? "Sunday round-up is on, 5pm "+esc(((PREFS.tz)||guessTz()).replace(/_/g," "))
-      : "Sunday round-up is off")+'</span></span>'+
+      ? esc(schedLine())+" · "+esc(((PREFS.tz)||guessTz()).replace(/_/g," "))
+      : "Weekly reminder is off for you")+'</span></span>'+
     '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--label-3)">chevron_right</span></span>';
   nrow.addEventListener("click", sheetNotifications);
   nc.appendChild(nrow);
@@ -2488,7 +2499,7 @@ function inviteByEmail(gid, mail){
    The weekly reminder is on unless it has been explicitly switched off, so an
    account that predates this setting still gets one. */
 const PREF_ROWS = [
-  ["weekly",    "Weekly Sunday reminder", "A round-up at 5pm on Sunday of what you owe and what you are owed.", true],
+  ["weekly",    "Weekly reminder",        "A round-up of what you owe and what you are owed.",                  true],
   ["newExpense","New expenses",           "When somebody adds an expense to one of your groups.",              false],
   ["updates",   "Expense changes",        "When somebody edits or deletes an expense you are part of.",        false],
   ["payments",  "Payments",               "When somebody records a payment involving you.",                    false]
@@ -2524,7 +2535,8 @@ function sheetNotifications(){
       '</select>'+
       '<div class="help">The reminder is worked out against this clock, so it arrives on your '+
       'Sunday evening rather than somebody else’s.</div></div>'+
-      '<p class="fine">Only the Sunday reminder is sending today. The other three are recorded '+
+      '<p class="fine">Reminders currently go out: '+esc(schedLine())+'.</p>'+
+      '<p class="fine">Only the weekly reminder is sending today. The other three are recorded '+
       'now so they take effect the moment that part is switched on.</p>';
 
     const host=$("prefList");
@@ -2559,6 +2571,98 @@ function sheetNotifications(){
 function savePrefs(patch){
   if(!remote || !USER) return Promise.resolve();
   return upd("users/"+USER.uid+"/prefs", patch);
+}
+
+/* ---------- admin: when reminders go out ----------
+   Lives at config/reminders. Readable by anyone signed in so the app can show
+   what the schedule is; writable only by the administrator, enforced by the
+   database rules rather than by hiding the button. */
+const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const SCHED_DEFAULT = { enabled:true, days:[0], hour:16, windowHours:5 };
+
+function schedNow(){
+  const c = (SCHED && typeof SCHED === "object") ? SCHED : {};
+  let days = Array.isArray(c.days) ? c.days.filter(d=>Number.isInteger(d)&&d>=0&&d<=6) : [];
+  days = [...new Set(days)].sort((a,b)=>a-b);
+  return {
+    enabled: c.enabled !== false,
+    days: days.length ? days : SCHED_DEFAULT.days,
+    hour: Number.isInteger(c.hour)&&c.hour>=0&&c.hour<=23 ? c.hour : SCHED_DEFAULT.hour,
+    windowHours: Number.isInteger(c.windowHours)&&c.windowHours>=1&&c.windowHours<=12
+      ? c.windowHours : SCHED_DEFAULT.windowHours
+  };
+}
+function schedLine(){
+  const c = schedNow();
+  if(!c.enabled) return "Reminders are switched off";
+  const to = (c.hour + c.windowHours) % 24;
+  return c.days.map(d=>DAY_NAMES[d]).join(", ")+" between "+
+         String(c.hour).padStart(2,"0")+":00 and "+String(to).padStart(2,"0")+":00";
+}
+
+function sheetSchedule(){
+  openSheet("Reminder schedule", (b)=>{
+    const draw = ()=>{
+      const c = schedNow();
+      b.innerHTML =
+        '<p class="lead">When the weekly email goes out. Each person still gets it at '+
+        'this time on <em>their own</em> clock.</p>'+
+        '<div class="card" id="schOn"></div>'+
+        '<div class="sechead">Days</div>'+
+        '<div class="chips" id="schDays"></div>'+
+        '<div class="sechead">Time</div>'+
+        '<div class="arow">'+
+          '<div class="field" style="flex:1 1 140px"><label for="schHour">From</label>'+
+          '<select id="schHour">'+[...Array(24).keys()].map(h=>
+            '<option value="'+h+'"'+(h===c.hour?' selected':'')+'>'+String(h).padStart(2,"0")+':00</option>').join("")+
+          '</select></div>'+
+          '<div class="field" style="flex:1 1 140px"><label for="schWin">Window</label>'+
+          '<select id="schWin">'+[1,2,3,4,5,6,8,12].map(w=>
+            '<option value="'+w+'"'+(w===c.windowHours?' selected':'')+'>'+w+' hour'+(w===1?"":"s")+'</option>').join("")+
+          '</select></div>'+
+        '</div>'+
+        '<p class="fine" id="schSummary"></p>'+
+        '<p class="fine">The window exists because the scheduler runs once a day at a fixed '+
+        'UTC time, which drifts by an hour when the clocks change. Keep it at least two hours '+
+        'unless the scheduler has been set to run hourly.</p>';
+
+      const on = c.enabled;
+      const row = el("button","row");
+      row.innerHTML='<span class="cat'+(on?" teal":"")+'"><span class="ms" aria-hidden="true">'+
+        (on?"alarm_on":"alarm_off")+'</span></span>'+
+        '<span class="body"><span class="t1">Send reminders</span>'+
+        '<span class="t2">'+(on?"On for everyone who has not opted out":"Nobody receives them")+'</span></span>'+
+        '<span class="right"><span class="switch'+(on?" on":"")+'" aria-hidden="true"><i></i></span></span>';
+      row.setAttribute("role","switch"); row.setAttribute("aria-checked", on?"true":"false");
+      row.addEventListener("click", ()=> saveSched({enabled: !on}).then(draw) );
+      $("schOn").appendChild(row);
+
+      DAY_NAMES.forEach((nm,i)=>{
+        const ch=el("button","chip"); ch.type="button"; ch.textContent=nm;
+        const picked = c.days.indexOf(i)>-1;
+        ch.setAttribute("aria-pressed", picked?"true":"false");
+        ch.addEventListener("click", ()=>{
+          const days = picked ? c.days.filter(d=>d!==i) : c.days.concat([i]).sort((a,b)=>a-b);
+          if(!days.length) return toast("Pick at least one day");
+          saveSched({days}).then(draw);
+        });
+        $("schDays").appendChild(ch);
+      });
+
+      const summary = ()=>{ $("schSummary").textContent = schedLine(); };
+      summary();
+      $("schHour").addEventListener("change", ()=> saveSched({hour: Number($("schHour").value)}).then(draw) );
+      $("schWin").addEventListener("change", ()=> saveSched({windowHours: Number($("schWin").value)}).then(draw) );
+    };
+    draw();
+  }, render);
+}
+function saveSched(patch){
+  if(!remote || !USER) return Promise.resolve();
+  SCHED = Object.assign({}, schedNow(), patch);
+  return upd("config/reminders",
+    Object.assign({}, patch, {updatedAt: Date.now(), updatedBy: USER.email || USER.name}))
+    .then(()=> toast("Schedule saved") );
 }
 
 /* ---------- create / join / share a group ---------- */
@@ -2946,6 +3050,10 @@ function onSignedIn(u){
       set("users/"+USER.uid+"/prefs/tz", tz);
     }
   }, ()=>{});
+
+  // The reminder schedule. Readable by anyone signed in, so the settings sheet
+  // can say when the next one is due; only the administrator may change it.
+  remote.onValue(ref("config/reminders"), snap=>{ SCHED = snap.val() || {}; render(); }, ()=>{});
 
   // Groups somebody has added me to by email turn up on their own.
   if(USER.email){

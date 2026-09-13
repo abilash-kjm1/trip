@@ -8,6 +8,11 @@
       }
     },
 
+    "config": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'"
+    },
+
     "users": {
       "$uid": {
         ".read":  "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",

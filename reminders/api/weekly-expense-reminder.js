@@ -11,49 +11,12 @@ import { readPath, database } from "../lib/firebase.js";
 import { sendEmail, provider } from "../lib/email.js";
 import { reminderEmail } from "../lib/template.js";
 import { groupSummary, cents } from "../lib/ledger.js";
+import { normalise, isDue, isValidTz, describe } from "../lib/schedule.js";
 
-const DEFAULT_TZ = "America/Toronto";
-const WEEK_GUARD_MS = 6 * 24 * 3600 * 1000;
+const DEFAULT_TZ = process.env.DEFAULT_TZ || "America/Toronto";
 
-/* A window rather than one exact hour, because the cron is scheduled in UTC
-   and the clocks move. `0 21 * * 0` is 17:00 in Toronto on EDT but 16:00 once
-   EST starts, so an exact-hour test would go quiet from November to March.
-   The window covers both, and the once-a-week stamp means a wider window
-   cannot turn into more than one email. */
-const WINDOW_FROM = Number(process.env.SEND_HOUR_FROM || 16);
-const WINDOW_TO   = Number(process.env.SEND_HOUR_TO   || 20);
-
-/** Weekday and hour as they read on a wall clock in `tz`. */
-function localNow(tz, at) {
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: tz, weekday: "short", hour: "numeric", hour12: false
-    }).formatToParts(at);
-    const get = (t) => (parts.find((p) => p.type === t) || {}).value;
-    return { weekday: get("weekday"), hour: parseInt(get("hour"), 10) };
-  } catch {
-    return null;                    // unknown timezone
-  }
-}
-
-const isValidTz = (tz) => !!localNow(tz, new Date());
-
-/** Does this account want the Sunday reminder, right now? */
-function isDue(prefs, at, force) {
-  const tz = (prefs && typeof prefs.tz === "string" && isValidTz(prefs.tz)) ? prefs.tz : DEFAULT_TZ;
-  if (force) return { due: true, tz };
-
-  const now = localNow(tz, at);
-  if (!now) return { due: false, tz };
-  if (now.weekday !== "Sun") return { due: false, tz };
-  if (now.hour < WINDOW_FROM || now.hour > WINDOW_TO) return { due: false, tz };
-
-  // Guard against a double send if the schedule is ever run more than once.
-  const last = Number(prefs && prefs.lastWeekly) || 0;
-  if (last && at.getTime() - last < WEEK_GUARD_MS) return { due: false, tz };
-
-  return { due: true, tz };
-}
+const tzOf = (prefs) =>
+  (prefs && typeof prefs.tz === "string" && isValidTz(prefs.tz)) ? prefs.tz : DEFAULT_TZ;
 
 const looksLikeEmail = (s) =>
   typeof s === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim()) && s.length < 320;
@@ -91,7 +54,16 @@ export default async function handler(req, res) {
   const detail = [];
 
   try {
-    const [users, trips] = await Promise.all([readPath("users"), readPath("trips")]);
+    const [users, trips, rawCfg] = await Promise.all([
+      readPath("users"), readPath("trips"), readPath("config/reminders")
+    ]);
+    const cfg = normalise(rawCfg);
+    log.schedule = describe(cfg);
+
+    if (!cfg.enabled && !force) {
+      console.log("[reminder] schedule is switched off");
+      return res.status(200).json({ ok: true, ms: Date.now() - started, ...log });
+    }
 
     for (const uid of Object.keys(users)) {
       log.considered++;
@@ -111,9 +83,10 @@ export default async function handler(req, res) {
           continue;
         }
 
-        const { due, tz } = isDue(prefs, at, force);
-        if (!due) {
-          if (dry) detail.push({ uid, email, tz, skipped: "not Sunday evening on their clock" });
+        const tz = tzOf(prefs);
+        const verdict = force ? { due: true, why: "forced" } : isDue(cfg, tz, prefs, at);
+        if (!verdict.due) {
+          if (dry) detail.push({ uid, email, tz, skipped: verdict.why });
           continue;
         }
         log.due++;
