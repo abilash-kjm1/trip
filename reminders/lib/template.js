@@ -52,13 +52,13 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
       (t.from === g.me ? toPay : toGet).push(entry);
     });
   });
-  const many = groups.length > 1;
-
+  // The group is always named, even with only one of them. Somebody reading
+  // this on a phone should not have to remember which ledger it refers to.
   function person(x, colour) {
     return `<tr>
       <td style="padding:13px 0;border-bottom:1px solid ${LINE}">
         <span style="font-size:17px;font-weight:600;color:${INK}">${esc(x.who)}</span>
-        ${many ? `<br><span style="color:${SOFT};font-size:13px">${esc(x.group)}</span>` : ""}
+        <br><span style="color:${SOFT};font-size:13px">in ${esc(x.group)}</span>
       </td>
       <td style="padding:13px 0;border-bottom:1px solid ${LINE};text-align:right;white-space:nowrap">
         <span style="font-size:20px;font-weight:700;color:${colour}">${money(x.amt)}</span>
@@ -139,11 +139,11 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
   let t = `Hello ${name},\n\n${headline}\n`;
   if (toPay.length) {
     t += `\nPAY THESE PEOPLE\n`;
-    toPay.forEach((x) => { t += `  ${x.who}${many ? " (" + x.group + ")" : ""}: ${money(x.amt)}\n`; });
+    toPay.forEach((x) => { t += `  ${x.who} in ${x.group}: ${money(x.amt)}\n`; });
   }
   if (toGet.length) {
     t += `\nTHESE PEOPLE OWE YOU\n`;
-    toGet.forEach((x) => { t += `  ${x.who}${many ? " (" + x.group + ")" : ""}: ${money(x.amt)}\n`; });
+    toGet.forEach((x) => { t += `  ${x.who} in ${x.group}: ${money(x.amt)}\n`; });
   }
   t += `\nTotal you owe: ${money(owe)}\nTotal owed to you: ${money(owed)}\n`;
   groups.forEach((g) => {
