@@ -803,7 +803,8 @@ const linkedName = (email) => PEOPLE_LINKS[String(email||"").toLowerCase()] || n
 /* ---------------- local state ---------------- */
 const LS = {
   grp: "settle.groups.v2",   // cached copy of users/{uid}/groups, for offline
-  cur: "settle.cur.v2"
+  cur: "settle.cur.v2",
+  who: "settle.uid.v2"       // whose cache the other two are
 };
 function lsGet(k, d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }
 function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
@@ -1162,6 +1163,22 @@ function renamePerson(gid, key, from, to){
     if(p.to===from)   u["payments/"+p.k+"/to"]=to;
   });
   return upd("trips/"+gid, u);
+}
+
+/* Two people share a phone, or one person has two accounts. Everything held
+   locally - the group list, the group last open, the group named in the
+   address bar - belongs to whoever was signed in before, and none of it is
+   the next person's to see. Signing out clears it; signing straight in as
+   somebody else did not, and that is how one account came to be looking at
+   another's group. Returns true when it wiped something. */
+function forgetPreviousAccount(uid){
+  if(!uid) return false;
+  if(lsGet(LS.who, null) === uid) return false;
+  JOINED = []; CURRENT = null; DATA = {};
+  try{ localStorage.removeItem(LS.grp); localStorage.removeItem(LS.cur); }catch(e){}
+  if(typeof location !== "undefined" && location.hash) location.hash = "";
+  lsSet(LS.who, uid);
+  return true;
 }
 
 /* ---------------- which groups I am in ---------------- */
@@ -3430,12 +3447,21 @@ function signOutNow(){
   if(!confirm("Sign out of Settle on this device?")) return;
   Object.keys(subs).forEach(k=>{ subs[k](); delete subs[k]; });
   fb.authMod.signOut(fb.auth).then(()=>{
-    try{ localStorage.removeItem(LS.grp); localStorage.removeItem(LS.cur); }catch(e){}
+    try{ localStorage.removeItem(LS.grp); localStorage.removeItem(LS.cur);
+         localStorage.removeItem(LS.who); }catch(e){}
     location.hash=""; location.reload();
   });
 }
 
 function onSignedIn(u){
+  // Two people share a phone, or one person has two accounts. Everything held
+  // locally - the group list, the group last open, the group named in the
+  // address bar - belongs to whoever was signed in before, and none of it is
+  // this person's to see. Signing out clears it, but signing straight in as
+  // somebody else does not, and that is exactly how one account ended up
+  // looking at another's group.
+  forgetPreviousAccount(u.uid);
+
   USER = { uid:u.uid, name:u.displayName || (u.email||"").split("@")[0] || "You",
            email:u.email || "", photo:u.photoURL || null };
   setSync(null);
@@ -3531,6 +3557,12 @@ function openFromURL(){
     remote.get(ref("trips/"+gid+"/meta")).then(snap=>{
       if(!snap.exists() && !known){ toast("That group link no longer works"); location.hash=""; return; }
       const meta=snap.val()||{};
+      // Following a link used to join you on the spot, with nothing but a
+      // toast to say so. An address left in the bar by whoever used this
+      // device last is not a decision, so ask before acting on it.
+      if(!known && !confirm('Join "'+(meta.name||"this group")+'"? You will see everything it has spent and everyone in it, and they will see you.')){
+        location.hash=""; render(); return;
+      }
       rememberGroup(gid, meta.name||"Group");
       watchGroup(gid);
       if(!known) toast("You joined “"+(meta.name||"the group")+"”");
