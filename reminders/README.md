@@ -159,11 +159,54 @@ already written for it, so changing the schedule to `0 * * * *` is the only
 edit. That needs either a Vercel plan allowing hourly crons or a free external
 pinger such as cron-job.org hitting the same URL with the same bearer token.
 
+## Running it hourly
+
+The schedule is set in the app (Account → Administration → Reminder schedule),
+but the endpoint can only act when something calls it. **Vercel Hobby fires a
+cron once a day**, so out of the box only a window that happens to cover that
+one firing will ever send. Any other chosen hour goes unnoticed.
+
+Calling it every hour fixes that, and costs nothing:
+
+1. **cron-job.org** → sign up free
+2. **Create cronjob**
+3. **URL**: `https://YOUR-PROJECT.vercel.app/api/weekly-expense-reminder`
+4. **Schedule**: Every hour, at minute 0
+5. **Advanced → Headers**, add one:
+   * name `Authorization`
+   * value `Bearer YOUR_CRON_SECRET`
+6. Save and enable
+
+Leave the Vercel cron in `vercel.json` as it is. Two callers are harmless: the
+`lastWeekly` stamp means the second one finds nothing to do, and it is a free
+backstop if cron-job.org ever misses a run.
+
+With hourly calls the window can be narrowed to one or two hours and a chosen
+time means what it says, daylight saving included.
+
+### What an hourly call actually costs
+
+Nearly nothing, because the run does as little as possible before ruling
+itself out:
+
+| Every run | Reads `config/reminders`, a few bytes |
+| Most runs | Reads `users` to see if anybody is due, then stops |
+| The one run that sends | Also reads `trips`, then emails |
+
+So 720 calls a month, of which roughly four touch the expenses at all.
+
 ## Cost
 
-Designed to sit inside the free tiers: one cron job, two database reads per
-run regardless of how many people there are, and one Resend call per person who
-actually owes something. Resend's free tier is 100 emails a day, 3,000 a month.
+| | Free tier | What this uses |
+|---|---|---|
+| Brevo | **300 emails a day** (~9,000/month) | 4 a week - about 1% of a single day's allowance |
+| Vercel Hobby | 100,000 function calls a month | 720 if run hourly |
+| cron-job.org | unlimited jobs | 1 |
+| Firebase RTDB | 10 GB download a month | a few MB |
+
+The email allowance is the one people worry about, and it is the one with the
+most room: at four people on a weekly schedule you would need about seventy
+times as many people before a daily limit of 300 came into view.
 
 ## Security notes
 

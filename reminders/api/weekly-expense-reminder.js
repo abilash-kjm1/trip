@@ -54,16 +54,36 @@ export default async function handler(req, res) {
   const detail = [];
 
   try {
-    const [users, trips, rawCfg] = await Promise.all([
-      readPath("users"), readPath("trips"), readPath("config/reminders")
-    ]);
-    const cfg = normalise(rawCfg);
+    // Cheapest first. When this runs hourly, nearly every run should stop on
+    // one of the next two checks without ever reading the expenses.
+    const cfg = normalise(await readPath("config/reminders"));
     log.schedule = describe(cfg);
 
     if (!cfg.enabled && !force) {
       console.log("[reminder] schedule is switched off");
       return res.status(200).json({ ok: true, ms: Date.now() - started, ...log });
     }
+
+    const users = await readPath("users");
+
+    // Is anybody due at all? Deciding this needs only preferences and a
+    // timezone, never the ledger.
+    const dueNow = Object.keys(users).filter((uid) => {
+      const u = users[uid] || {};
+      const prefs = u.prefs || {};
+      if (prefs.weekly === false) return false;
+      if (!looksLikeEmail(String((u.profile || {}).email || "").trim().toLowerCase())) return false;
+      return force ? true : isDue(cfg, tzOf(prefs), prefs, at).due;
+    });
+
+    if (!dueNow.length) {
+      log.considered = Object.keys(users).length;
+      console.log("[reminder] nobody due; skipped reading the expenses");
+      return res.status(200).json({ ok: true, ms: Date.now() - started, ...log,
+                                    ...(dry ? { detail: [{ skipped: "nobody is due at this hour" }] } : {}) });
+    }
+
+    const trips = await readPath("trips");
 
     for (const uid of Object.keys(users)) {
       log.considered++;
