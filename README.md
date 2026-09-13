@@ -68,34 +68,30 @@ claimed that name. Each account's own list of groups lives at
 `users/{uid}/groups`, which is why it follows you between devices; a cached
 copy is kept in `localStorage` so the app still opens offline.
 
-The look is Liquid Glass, and the part that makes it glass rather than frost
-is the rim. Each panel carries two pseudo-elements: `::before` is a gradient
-ring masked to the border alone, so the edge reads as the *thickness* of a
-lens catching light from one side, and `::after` is the specular sweep across
-the top of a curved surface.
+The look is Liquid Glass, applied the way Apple specifies it. The rule that
+governs everything: glass is the material of the **navigation layer only** —
+the bar buttons, the tab bar, the floating action button, the sheet surface.
+It floats above content and refracts the content passing beneath it. It is
+never applied to content itself: lists, rows, cards, tiles, fields or text.
+And glass is never nested in glass, so the controls inside a glass sheet are
+solid, and the bar buttons flatten the moment the bar itself turns to glass.
 
-The fill is nearly clear — around 20% white. It stays readable not by being
-painted over but because the backdrop filter lifts what is behind it
-(`brightness(1.06) saturate(210%)`), which is the trick that lets colour flow
-through a panel while text on top stays legible. Materials come in
-thicknesses, as they do on iOS: panels and the tab bar are thin, form sheets
-are thick so fields read over whatever is blurring beneath them.
+Content is therefore an ordinary opaque iOS grouped list — white cards on a
+grey ground, hairline separators inset to the text. That contrast is the whole
+point: glass reads as glass only because there is something solid underneath
+for it to bend.
 
-That means the colour field behind is load bearing, not decoration — glass
-with nothing to refract is just a grey box — so it is a set of radial washes
-with a whisper of SVG grain to stop them banding.
+The glass itself is two pseudo-elements on a `.glass` class. `::before` is a
+gradient ring masked to the border alone, so the edge reads as the *thickness*
+of the material catching light from one side; `::after` is the specular sweep
+across the curved surface. The fill is around 42% white and stays legible
+because the backdrop filter lifts what is behind it rather than painting over
+it.
 
-Type follows the iOS scale (17px body, 34px large titles, tight negative
-tracking, tabular figures for money) in SF Pro on Apple hardware via
-`-apple-system`, falling back to Inter, which is metrically close. Colours are
-the iOS system palette. Screen names behave like iOS large titles: they live
-in the content, and the navigation bar stays invisible until one scrolls under
-it, at which point the bar frosts over and the name reappears in it, small and
-centred.
-
-Where there is no `backdrop-filter` (older browsers), an `@supports` block
-swaps the panels to near-opaque white and fades the colour field, so the app
-degrades to something clean rather than something murky.
+Accessibility is part of the spec, not an afterthought: `prefers-reduced-
+transparency` turns every glass surface opaque, `prefers-contrast: more`
+darkens the label hierarchy and thickens separators, and an `@supports` block
+covers browsers with no `backdrop-filter` at all.
 
 The theme is locked light (`color-scheme: light`, plus the same tokens
 re-declared under `prefers-color-scheme: dark`) so a phone's dark mode cannot
