@@ -1605,13 +1605,11 @@ function viewCircles(main){
 
   if(!JOINED.length){
     const e=el("div","empty");
-    e.innerHTML='<span class="ms" aria-hidden="true">groups</span><h3>No groups yet</h3>'+
-      '<p>Create one for a trip, a flat or a couple — then share the link so others can join.</p>';
-    const b=el("button","btn p","Create a group"); b.addEventListener("click", sheetGroupNew);
+    e.innerHTML='<span class="ms" aria-hidden="true">layers</span><h3>No circles yet</h3>'+
+      '<p>Start one for a trip, a flat or a couple, and add the people you split with. '+
+      'To join a circle somebody else started, ask them to add you — they will need your email.</p>';
+    const b=el("button","btn p","Start a circle"); b.addEventListener("click", sheetGroupNew);
     e.appendChild(b);
-    const j=el("button","btn s","Join with a code");
-    j.style.marginTop="10px"; j.addEventListener("click", sheetGroupJoin);
-    e.appendChild(el("div","")); e.appendChild(j);
     main.appendChild(e);
     if(LEGACY_OK){
       main.appendChild(el("div","sechead","Were you on this trip?"));
@@ -1646,9 +1644,6 @@ function viewCircles(main){
   });
   main.appendChild(card);
 
-  const j=el("button","btn s wide","Join a group with a code");
-  j.addEventListener("click", sheetGroupJoin);
-  main.appendChild(j);
 }
 function groupIcon(gid){
   const t=(DATA[gid]&&DATA[gid].meta&&DATA[gid].meta.type)||"";

@@ -1,5 +1,5 @@
 /* Settle - offline service worker */
-const VERSION = 'settle-v28';
+const VERSION = 'settle-v29';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 
