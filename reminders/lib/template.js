@@ -43,9 +43,42 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
     : net > 0 ? `You are owed ${money(net)}` : `You owe ${money(-net)}`;
   const headColour = Math.abs(net) < 0.005 ? SOFT : (net > 0 ? GREEN : RED);
 
+  // Who to pay, gathered across every group. This is the part somebody acts
+  // on, so it goes first rather than under a list of expenses.
+  const toPay = [], toGet = [];
+  groups.forEach((g) => {
+    (g.plan || []).forEach((t) => {
+      const entry = { who: t.from === g.me ? t.to : t.from, amt: t.amt, group: g.group };
+      (t.from === g.me ? toPay : toGet).push(entry);
+    });
+  });
+  const many = groups.length > 1;
+
+  function person(x, colour) {
+    return `<tr>
+      <td style="padding:13px 0;border-bottom:1px solid ${LINE}">
+        <span style="font-size:17px;font-weight:600;color:${INK}">${esc(x.who)}</span>
+        ${many ? `<br><span style="color:${SOFT};font-size:13px">${esc(x.group)}</span>` : ""}
+      </td>
+      <td style="padding:13px 0;border-bottom:1px solid ${LINE};text-align:right;white-space:nowrap">
+        <span style="font-size:20px;font-weight:700;color:${colour}">${money(x.amt)}</span>
+      </td>
+    </tr>`;
+  }
+
   let body = "";
 
-  body += section("The short version",
+  if (toPay.length) {
+    body += section("Pay these people", toPay.map((x) => person(x, RED)).join(""));
+  }
+  if (toGet.length) {
+    body += section("These people owe you", toGet.map((x) => person(x, GREEN)).join(""));
+  }
+  if (!toPay.length && !toGet.length) {
+    body += section("Settling up", row("Nobody owes anybody", "settled", SOFT));
+  }
+
+  body += section("Totals",
     row("Total you owe", money(owe), owe > 0.004 ? RED : SOFT) +
     row("Total owed to you", money(owed), owed > 0.004 ? GREEN : SOFT)
   );
@@ -67,19 +100,10 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
       );
     });
 
-    let plan = "";
-    g.plan.forEach((t) => {
-      const mine = t.from === g.me;
-      plan += row(
-        mine ? `You pay ${esc(t.to)}` : `${esc(t.from)} pays you`,
-        money(t.amt), mine ? RED : GREEN
-      );
-    });
-
     const label = `${g.group} — ${Math.abs(g.net) < 0.005 ? "settled"
       : g.net > 0 ? `you are owed ${money(g.net)}` : `you owe ${money(-g.net)}`}`;
 
-    body += section(label, rows + plan);
+    body += section(label, rows);
   });
 
   const html = `<!doctype html>
@@ -112,14 +136,20 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
 </body></html>`;
 
   // A plain-text alternative, for clients that refuse HTML.
-  let t = `Hello ${name},\n\n${headline}\n\nTotal you owe: ${money(owe)}\nTotal owed to you: ${money(owed)}\n`;
+  let t = `Hello ${name},\n\n${headline}\n`;
+  if (toPay.length) {
+    t += `\nPAY THESE PEOPLE\n`;
+    toPay.forEach((x) => { t += `  ${x.who}${many ? " (" + x.group + ")" : ""}: ${money(x.amt)}\n`; });
+  }
+  if (toGet.length) {
+    t += `\nTHESE PEOPLE OWE YOU\n`;
+    toGet.forEach((x) => { t += `  ${x.who}${many ? " (" + x.group + ")" : ""}: ${money(x.amt)}\n`; });
+  }
+  t += `\nTotal you owe: ${money(owe)}\nTotal owed to you: ${money(owed)}\n`;
   groups.forEach((g) => {
     t += `\n${g.group}\n`;
     g.owes.forEach((x) => { t += `  ${x.desc} — ${x.payer} paid ${money(x.amount)}, your share ${money(x.share)}\n`; });
     g.lent.forEach((x) => { t += `  ${x.desc} — you paid ${money(x.amount)}, ${money(x.out)} still out\n`; });
-    g.plan.forEach((p) => {
-      t += p.from === g.me ? `  You pay ${p.to} ${money(p.amt)}\n` : `  ${p.from} pays you ${money(p.amt)}\n`;
-    });
   });
   t += `\nOpen Settle: ${appUrl}\nTurn this off under Account > Notifications.\n`;
 
