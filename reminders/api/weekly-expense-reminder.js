@@ -85,6 +85,9 @@ export default async function handler(req, res) {
   const at = new Date();
 
   const log = { considered: 0, due: 0, skippedNothingOwing: 0, sent: 0, failed: 0, errors: [] };
+  // A dry run explains itself. "Nothing owing" has several causes and the
+  // summary alone cannot tell them apart, which makes setup guesswork.
+  const detail = [];
 
   try {
     const [users, trips] = await Promise.all([readPath("users"), readPath("trips")]);
@@ -97,12 +100,21 @@ export default async function handler(req, res) {
 
       try {
         // ---- wants it, and can receive it ---------------------------------
-        if (prefs.weekly === false) continue;
+        if (prefs.weekly === false) {
+          if (dry) detail.push({ uid, skipped: "weekly reminder switched off" });
+          continue;
+        }
         const email = String(profile.email || "").trim().toLowerCase();
-        if (!looksLikeEmail(email)) continue;
+        if (!looksLikeEmail(email)) {
+          if (dry) detail.push({ uid, skipped: "no usable email on the profile" });
+          continue;
+        }
 
         const { due, tz } = isDue(prefs, at, force);
-        if (!due) continue;
+        if (!due) {
+          if (dry) detail.push({ uid, email, tz, skipped: "not Sunday evening on their clock" });
+          continue;
+        }
         log.due++;
 
         // ---- what do they actually owe ------------------------------------
@@ -110,17 +122,29 @@ export default async function handler(req, res) {
         const groups = [];
         let owe = 0, owed = 0;
 
+        const why = [];
         for (const gid of gids) {
           const g = trips[gid];
-          if (!g || typeof g !== "object") continue;          // deleted group
+          if (!g || typeof g !== "object") {
+            why.push({ gid, skipped: "group no longer exists" });
+            continue;
+          }
           const name = (g.meta && g.meta.name) || gid;
           const s = groupSummary(g, name, uid);
-          if (!s) continue;                                   // never claimed a name here
-          if (Math.abs(s.net) < 0.005 && !s.owes.length && !s.lent.length) continue;
+          if (!s) {
+            why.push({ gid, group: name, skipped: "this account has not claimed a name in it" });
+            continue;
+          }
+          if (Math.abs(s.net) < 0.005 && !s.owes.length && !s.lent.length) {
+            why.push({ gid, group: name, person: s.me, skipped: "settled, nothing outstanding" });
+            continue;
+          }
+          why.push({ gid, group: name, person: s.me, net: s.net, owesLines: s.owes.length, lentLines: s.lent.length });
           groups.push(s);
           if (s.net < -0.004) owe += -s.net;
           else if (s.net > 0.004) owed += s.net;
         }
+        if (dry) detail.push({ uid, email, tz, groupsListed: gids.length, groups: why });
 
         owe = cents(owe); owed = cents(owed);
 
@@ -159,7 +183,7 @@ export default async function handler(req, res) {
 
     const ms = Date.now() - started;
     console.log("[reminder] done in " + ms + "ms", JSON.stringify(log));
-    return res.status(200).json({ ok: true, ms, ...log });
+    return res.status(200).json({ ok: true, ms, ...log, ...(dry ? { detail } : {}) });
   } catch (err) {
     const msg = (err && err.message) || String(err);
     console.error("[reminder] aborted:", msg);
