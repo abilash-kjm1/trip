@@ -157,6 +157,17 @@ export default async function handler(req, res) {
     } else {
       const last = Number(beat.at) || 0;
       const gapMins = last && beat.prevAt ? Math.round((last - Number(beat.prevAt)) / 60000) : null;
+      // Publishing the membership rules before this index is filled in would
+      // shut people out of their own ledger, so show it before it matters.
+      const allTrips = await readPath("trips");
+      log.members = Object.keys(allTrips).map((gid) => {
+        const g = allTrips[gid] || {};
+        const named = Object.keys(g.people || {})
+          .filter((k) => g.people[k] && g.people[k].uid).length;
+        return ((g.meta && g.meta.name) || gid) + ": " +
+               Object.keys(g.uids || {}).length + " on the index, " +
+               named + " with an account";
+      });
       log.directory = Object.keys(directory).length + " listed: " +
         (Object.keys(directory).map((u) => (directory[u] || {}).name).filter(Boolean).join(", ")
          || "nobody yet");

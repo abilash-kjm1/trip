@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-title" content="Settle">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap">
 <style>
 /* ============================================================
    SETTLE — Liquid Glass, applied the way Apple specifies it
@@ -684,6 +684,213 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 }
 @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 
+/* ============================================================
+   SPLITTER — warm paper, one accent, a serif that speaks
+
+   The old skin was iOS: cool grey, system blue, glass. This is
+   the opposite temperament. Paper rather than screen, a single
+   warm accent doing all the pointing, and a serif kept for the
+   sentences the app actually says to you. Money is the only
+   thing allowed to be green or red; nothing else competes.
+   ============================================================ */
+:root{
+  --paper:#F3EDE4;        /* the ground: warm, not white */
+  --panel:#FBF8F4;        /* the sheet the content sits on */
+  --surface:#FFFFFF;
+  --ink:#1B1815;
+  --ink-2:#6B625A;
+  --ink-3:#A69C91;
+  --line:#E8DFD3;
+
+  --clay:#EFB183;         /* the one accent */
+  --clay-dk:#C97A46;
+  --clay-lt:#F7DCC6;
+
+  --good:#2E7D5B;         /* coming to you */
+  --bad:#C4472C;          /* going out */
+
+  --ground:var(--paper);
+  --label:var(--ink);
+  --label-2:var(--ink-2);
+  --label-3:var(--ink-3);
+  --sep:var(--line);
+  --tint:var(--clay-dk);
+  --owed:var(--good);
+  --owe:var(--bad);
+  --danger:var(--bad);
+  --green-dk:var(--good);
+  --green-lt:rgba(46,125,91,.12);
+
+  --fill-1:rgba(107,98,90,.07);
+  --fill-2:rgba(107,98,90,.11);
+  --fill-3:rgba(107,98,90,.16);
+
+  --serif:"Fraunces", "Iowan Old Style", Georgia, serif;
+  --r-lg:22px; --r-md:16px; --r-sm:12px;
+}
+
+body{ background:var(--paper); color:var(--ink); }
+.bgmesh{ display:none; }
+
+/* the voice */
+h1, h2, .ltitle, .display, .hero h2{
+  font-family:var(--serif); font-weight:600; letter-spacing:-.01em;
+}
+.display{
+  font-size:clamp(28px, 7vw, 40px); line-height:1.08; margin:2px 0 0; max-width:15ch;
+}
+.eyebrow{
+  font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); margin:0;
+}
+.topline{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+  flex-wrap:wrap; }
+.topline > div{ flex:1 1 240px; min-width:0; }
+.topline .btn{ flex:0 0 auto; }
+/* On a phone the add button lives in the bar at the bottom, where a thumb
+   already is. Two of them would just be two. */
+@media (max-width:759px){ .topline .btn.ink{ display:none; } }
+
+/* ---- the shell ---------------------------------------------------- */
+.bar{ background:transparent; backdrop-filter:none; border:0; box-shadow:none; }
+.bar.scrolled{ background:rgba(243,237,228,.88); backdrop-filter:blur(14px); }
+.bar h1{ font-family:var(--serif); font-size:17px; }
+
+.brand{ display:flex; align-items:center; font-family:var(--serif);
+  font-size:21px; font-weight:700; letter-spacing:-.02em; color:var(--ink); }
+.brand i{ font-style:normal; color:var(--clay-dk); }
+
+.side{ display:none; }
+
+/* ---- surfaces ----------------------------------------------------- */
+.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
+  box-shadow:none; overflow:hidden;
+}
+.sechead{
+  font-family:var(--serif); font-size:18px; font-weight:600; letter-spacing:-.01em;
+  text-transform:none; color:var(--ink); margin:26px 0 10px; padding:0;
+}
+.row{ background:transparent; }
+.row + .row::before, .daygroup + .row::before{ background:var(--line); }
+
+/* the three figures */
+.stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:12px; margin:16px 0 0; }
+.stat{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:14px 16px 15px;
+}
+.stat .k{
+  font-size:10px; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); display:block; line-height:1.3;
+}
+.stat .v{ font-size:26px; font-weight:700; letter-spacing:-.02em; display:block; margin:7px 0 2px; }
+.stat .s{ font-size:12px; color:var(--ink-3); display:block; }
+.stat .v.pos{ color:var(--good); } .stat .v.neg{ color:var(--bad); }
+
+/* the one thing to do next */
+.hero{
+  position:relative; overflow:hidden; margin:18px 0 0; padding:24px 24px 22px;
+  border-radius:var(--r-lg); background:var(--clay); color:#2A1B10;
+}
+.hero::after{
+  content:""; position:absolute; right:-60px; top:-70px; width:230px; height:230px;
+  border-radius:50%; background:rgba(255,255,255,.13); pointer-events:none;
+}
+.hero h2{ font-size:clamp(22px,5.2vw,28px); line-height:1.12; margin:0; max-width:13ch;
+  position:relative; }
+.hero p{ margin:10px 0 0; font-size:14px; line-height:1.5; color:#5A3A22; max-width:34ch;
+  position:relative; }
+.hero .row2{ position:relative; display:flex; align-items:flex-end; justify-content:space-between;
+  gap:16px; flex-wrap:wrap; margin:18px 0 0; }
+.hero .net{ font-family:var(--serif); font-size:clamp(26px,6vw,34px); font-weight:700;
+  letter-spacing:-.02em; line-height:1; text-align:right; }
+.hero .net small{ display:block; font-family:var(--f); font-size:12px; font-weight:500;
+  letter-spacing:0; color:#6B4527; margin-top:6px; }
+
+/* buttons */
+.btn{ border-radius:999px; font-weight:600; }
+.btn.primary, .btn.p{ background:var(--ink); color:#FBF8F4; border:0; }
+.btn.ghost{ background:transparent; border:1px solid var(--line); color:var(--ink); }
+.btn.ink{ background:var(--ink); color:#FBF8F4; border:0; padding:12px 18px; white-space:nowrap; }
+
+/* ---- the moments and people columns -------------------------------- */
+.cols{ display:grid; gap:14px; margin:8px 0 0; }
+@media (min-width:760px){ .cols.two{ grid-template-columns:1fr 1fr; align-items:start; } }
+
+.moment{ display:flex; align-items:flex-start; gap:12px; padding:14px 16px; width:100%;
+  background:transparent; border:0; text-align:left; font:inherit; cursor:pointer; }
+.moment + .moment{ border-top:1px solid var(--line); }
+.moment .ic{
+  flex:0 0 auto; width:36px; height:36px; border-radius:50%; background:var(--clay-lt);
+  color:var(--clay-dk); display:flex; align-items:center; justify-content:center;
+}
+.moment .ic .ms{ font-size:19px; }
+.moment .b{ flex:1; min-width:0; }
+.moment .t{ font-weight:600; font-size:15px; letter-spacing:-.01em; color:var(--ink); }
+.moment .m{ font-size:12px; color:var(--ink-3); margin-top:3px; }
+.moment .amt{ text-align:right; white-space:nowrap; }
+.moment .amt b{ font-size:15px; font-weight:700; color:var(--ink); }
+.moment .amt span{ display:block; font-size:12px; margin-top:3px; }
+
+/* circles strip */
+.circles{ display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); }
+.circle{ border-top:2px solid var(--ink); padding:12px 0 4px; background:transparent;
+  border-left:0; border-right:0; border-bottom:0; text-align:left; font:inherit; cursor:pointer; }
+.circle .n{ font-family:var(--serif); font-size:17px; font-weight:600; color:var(--ink); }
+.circle .m{ font-size:12px; color:var(--ink-3); margin-top:4px; }
+.circle .v{ font-size:13px; font-weight:600; margin-top:6px; }
+
+/* ---- navigation ---------------------------------------------------- */
+.nav{
+  background:var(--ink); backdrop-filter:none; border:0;
+  border-radius:999px; box-shadow:0 10px 30px rgba(27,24,21,.22);
+  left:50%; transform:translateX(-50%); width:auto; max-width:calc(100% - 24px);
+  padding:7px 8px; gap:2px;
+}
+.nav button{ color:rgba(251,248,244,.60); font-size:10px; padding:7px 13px; border-radius:999px; }
+.nav button .ms{ font-size:23px; }
+.nav button[aria-current="page"]{ color:#FBF8F4; background:rgba(255,255,255,.10); }
+
+.fab{
+  background:var(--clay); color:#2A1B10; border:0;
+  box-shadow:0 8px 22px rgba(201,122,70,.34);
+}
+.fab .ms{ font-size:26px; }
+
+/* ---- desktop: a dark rail, and the content on paper ---------------- */
+@media (min-width:1000px){
+  body{ background:#141210; }
+  .side{
+    display:flex; flex-direction:column; gap:2px; position:fixed; inset:0 auto 0 0;
+    width:232px; padding:26px 16px 20px; color:rgba(251,248,244,.72); overflow:auto;
+  }
+  .side .brand{ color:#FBF8F4; padding:0 10px 20px; }
+  .side .grp{ font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:rgba(251,248,244,.34); padding:16px 10px 8px; }
+  .side button{
+    display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+    background:transparent; border:0; color:inherit; font-size:14px; font-weight:500;
+    padding:10px 11px; border-radius:10px; cursor:pointer;
+  }
+  .side button .ms{ font-size:20px; }
+  .side button:hover{ background:rgba(255,255,255,.06); color:#FBF8F4; }
+  .side button[aria-current="page"]{ background:var(--clay-lt); color:#2A1B10; font-weight:600; }
+  .side .foot{ margin-top:auto; border-top:1px solid rgba(255,255,255,.10); padding-top:14px; }
+
+  .shell{ margin-left:232px; min-height:100vh; padding:14px 14px 14px 0; }
+  .panel{ background:var(--panel); border-radius:26px; min-height:calc(100vh - 28px);
+    padding:34px 40px 60px; }
+  .wrap{ max-width:1000px; margin:0; padding:0; }
+  .bar, .nav, .fab{ display:none; }
+  .display{ font-size:44px; max-width:18ch; }
+}
+@media (max-width:999px){
+  .shell{ margin:0; padding:0; }
+  .panel{ background:transparent; padding:0; }
+}
+
+
 /* ---------- printing (kept last so it wins the cascade) ---------- */
 #printArea{ display:none; }
 @media print{
@@ -713,10 +920,27 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 <body>
 <div class="bgmesh" aria-hidden="true"></div>
 
+<!-- The rail only exists on a wide screen. On a phone the same places are
+     reached from the bar at the bottom, so nothing here is the only way to
+     get anywhere. -->
+<aside class="side" id="side" aria-label="Sections">
+  <div class="brand">split<i>ter</i></div>
+  <div class="grp">Home</div>
+  <button data-tab="groups"><span class="ms" aria-hidden="true">explore</span>Today</button>
+  <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
+  <button data-tab="circles"><span class="ms" aria-hidden="true">layers</span>Circles</button>
+  <div class="foot">
+    <button data-tab="account"><span class="ms" aria-hidden="true">account_circle</span>Your account</button>
+  </div>
+</aside>
+
+<div class="shell">
+<div class="panel">
+
 <header class="bar" id="bar">
   <button class="ibtn glass" id="backBtn" aria-label="Back" hidden><span class="ms" aria-hidden="true">arrow_back</span></button>
   <span class="spacer"></span>
-  <h1 id="barTitle">Groups</h1>
+  <h1 id="barTitle">Today</h1>
   <span class="spacer"></span>
   <button class="ibtn glass" id="gmenuBtn" aria-label="Group settings" hidden><span class="ms" aria-hidden="true">more_horiz</span></button>
 </header>
@@ -724,11 +948,15 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 
 <main class="wrap" id="main"></main>
 
+</div>
+</div>
+
 <button class="fab" id="fab" hidden><span class="ms" aria-hidden="true">add</span><span id="fabLabel">Add expense</span></button>
 
-<nav class="nav glass" id="nav" aria-label="Sections">
-  <button data-tab="groups" aria-current="page"><span class="ms" aria-hidden="true">group</span>Groups</button>
-  <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Activity</button>
+<nav class="nav" id="nav" aria-label="Sections">
+  <button data-tab="groups" aria-current="page"><span class="ms" aria-hidden="true">explore</span>Today</button>
+  <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
+  <button data-tab="circles"><span class="ms" aria-hidden="true">layers</span>Circles</button>
   <button data-tab="account"><span class="ms" aria-hidden="true">account_circle</span>Account</button>
 </nav>
 
@@ -1252,7 +1480,7 @@ function render(){
   $("fab").hidden=true; $("backBtn").hidden=true; $("gmenuBtn").hidden=true;
   $("nav").hidden = !USER;
   ME = CURRENT ? meIn(CURRENT) : null;
-  document.querySelectorAll(".nav button").forEach(b=>{
+  document.querySelectorAll(".nav button, .side button").forEach(b=>{
     if(b.dataset.tab===TAB && !CURRENT && !ADMIN_VIEW) b.setAttribute("aria-current","page");
     else b.removeAttribute("aria-current");
   });
@@ -1263,6 +1491,7 @@ function render(){
   else if(CURRENT)          viewGroup(main);
   else if(ADMIN_VIEW)       viewAdmin(main);
   else if(TAB==="groups")   viewGroups(main);
+  else if(TAB==="circles")  viewCircles(main);
   else if(TAB==="activity") viewActivity(main);
   else if(TAB==="account")  viewAccount(main);
   if(y) window.scrollTo(0, Math.min(y, document.body.scrollHeight));
@@ -1358,8 +1587,8 @@ function viewAccess(main){
 }
 
 /* ---------- groups list ---------- */
-function viewGroups(main){
-  setTitle(main, "Groups");
+function viewCircles(main){
+  setTitle(main, "Circles");
   $("fab").hidden=false; $("fabLabel").textContent="New group";
 
   let owed=0, owe=0;
@@ -1992,6 +2221,285 @@ function viewAdmin(main){
   note.style.cssText="text-align:center;color:var(--label-3);font-size:12px;margin:16px 4px";
   note.textContent="Opening a group here adds it to your own list so you can work in it.";
   main.appendChild(note);
+}
+
+/* ---------- Today ----------
+   The screen that answers "do I owe anybody anything" before it shows
+   anything else. One thing to do next, three figures, then what has been
+   happening. Everything on it is real: no row here is a placeholder. */
+
+/* Every settling-up payment I am part of, across every group, smallest
+   first - the one that clears a whole person for the least money is the one
+   worth doing today. */
+function whatToDoNext(){
+  const out = [];
+  JOINED.forEach(g=>{
+    const me = meIn(g.id);
+    if(!me) return;
+    settlements(g.id).forEach(t=>{
+      if(t.from===me) out.push({dir:"pay",  who:t.to,   amt:t.amt, gid:g.id});
+      else if(t.to===me) out.push({dir:"get", who:t.from, amt:t.amt, gid:g.id});
+    });
+  });
+  out.sort((a,b)=> a.amt-b.amt );
+  return out;
+}
+
+/* The most recent expenses anywhere, with what they mean for me. */
+function recentMoments(n){
+  const out = [];
+  JOINED.forEach(g=>{
+    const me = meIn(g.id);
+    expensesOf(g.id).forEach(e=>{
+      const sh = sharesOf(e)[me] || 0;
+      out.push({
+        gid:g.id, k:e.k, desc:e.desc, amount:Number(e.amount)||0, cat:e.cat,
+        at:Number(e.at)||0, payer:e.payer,
+        mine: me && e.payer===me ? (Number(e.amount)||0) - sh : -sh
+      });
+    });
+  });
+  out.sort((a,b)=> b.at-a.at );
+  return out.slice(0, n);
+}
+
+/* Everybody I share anything with, and where we stand overall. */
+function peopleAcrossGroups(){
+  const by = {};
+  JOINED.forEach(g=>{
+    const me = meIn(g.id);
+    if(!me) return;
+    const net = pairNet ? null : null;   // per-pair totals come from settlements
+    everyoneIn(g.id).forEach(n=>{
+      if(n===me) return;
+      by[n] = by[n] || {name:n, bills:0, net:0, colour:colourOf(g.id, n)};
+    });
+    expensesOf(g.id).forEach(e=>{
+      const sh = sharesOf(e);
+      Object.keys(sh).forEach(n=>{ if(n!==me && by[n]) by[n].bills++; });
+    });
+    settlements(g.id).forEach(t=>{
+      if(t.from===me && by[t.to])   by[t.to].net   -= t.amt;
+      else if(t.to===me && by[t.from]) by[t.from].net += t.amt;
+    });
+  });
+  return Object.keys(by).map(k=>by[k])
+    .sort((a,b)=> Math.abs(b.net)-Math.abs(a.net) || a.name.localeCompare(b.name));
+}
+
+function colourOf(gid, name){
+  const m = membersOf(gid).find(x=>x.name===name);
+  return (m && m.colour) || "#A69C91";
+}
+
+function viewGroups(main){
+  // The date and the headline below are this screen's title, so the usual
+  // large one would only say the same thing twice.
+  $("barTitle").textContent = "Today";
+  $("fab").hidden = !JOINED.length;
+  $("fabLabel").textContent = "Add an expense";
+
+  const today = new Date();
+  const line = el("div","topline");
+  line.innerHTML =
+    '<div><p class="eyebrow">'+esc(today.toLocaleDateString(undefined,
+      {weekday:"long", month:"long", day:"numeric"}))+'</p>'+
+    '<h1 class="display">Money feels lighter when it\'s clear.</h1></div>';
+  const add = el("button","btn ink","+ Add an expense");
+  add.addEventListener("click", ()=>{
+    if(!JOINED.length) return sheetGroupNew();
+    if(JOINED.length===1) { openGroup(JOINED[0].id); setTimeout(()=>sheetExpense(null), 260); return; }
+    sheetPickCircle();
+  });
+  line.appendChild(add);
+  main.appendChild(line);
+
+  if(!JOINED.length){
+    const e=el("div","empty");
+    e.innerHTML='<span class="ms" aria-hidden="true">layers</span><h3>Nothing shared yet</h3>'+
+      '<p>Start a circle for a trip, a flat or a couple, and add the people you split with.</p>';
+    const b=el("button","btn p","Start a circle"); b.addEventListener("click", sheetGroupNew);
+    e.appendChild(b);
+    main.appendChild(e);
+    return;
+  }
+
+  let owed=0, owe=0, spend=0;
+  const owedPeople = {}, owePeople = {};
+  const now = new Date(), m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  JOINED.forEach(g=>{
+    const v=myBalance(g.id);
+    if(v>0.004) owed+=v; else if(v<-0.004) owe+=-v;
+    expensesOf(g.id).forEach(e=>{ if((Number(e.at)||0) >= m0) spend += Number(e.amount)||0; });
+  });
+  const plan = whatToDoNext();
+  plan.forEach(t=>{ (t.dir==="pay" ? owePeople : owedPeople)[t.who]=true; });
+  const net = owed-owe;
+
+  /* ---- the one thing to do next ---- */
+  const first = plan.filter(t=>t.dir==="pay")[0] || plan[0];
+  const hero = el("section","hero");
+  const headline = !first ? "Everything is settled."
+                 : first.dir==="pay" ? "One payment, and you're closer to clear."
+                 : "Someone owes you. Nudge them?";
+  const sub = !first
+    ? "Nobody owes anybody in any of your circles."
+    : first.dir==="pay"
+      ? "Pay "+esc(first.who)+" in "+esc(groupName(first.gid))+". The rest can wait."
+      : esc(first.who)+" owes you "+money(first.amt)+" in "+esc(groupName(first.gid))+".";
+  hero.innerHTML =
+    '<h2>'+esc(headline)+'</h2><p>'+sub+'</p>'+
+    '<div class="row2"><div id="heroAct"></div>'+
+    '<div class="net">'+money(net)+'<small>Your overall balance</small></div></div>';
+  main.appendChild(hero);
+  if(first){
+    const b = el("button","btn ink",
+      (first.dir==="pay" ? "Pay "+esc(first.who) : "Remind "+esc(first.who))+" "+money(first.amt));
+    b.addEventListener("click", ()=>{
+      openGroup(first.gid);
+      setTimeout(()=> sheetSettle(first.dir==="pay" ? meIn(first.gid) : first.who,
+                                  first.dir==="pay" ? first.who : meIn(first.gid),
+                                  first.amt, null), 260);
+    });
+    $("heroAct").appendChild(b);
+  }
+
+  /* ---- the three figures ---- */
+  const stats = el("div","stats");
+  const nOwed = Object.keys(owedPeople).length, nOwe = Object.keys(owePeople).length;
+  stats.innerHTML =
+    '<div class="stat"><span class="k">Friends owe you</span>'+
+      '<span class="v pos">'+money(owed)+'</span>'+
+      '<span class="s">'+(nOwed?("Across "+nOwed+" "+(nOwed===1?"person":"people")):"Nobody, right now")+'</span></div>'+
+    '<div class="stat"><span class="k">You need to pay</span>'+
+      '<span class="v neg">'+money(owe)+'</span>'+
+      '<span class="s">'+(nOwe?("Across "+nOwe+" "+(nOwe===1?"person":"people")):"Nobody, right now")+'</span></div>'+
+    '<div class="stat"><span class="k">This month</span>'+
+      '<span class="v">'+money(spend)+'</span>'+
+      '<span class="s">Shared spending</span></div>';
+  main.appendChild(stats);
+
+  /* ---- what has been happening, and with whom ---- */
+  const cols = el("div","cols two");
+
+  const left = el("div");
+  left.appendChild(el("div","sechead","Your latest shared moments"));
+  const lc = el("div","card");
+  const moments = recentMoments(4);
+  if(!moments.length){
+    lc.appendChild(el("div","moment",'<div class="b"><div class="m">Nothing added yet.</div></div>'));
+  }
+  moments.forEach(x=>{
+    const b = el("button","moment");
+    const good = x.mine > 0.004, bad = x.mine < -0.004;
+    b.innerHTML =
+      '<span class="ic"><span class="ms" aria-hidden="true">'+catOf(x.cat).i+'</span></span>'+
+      '<span class="b"><span class="t">'+esc(x.desc)+'</span>'+
+      '<span class="m">'+esc(dayLabel(x.at))+' · '+esc(groupName(x.gid))+'</span></span>'+
+      '<span class="amt"><b>'+money(x.amount)+'</b>'+
+      '<span style="color:'+(good?"var(--good)":bad?"var(--bad)":"var(--ink-3)")+'">'+
+        (good ? "Get "+money(x.mine) : bad ? "Pay "+money(-x.mine) : "Not yours")+
+      '</span></span>';
+    b.addEventListener("click", ()=>{ openGroup(x.gid); });
+    lc.appendChild(b);
+  });
+  left.appendChild(lc);
+  cols.appendChild(left);
+
+  const right = el("div");
+  right.appendChild(el("div","sechead","People you share with"));
+  const rc = el("div","card");
+  const ppl = peopleAcrossGroups().slice(0, 4);
+  if(!ppl.length){
+    rc.appendChild(el("div","moment",'<div class="b"><div class="m">Nobody else yet.</div></div>'));
+  }
+  ppl.forEach(p=>{
+    const b = el("button","moment");
+    const good = p.net > 0.004, bad = p.net < -0.004;
+    b.innerHTML =
+      avatarHTML("", p.name, p.colour, null)+
+      '<span class="b"><span class="t">'+esc(p.name)+'</span>'+
+      '<span class="m">'+p.bills+' bill'+(p.bills===1?"":"s")+' to sort out</span></span>'+
+      '<span class="amt"><span style="color:'+(good?"var(--good)":bad?"var(--bad)":"var(--ink-3)")+
+        ';font-weight:600">'+
+        (good ? "Pays you "+money(p.net) : bad ? "You pay "+money(-p.net) : "All square")+
+      '</span></span>';
+    b.addEventListener("click", ()=> sheetWhoWith(p.name) );
+    rc.appendChild(b);
+  });
+  right.appendChild(rc);
+  cols.appendChild(right);
+  main.appendChild(cols);
+
+  /* ---- the circles themselves ---- */
+  main.appendChild(el("div","sechead","Your circles"));
+  const strip = el("div","circles");
+  JOINED.slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).forEach(g=>{
+    const v=myBalance(g.id), mem=everyoneIn(g.id).length, n=expensesOf(g.id).length;
+    const c = el("button","circle");
+    c.innerHTML =
+      '<div class="n">'+esc(groupName(g.id))+'</div>'+
+      '<div class="m">'+mem+' '+(mem===1?"person":"people")+' · '+n+' expense'+(n===1?"":"s")+'</div>'+
+      '<div class="v" style="color:'+(v>0.004?"var(--good)":v<-0.004?"var(--bad)":"var(--ink-3)")+'">'+
+        (Math.abs(v)<0.005 ? "Settled" : v>0 ? "You get "+money(v) : "You pay "+money(-v))+'</div>';
+    c.addEventListener("click", ()=> openGroup(g.id) );
+    strip.appendChild(c);
+  });
+  main.appendChild(strip);
+}
+
+/* Which circle is this expense for? Only asked when there is more than one. */
+function sheetPickCircle(){
+  openSheet("Add to which circle?", (b)=>{
+    b.innerHTML = '<p class="lead">Pick the circle this expense belongs to.</p><div class="card" id="pcList"></div>';
+    const host=$("pcList");
+    JOINED.slice().sort((a,b2)=>groupName(a.id).localeCompare(groupName(b2.id))).forEach(g=>{
+      const r=el("button","row");
+      r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+groupIcon(g.id)+'</span></span>'+
+        '<span class="body"><span class="t1">'+esc(groupName(g.id))+'</span>'+
+        '<span class="t2">'+everyoneIn(g.id).length+' people</span></span>'+
+        '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--ink-3)">chevron_right</span></span>';
+      r.addEventListener("click", ()=>{
+        closeSheet(); openGroup(g.id); setTimeout(()=>sheetExpense(null), 260);
+      });
+      host.appendChild(r);
+    });
+  }, render);
+}
+
+/* One person, across every circle we share. */
+function sheetWhoWith(name){
+  openSheet(name, (b)=>{
+    let h = '<p class="lead">Everything you and '+esc(name)+' share.</p>';
+    const rows = [];
+    JOINED.forEach(g=>{
+      const me = meIn(g.id);
+      if(!me || everyoneIn(g.id).indexOf(name)<0) return;
+      let net = 0;
+      settlements(g.id).forEach(t=>{
+        if(t.from===me && t.to===name) net -= t.amt;
+        else if(t.to===me && t.from===name) net += t.amt;
+      });
+      rows.push({gid:g.id, net:net});
+    });
+    h += '<div class="card" id="wwList"></div>';
+    b.innerHTML = h;
+    const host=$("wwList");
+    if(!rows.length){
+      host.appendChild(el("div","moment",'<div class="b"><div class="m">No shared circles.</div></div>'));
+      return;
+    }
+    rows.forEach(x=>{
+      const r=el("button","row");
+      r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+groupIcon(x.gid)+'</span></span>'+
+        '<span class="body"><span class="t1">'+esc(groupName(x.gid))+'</span></span>'+
+        '<span class="right"><span class="amt '+(x.net>0.004?"pos":x.net<-0.004?"neg":"zero")+'">'+
+        (Math.abs(x.net)<0.005 ? "settled" : x.net>0 ? "gets you "+money(x.net) : "you pay "+money(-x.net))+
+        '</span></span>';
+      r.addEventListener("click", ()=>{ closeSheet(); openGroup(x.gid); setTimeout(()=>sheetPerson(name), 260); });
+      host.appendChild(r);
+    });
+  }, render);
 }
 
 /* =========================== SHEETS =========================== */
@@ -3350,7 +3858,7 @@ $("gmenuBtn").addEventListener("click", sheetGroupMenu);
 $("sheetClose").addEventListener("click", closeSheet);
 $("scrim").addEventListener("click", closeSheet);
 $("fab").addEventListener("click", ()=>{ CURRENT ? sheetExpense(null) : sheetGroupNew(); });
-document.querySelectorAll(".nav button").forEach(b=>{
+document.querySelectorAll(".nav button, .side button").forEach(b=>{
   b.addEventListener("click", ()=>{
     ADMIN_VIEW=false;
     if(CURRENT){ CURRENT=null; lsSet(LS.cur,null); if(location.hash) location.hash=""; }
