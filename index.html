@@ -776,6 +776,52 @@ function unlinkPerson(gid, key){
   return upd("trips/"+gid+"/people/"+key, {uid:null, email:null, photo:null});
 }
 
+// Fold one person into another: everything `from` paid, owed or was split
+// into becomes `to`, and `from` disappears. Used to repair a duplicate — the
+// same human entered twice — which otherwise skews every split they are in.
+// One atomic update, because a half-applied merge would silently change what
+// people owe.
+function mergePeople(gid, from, to){
+  const u={};
+  expensesOf(gid).forEach(e=>{
+    if(e.payer===from) u["expenses/"+e.k+"/payer"]=to;
+    const b=e.between||[];
+    if(b.indexOf(from)>-1){
+      const vals=Object.assign({}, e.vals||{});
+      if(vals[from]!=null){
+        // both halves of the duplicate contributed, so their shares add up
+        vals[to]=(Number(vals[to])||0)+(Number(vals[from])||0);
+        delete vals[from];
+      }
+      const nb=[];
+      b.forEach(n=>{ const m=(n===from)?to:n; if(nb.indexOf(m)<0) nb.push(m); });
+      u["expenses/"+e.k+"/between"]=nb;
+      u["expenses/"+e.k+"/vals"]=vals;
+    }
+  });
+  paymentsOf(gid).forEach(p=>{
+    const f=(p.from===from)?to:p.from, t=(p.to===from)?to:p.to;
+    if(f===t) u["payments/"+p.k]=null;             // paying yourself means nothing
+    else{
+      if(f!==p.from) u["payments/"+p.k+"/from"]=f;
+      if(t!==p.to)   u["payments/"+p.k+"/to"]=t;
+    }
+  });
+  const gone=membersOf(gid).find(x=>x.name===from);
+  if(gone) u["people/"+gone.k]=null;
+  return upd("trips/"+gid, u);
+}
+// What a merge would touch, so it can be described before it happens.
+function mergePreview(gid, from){
+  let paid=0, inSplit=0, pays=0;
+  expensesOf(gid).forEach(e=>{
+    if(e.payer===from) paid++;
+    if((e.between||[]).indexOf(from)>-1) inSplit++;
+  });
+  paymentsOf(gid).forEach(p=>{ if(p.from===from||p.to===from) pays++; });
+  return {paid, inSplit, pays};
+}
+
 // Renaming has to move the name everywhere it is used as a key, or the
 // balances stop adding up. One atomic update so it cannot half-apply.
 function renamePerson(gid, key, from, to){
@@ -1683,7 +1729,8 @@ function sheetMembers(){
 /* ---------- rename a person / move an account between names ---------- */
 function sheetPersonEdit(gid, m, after){
   const isMe = m.uid && USER && m.uid===USER.uid;
-  const free = membersOf(gid).filter(x=> !x.uid && x.k!==m.k );
+  const others = membersOf(gid).filter(x=> x.k!==m.k );
+  const pv = mergePreview(gid, m.name);
   openSheet(m.name, (b)=>{
     b.innerHTML=
       fieldHTML("pnName","Name","text", m.name)+
@@ -1694,8 +1741,21 @@ function sheetPersonEdit(gid, m, after){
         '<p class="fine" style="margin:0 0 12px">'+esc(m.name)+' is signed in as '+esc(m.email)+'.</p>':'')+
       (isMe?'<button class="btn s wide" id="pnFree">This is not me — release this name</button>'+
         '<p class="fine">You will be asked which name is yours next time you open the group.</p>':'')+
-      ((!m.uid && free.length>=0 && USER)?'<div class="sechead">Or</div>'+
-        '<button class="btn s wide" id="pnMine">This one is me</button>':'');
+      ((!m.uid && USER)?'<div class="sechead">Or</div>'+
+        '<button class="btn s wide" id="pnMine">This one is me</button>':'')+
+      (others.length?'<div class="sechead">Same person twice?</div>'+
+        '<p class="lead" style="text-align:left;margin:0 0 14px">'+
+        'Fold '+esc(m.name)+' into someone else. Everything they paid, owe or were '+
+        'split into moves across, and '+esc(m.name)+' is removed. '+
+        (pv.paid+pv.inSplit+pv.pays ?
+          'That is '+pv.paid+' expense'+(pv.paid===1?'':'s')+' paid, '+
+          pv.inSplit+' split'+(pv.inSplit===1?'':'s')+' and '+
+          pv.pays+' payment'+(pv.pays===1?'':'s')+'.' :
+          'They are not on anything yet.')+'</p>'+
+        '<div class="field"><label for="pnInto">Merge into</label><select id="pnInto">'+
+          others.map(o=>'<option value="'+esc(o.name)+'">'+esc(o.name)+'</option>').join("")+
+        '</select></div>'+
+        '<button class="btn d wide" id="pnMerge">Merge and remove '+esc(m.name)+'</button>':'');
 
     $("pnSave").addEventListener("click", ()=>{
       const v=$("pnName").value.trim();
@@ -1711,6 +1771,17 @@ function sheetPersonEdit(gid, m, after){
       unlinkPerson(gid, m.k).then(()=>{
         claimAsked[gid]=false; autoLinked[gid]=true;   // do not silently retake it
         closeSheet(); toast("Released — pick your name again"); render();
+      });
+    });
+    if($("pnMerge")) $("pnMerge").addEventListener("click", ()=>{
+      const into=$("pnInto").value;
+      if(into===m.name) return toast("Pick a different person");
+      const ok=confirm("Move everything from "+m.name+" to "+into+", and remove "+m.name+"?"
+        +"\n\nThis changes what people owe, and it cannot be undone.");
+      if(!ok) return;
+      mergePeople(gid, m.name, into).then(()=>{
+        closeSheet(); toast(m.name+" merged into "+into); render();
+        if(after) setTimeout(after, 250);
       });
     });
     if($("pnMine")) $("pnMine").addEventListener("click", ()=>{

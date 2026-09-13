@@ -19,6 +19,11 @@ own Google account.
   Regulars can be pinned to a name in `PEOPLE_LINKS`, and are linked silently
   without being asked. Names can be changed afterwards, and an account can be
   released or moved to a different name, from the group's people list.
+- **Merging a duplicate** — if the same person ends up on the list twice, fold
+  one into the other from the people list. Everything they paid, owe or were
+  split into moves across in one atomic write, a payment between the two
+  halves is dropped as meaningless, and an equal split correctly loses the
+  phantom head so the remaining people's shares go up.
 - **Four ways to split** — equally between the people you tick, exact amounts,
   percentages, or shares (2 shares pays twice what 1 does). The editor shows
   each person's figure as you type and refuses to save a split that does not
