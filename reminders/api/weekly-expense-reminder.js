@@ -49,7 +49,22 @@ export default async function handler(req, res) {
   const dry = String((req.query && req.query.dry) || "") === "1";
   const at = new Date();
 
+  // What this running build can actually see. A variable added in the Vercel
+  // dashboard does not reach a deployment that is already running, so "I added
+  // it" and "it is there" are different claims - and the difference is silent.
+  // Presence only: never the values.
+  const config = dry ? {
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL || "NOT SET - nobody can be let in",
+    CRON_SECRET: process.env.CRON_SECRET ? "set" : "NOT SET",
+    FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT ? "set" : "NOT SET",
+    BREVO_API_KEY: process.env.BREVO_API_KEY ? "set" : "not set",
+    RESEND_API_KEY: process.env.RESEND_API_KEY ? "set" : "not set",
+    REMINDER_FROM: process.env.REMINDER_FROM || "NOT SET - the sender falls back",
+    APP_URL: process.env.APP_URL || "not set - using the default"
+  } : undefined;
+
   const log = { provider: provider() || "none",
+                ...(dry ? { config } : {}),
                 considered: 0, due: 0, skippedNothingOwing: 0, sent: 0, failed: 0, errors: [] };
   // A dry run explains itself. "Nothing owing" has several causes and the
   // summary alone cannot tell them apart, which makes setup guesswork.
