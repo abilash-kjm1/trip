@@ -1008,6 +1008,82 @@ button, input, select, textarea{ font-family:var(--f); }
 }
 
 
+/* ============================================================
+   THEMES
+
+   A theme is a palette and nothing else. Every colour in the app
+   comes from the tokens below, so a theme can only change how it
+   looks - never what anything says, where anything sits, or what
+   a colour means. Green is still money coming to you and red is
+   still money going out, in every one of them.
+
+   The default palette lives on :root above. Anything here only
+   overrides tokens.
+   ============================================================ */
+
+/* Purple - for the ARMY. Borahae. */
+:root[data-theme="purple"]{
+  --cream:#F8F5FD;
+  --surface:#FFFFFF;
+  --ink:#2A1F3D;
+  --ink-2:#6B6080;
+  --ink-3:#A29CB5;
+  --line:#E9E2F5;
+  --line-2:#F2EDFA;
+
+  /* the accent, in the three weights every surface needs */
+  --apricot:#C4AEEF;          /* the feature panel */
+  --apricot-dk:#6D3FBF;       /* links, icons, anything that must read as text */
+  --apricot-lt:#EDE4FB;       /* tints behind icons and input surfaces */
+
+  --good:#2E7D62;
+  --bad:#C24A6A;
+
+  --shadow:0 1px 2px rgba(42,31,61,.05), 0 6px 18px rgba(42,31,61,.07);
+  --green-lt:rgba(46,125,98,.12);
+  --fill-1:rgba(107,96,128,.06);
+  --fill-2:rgba(107,96,128,.10);
+  --fill-3:rgba(107,96,128,.16);
+}
+/* The panel is a light purple, so its text stays the deep plum rather than
+   the near-black the warm theme uses on apricot. */
+:root[data-theme="purple"] .hero{ color:#2A1F3D; }
+:root[data-theme="purple"] .hero p{ color:#584A72; }
+:root[data-theme="purple"] .hero .net small{ color:#584A72; }
+:root[data-theme="purple"] .hero::after{ border-color:rgba(42,31,61,.20); }
+:root[data-theme="purple"] .hero::before{ border-color:rgba(42,31,61,.13); }
+:root[data-theme="purple"] .nav .add{ color:#2A1F3D;
+  box-shadow:0 6px 18px rgba(109,63,191,.38); }
+:root[data-theme="purple"] .side button[aria-current="page"]{ color:#2A1F3D; }
+:root[data-theme="purple"] .me{ background:var(--apricot-lt); color:var(--apricot-dk); }
+:root[data-theme="purple"] .summary .split .v.pos{ color:#7FD0B0; }
+:root[data-theme="purple"] .summary .split .v.neg{ color:#F0A0B6; }
+:root[data-theme="purple"] .sync{ background:var(--apricot-lt); color:#4A317F; }
+:root[data-theme="purple"] .notice.warn{ background:rgba(196,174,239,.28); color:#4A317F;
+  border-color:rgba(109,63,191,.26); }
+:root[data-theme="purple"] .tag.warn, :root[data-theme="purple"] .tag.admin{
+  background:rgba(196,174,239,.44); color:#4A317F; }
+:root[data-theme="purple"] .card.addform{ border-color:rgba(109,63,191,.20); }
+:root[data-theme="purple"] .card.addform .field label{ color:#584A72; }
+:root[data-theme="purple"] .card.addform h3,
+:root[data-theme="purple"] .card.addform .t1{ color:#2A1F3D; }
+:root[data-theme="purple"] .card.addform .lead,
+:root[data-theme="purple"] .card.addform .sub{ color:#584A72; }
+
+/* ---- the chooser ----------------------------------------------------- */
+.themes{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:var(--s3); padding:var(--s4); }
+.theme{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r2);
+  padding:var(--s3); text-align:left; font:inherit; cursor:pointer; }
+.theme[aria-pressed="true"]{ border-color:var(--apricot-dk);
+  box-shadow:0 0 0 2px var(--apricot-lt); }
+.theme .swatch{ display:flex; gap:5px; margin-bottom:var(--s2); }
+.theme .swatch i{ width:22px; height:22px; border-radius:7px; display:block;
+  border:1px solid rgba(0,0,0,.06); }
+.theme .n{ display:block; font-size:14px; font-weight:600; color:var(--ink); }
+.theme .m{ display:block; font-size:12px; color:var(--ink-3); margin-top:2px; }
+
+
 /* ---------- printing (kept last so it wins the cascade) ---------- */
 #printArea{ display:none; }
 @media print{
@@ -1151,7 +1227,8 @@ const linkedName = (email) => PEOPLE_LINKS[String(email||"").toLowerCase()] || n
 const LS = {
   grp: "settle.groups.v2",   // cached copy of users/{uid}/groups, for offline
   cur: "settle.cur.v2",
-  who: "settle.uid.v2"       // whose cache the other two are
+  who: "settle.uid.v2",      // whose cache the other two are
+  theme: "settle.theme.v1"   // a look, kept on the device so it applies at once
 };
 function lsGet(k, d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }
 function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
@@ -1170,6 +1247,24 @@ let TAB      = "home";                      // home | groups | activity | accoun
 let DATA     = {};                          // gid -> {meta, people, expenses, payments}
 let remote   = null;                        // firebase handles
 const subs   = {};                          // gid -> unsubscribe
+
+/* ---------------- how it looks ----------------
+   A theme is a palette. It changes no wording, no layout and no meaning:
+   green is money coming to you and red is money going out in every one of
+   them. Kept on the device as well as on the account, so it is already right
+   on the first paint rather than flickering once the database answers. */
+const THEMES = [
+  {k:"warm",   n:"Warm",   m:"Cream and apricot", sw:["#F4EEE6","#EEB586","#2F332D"]},
+  {k:"purple", n:"Purple", m:"Borahae",           sw:["#F8F5FD","#C4AEEF","#2A1F3D"]}
+];
+let THEME = lsGet(LS.theme, "warm");
+function applyTheme(k){
+  THEME = THEMES.some(t=>t.k===k) ? k : "warm";
+  if(THEME==="warm") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", THEME);
+  lsSet(LS.theme, THEME);
+}
+applyTheme(THEME);
 
 const isAdmin = () => !!(USER && ADMIN_EMAIL && (USER.email||"").toLowerCase()===ADMIN_EMAIL);
 
@@ -2269,6 +2364,31 @@ function viewAccount(main){
 
     main.appendChild(a);
   }
+
+  // ---- how it looks ----
+  main.appendChild(el("div","sechead","Appearance"));
+  const tc = el("div","card");
+  const tg = el("div","themes");
+  THEMES.forEach(t=>{
+    const b = el("button","theme");
+    b.type = "button";
+    b.setAttribute("aria-pressed", t.k===THEME ? "true" : "false");
+    b.innerHTML =
+      '<span class="swatch">'+t.sw.map(c=>'<i style="background:'+c+'"></i>').join("")+'</span>'+
+      '<span class="n">'+esc(t.n)+'</span>'+
+      '<span class="m">'+esc(t.m)+'</span>';
+    b.addEventListener("click", ()=>{
+      if(t.k===THEME) return;
+      applyTheme(t.k);
+      // On the account as well as on this device, so it follows you.
+      if(remote && USER) savePrefs({theme: t.k});
+      render();
+      toast(t.n+" it is");
+    });
+    tg.appendChild(b);
+  });
+  tc.appendChild(tg);
+  main.appendChild(tc);
 
   main.appendChild(el("div","sechead","Notifications"));
   const nc=el("div","card");
@@ -4191,6 +4311,9 @@ function onSignedIn(u){
   // account never opens the settings sheet.
   remote.onValue(ref("users/"+USER.uid+"/prefs"), snap=>{
     PREFS = snap.val() || {};
+    // The look follows the account. Only redraw when it actually differs,
+    // or every preference write would repaint the whole app.
+    if(typeof PREFS.theme === "string" && PREFS.theme !== THEME){ applyTheme(PREFS.theme); render(); }
     if(PREFS.tz === undefined){
       let tz="America/Toronto";
       try{ tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; }catch(e){}
