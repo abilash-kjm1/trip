@@ -8,7 +8,7 @@
    without it the endpoint answers 401. Nobody can use this to fan out mail.
    =========================================================================== */
 import { readPath, database } from "../lib/firebase.js";
-import { sendEmail } from "../lib/email.js";
+import { sendEmail, provider } from "../lib/email.js";
 import { reminderEmail } from "../lib/template.js";
 import { groupSummary, cents } from "../lib/ledger.js";
 
@@ -84,7 +84,8 @@ export default async function handler(req, res) {
   const dry = String((req.query && req.query.dry) || "") === "1";
   const at = new Date();
 
-  const log = { considered: 0, due: 0, skippedNothingOwing: 0, sent: 0, failed: 0, errors: [] };
+  const log = { provider: provider() || "none",
+                considered: 0, due: 0, skippedNothingOwing: 0, sent: 0, failed: 0, errors: [] };
   // A dry run explains itself. "Nothing owing" has several causes and the
   // summary alone cannot tell them apart, which makes setup guesswork.
   const detail = [];
@@ -176,7 +177,9 @@ export default async function handler(req, res) {
         // One person's failure must not stop the rest.
         log.failed++;
         const msg = (err && err.message) || String(err);
-        log.errors.push({ uid, error: msg.slice(0, 200) });
+        // Setup errors carry the instruction for fixing them, so do not clip
+        // them mid-sentence.
+        log.errors.push({ uid, error: msg.slice(0, 600) });
         console.error("[reminder] failed for", uid, msg);
       }
     }
