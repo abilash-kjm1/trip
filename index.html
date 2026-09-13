@@ -865,6 +865,10 @@ button, input, select, textarea{ font-family:var(--f); }
 .gcard .m{ font-size:12px; color:var(--ink-3); margin-top:var(--s1); }
 .gcard .v{ font-size:13px; font-weight:700; margin-top:var(--s2); }
 
+/* A single action under a screen's title. */
+.actline{ display:flex; justify-content:center; margin:0 0 var(--s5); }
+.actline .btn{ padding:12px 22px; }
+
 /* ---- controls -------------------------------------------------------- */
 .btn{ border-radius:999px; font-weight:600; font-size:14.5px; }
 .btn.primary, .btn.p, .btn.dark{ background:var(--ink); color:var(--cream); border:0; }
@@ -1723,7 +1727,7 @@ function render(){
   const nAdd = $("navAdd");
   if(nAdd) nAdd.hidden = !USER || !mayUse() || (!CURRENT && !JOINED.length);
   ME = CURRENT ? meIn(CURRENT) : null;
-  document.querySelectorAll(".nav button, .side button").forEach(b=>{
+  document.querySelectorAll(".nav button[data-tab], .side button[data-tab]").forEach(b=>{
     if(b.dataset.tab===TAB && !CURRENT && !ADMIN_VIEW) b.setAttribute("aria-current","page");
     else b.removeAttribute("aria-current");
   });
@@ -1832,7 +1836,15 @@ function viewAccess(main){
 /* ---------- groups list ---------- */
 function viewGroups(main){
   setTitle(main, "Groups");
-  $("fab").hidden=false; $("fabLabel").textContent="New group";
+  // The floating button used to carry this and the new skin hides it, which
+  // left no way at all to start a group once you already had one. A plain
+  // button on the screen is harder to lose.
+  $("fab").hidden=true;
+  const act=el("div","actline");
+  const nb=el("button","btn p","+  New group");
+  nb.addEventListener("click", sheetGroupNew);
+  act.appendChild(nb);
+  main.appendChild(act);
 
   let owed=0, owe=0;
   JOINED.forEach(g=>{ const v=myBalance(g.id); if(v>0.004) owed+=v; else if(v<-0.004) owe+=-v; });
@@ -4129,12 +4141,17 @@ $("fab").addEventListener("click", ()=>{ CURRENT ? sheetExpense(null) : sheetGro
 // The raised button in the bar adds an expense wherever you are; inside a
 // group that group is the answer, and outside one it asks which.
 $("navAdd").addEventListener("click", ()=>{
-  if(CURRENT) sheetExpense(null); else addExpenseAnywhere();
+  if(CURRENT) sheetExpense(null);
+  else if(TAB==="groups") sheetGroupNew();   // on the groups screen, a group
+  else addExpenseAnywhere();
 });
 $("meBtn").addEventListener("click", ()=>{
   ADMIN_VIEW=false; CURRENT=null; TAB="account"; window.scrollTo(0,0); render();
 });
-document.querySelectorAll(".nav button, .side button").forEach(b=>{
+// Only the buttons that name a tab. The add button lives in the same bar and
+// names none, so it was setting the tab to undefined and leaving a blank
+// screen behind the sheet it opened.
+document.querySelectorAll(".nav button[data-tab], .side button[data-tab]").forEach(b=>{
   b.addEventListener("click", ()=>{
     ADMIN_VIEW=false;
     if(CURRENT){ CURRENT=null; lsSet(LS.cur,null); if(location.hash) location.hash=""; }
