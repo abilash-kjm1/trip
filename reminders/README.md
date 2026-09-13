@@ -74,6 +74,23 @@ check so they can never lock themselves out.
 `ADMIN_EMAIL` must be set for any of this to work; the request email has
 nowhere to go otherwise, and the endpoint says so rather than failing quietly.
 
+## Inviting somebody who is not in Settle yet
+
+Adding a member offers two paths: pick from the directory of people already
+approved, or type a name and address. The second queues an invitation email, so
+there is nothing for the person adding them to send on by hand.
+
+The queued note names the address, but it is only sent if that same address is
+already written against an unclaimed seat in that group. So an invitation can
+reach nobody the sender had not already recorded as a member, and it cannot be
+used to address mail to an arbitrary person. Twenty per run.
+
+The directory itself is kept in step by the scheduler rather than by people
+signing in: an entry for anybody approved who has none, and no entry for
+anybody explicitly turned away. Name, address and picture only - never
+preferences, never balances - and readable only once the administrator has
+approved you.
+
 ## Activity notices
 
 Three more switches on the Account screen - **New expenses**, **Expense

@@ -11,14 +11,16 @@
    nobody its author could not already reach.
    --------------------------------------------------------------------------- */
 import { money } from "./ledger.js";
-import { activityEmail, accessRequestEmail } from "./template.js";
+import { activityEmail, accessRequestEmail, groupInviteEmail } from "./template.js";
 import { makeToken, normaliseAccess } from "./access.js";
 
 /* Asking to join is not activity in a group - there is no group yet - so it
    travels through the same queue but down its own path, to the administrator
    rather than to members. */
 export const JOIN_KIND = "access.request";
+export const INVITE_KIND = "group.invite";
 export const MAX_JOINS = 20;             // per run; a ceiling on invitation spam
+export const MAX_INVITES = 20;
 
 /* What each kind of note is, and which switch on the Account screen governs
    it. The keys match the rows the app shows, so what somebody turns off is
@@ -48,7 +50,7 @@ export function normaliseEntry(key, raw, now) {
   if (!raw || typeof raw !== "object") return null;
 
   const kind = str(raw.kind, 40);
-  if (!KINDS[kind] && kind !== JOIN_KIND) return null;
+  if (!KINDS[kind] && kind !== JOIN_KIND && kind !== INVITE_KIND) return null;
 
   // A group id is a database key. Anything that could climb out of the path
   // is not one. A request to join names no group.
@@ -135,7 +137,7 @@ export function lineFor(e) {
 export async function runActivity({ users, at, dry, appUrl, db, send,
                                     adminEmail, secret, apiBase }) {
   const now = at.getTime();
-  const log = { queued: 0, dropped: 0, sent: 0, failed: 0, joins: 0, errors: [] };
+  const log = { queued: 0, dropped: 0, sent: 0, failed: 0, joins: 0, invites: 0, errors: [] };
 
   const raw = await db.read("mail/queue");
   const keys = Object.keys(raw || {});
@@ -181,8 +183,40 @@ export async function runActivity({ users, at, dry, appUrl, db, send,
     }
   }
 
+  // ---- invitations to somebody not in Settle yet ------------------------
+  // The note names the address, but it is only sent if that same address is
+  // already written against a seat in that group. So this can reach nobody the
+  // sender had not already recorded as a member - it is not a way to address
+  // mail to anyone at all.
+  const invites = batch.filter((e) => e.kind === INVITE_KIND);
+  for (const e of invites.slice(0, MAX_INVITES)) {
+    try {
+      const g = await db.read("trips/" + e.gid);
+      if (!g || !isMember(g, e.actorUid)) { log.dropped++; continue; }
+
+      const to = String(e.desc || "").trim().toLowerCase();
+      const seat = Object.keys(g.people || {}).map((k) => g.people[k])
+        .find((p) => p && String(p.invite || "").trim().toLowerCase() === to && !p.uid);
+      if (!to || !looksLikeEmail(to) || !seat) { log.dropped++; continue; }
+
+      const mail = groupInviteEmail({
+        name: String(seat.n || ""),
+        inviter: e.actor,
+        group: (g.meta && g.meta.name) || e.gid,
+        appUrl
+      });
+      if (!dry) await send({ to, ...mail });
+      log.invites++;
+      console.log("[invite] " + (dry ? "DRY " : "") + "asked " + to + " to join " + e.gid);
+    } catch (err) {
+      log.failed++;
+      log.errors.push({ gid: e.gid, error: ((err && err.message) || String(err)).slice(0, 600) });
+      console.error("[invite] could not invite for", e.gid, err);
+    }
+  }
+
   // ---- notices about a group --------------------------------------------
-  const notes = batch.filter((e) => e.kind !== JOIN_KIND);
+  const notes = batch.filter((e) => e.kind !== JOIN_KIND && e.kind !== INVITE_KIND);
 
   // A group is read once however many notes mention it.
   const groups = {};

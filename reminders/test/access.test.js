@@ -1,7 +1,7 @@
 /* Joining Settle: the signed link, and the request reaching the administrator. */
 import { makeToken, readToken, normaliseAccess, isApproved, TOKEN_TTL_MS,
          decisionPage, outcomePage } from "../lib/access.js";
-import { runActivity, JOIN_KIND } from "../lib/activity.js";
+import { runActivity, JOIN_KIND, INVITE_KIND } from "../lib/activity.js";
 
 let bad = 0;
 const is = (a, e, w) => {
@@ -104,6 +104,50 @@ const log = await runActivity({
 is([log.joins, log.sent, log.failed], [1, 1, 0], "both go out in the same pass");
 is(sent.map((m) => m.to).sort(), ["abi@example.com", "admin@example.com"], "to the right two people");
 is(db.removed.length, 2, "and both notes are cleared");
+
+console.log("\ninviting somebody who is not in Settle yet");
+const inviteGroup = {
+  meta: { name: "Montreal" },
+  people: { a: { n: "Kalai", uid: "u1" },
+            b: { n: "Kelvin", invite: "kelvin@example.com" } }
+};
+function inviteDb(queue, group) {
+  const removed = [];
+  return { removed,
+    read: async (p) => (p === "mail/queue" ? queue : (p === "trips/g1" ? group : {})),
+    remove: async (p) => { removed.push(p); } };
+}
+async function runInvite(note, group = inviteGroup) {
+  const db = inviteDb({ i1: note }, group);
+  const out = [];
+  const log = await runActivity({
+    users: {}, at: new Date(NOW), dry: false, appUrl: "https://app.test/", db,
+    send: async (m) => { out.push(m); },
+    adminEmail: "admin@example.com", secret: SECRET, apiBase: "https://api.test/"
+  });
+  return { log, sent: out, removed: db.removed };
+}
+const inv = { kind: INVITE_KIND, gid: "g1", actorUid: "u1", actor: "Kalai",
+              desc: "kelvin@example.com", at: NOW - 1000 };
+
+let v = await runInvite(inv);
+is(v.log.invites, 1, "one invitation goes out");
+is(v.sent[0].to, "kelvin@example.com", "to the address on the seat");
+is(v.sent[0].subject, "Kalai added you to Montreal", "saying who added them, and where");
+is(/sign in with this same email/.test(v.sent[0].text), true, "and what to do about it");
+is(v.removed, ["mail/queue/i1"], "the note is cleared");
+
+v = await runInvite({ ...inv, desc: "somebody-else@example.com" });
+is([v.log.invites, v.log.dropped], [0, 1],
+   "an address not written against a seat in that group reaches nobody");
+v = await runInvite({ ...inv, actorUid: "u9" });
+is([v.log.invites, v.log.dropped], [0, 1], "nor does one from outside the group");
+v = await runInvite({ ...inv, desc: "not-an-address" });
+is([v.log.invites, v.log.dropped], [0, 1], "nor a thing that is not an address");
+v = await runInvite(inv, { meta: { name: "M" },
+                           people: { a: { n: "Kalai", uid: "u1" },
+                                     b: { n: "K", invite: "kelvin@example.com", uid: "u4" } } });
+is([v.log.invites, v.log.dropped], [0, 1], "nor somebody who already has an account here");
 
 console.log("\nthe page the administrator lands on");
 const pg = decisionPage({ name: "Kelvin Raj", email: "kelvin@example.com" }, "tok-123");

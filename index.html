@@ -2534,15 +2534,16 @@ function sheetMembers(){
     const draw=()=>{
       const list=membersOf(gid), bal=balances(gid);
       b.innerHTML=
-        '<div class="field"><label for="mName">Add someone</label>'+
+        '<div id="mPick"></div>'+
+        '<div class="sechead" style="margin-top:18px">Someone new</div>'+
+        '<div class="field"><label for="mName">Their name</label>'+
         '<input id="mName" type="text" placeholder="Their name"></div>'+
-        '<div class="field"><label for="mMail">Their Google address (optional)</label>'+
+        '<div class="field"><label for="mMail">Their email</label>'+
         '<div style="display:flex;gap:8px"><input id="mMail" type="email" inputmode="email" '+
         'autocapitalize="off" autocorrect="off" placeholder="name@gmail.com">'+
-        '<button class="btn p" id="mAdd" style="flex:0 0 auto">Add</button></div>'+
-        '<div class="help">Give the address and this group appears for them the moment they sign '+
-        'in, already attached to this name. Leave it blank and they will need your link.</div></div>'+
-        '<div id="mPick"></div>'+
+        '<button class="btn p" id="mAdd" style="flex:0 0 auto">Invite</button></div>'+
+        '<div class="help">We email them an invitation, so there is nothing for you to send on. '+
+        'Leave the address blank to add a name now and sort the account out later.</div></div>'+
         (list.length?'<div class="sechead" style="margin-top:18px">'+list.length+' member'+(list.length===1?"":"s")+'</div>':"")+
         '<div id="mList"></div>';
 
@@ -2556,7 +2557,7 @@ function sheetMembers(){
         .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
 
       if(pool.length){
-        $("mPick").innerHTML='<div class="sechead" style="margin-top:18px">Already in Settle</div>'+
+        $("mPick").innerHTML='<div class="sechead">Already in Settle — tap to add</div>'+
           '<div class="card" id="mPickList"></div>'+
           '<p class="fine">Picking somebody links their account straight away, so their name '+
           'and balance are theirs from the start — they never have to claim it.</p>';
@@ -2614,7 +2615,15 @@ function sheetMembers(){
         const rec={n:v, c:freeColour(gid)};
         if(mail) rec.invite=mail;
         push("trips/"+gid+"/people", rec).then(()=>{
-          if(mail) inviteByEmail(gid, mail);
+          if(mail){
+            inviteByEmail(gid, mail);
+            // And actually tell them. Writing the invitation into the database
+            // and hoping they wander in one day is not an invitation.
+            notify("group.invite", gid, {desc: mail});
+            toast("Invitation on its way to "+mail);
+          } else {
+            toast(v+" added");
+          }
           $("mName").value=""; $("mMail").value="";
           setTimeout(draw,150);
         });

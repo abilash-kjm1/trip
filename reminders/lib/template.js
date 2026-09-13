@@ -317,3 +317,55 @@ export function accessDecisionEmail({ name, approved, appUrl }) {
 
   return { subject: headline, html, text };
 }
+
+/** To somebody who is not in Settle yet: you have been added to a group. */
+export function groupInviteEmail({ name, inviter, group, appUrl }) {
+  const headline = inviter + " added you to " + group;
+
+  const html = `<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>${esc(headline)}</title>
+</head><body style="margin:0;padding:0;background:#f2f2f7">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2f7;padding:24px 12px">
+<tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="max-width:560px;background:#ffffff;border-radius:18px;padding:28px 26px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+    <tr><td>
+      <p style="margin:0 0 4px;font-size:14px;color:${SOFT}">Settle</p>
+      <h1 style="margin:0 0 2px;font-size:26px;line-height:1.2;color:${INK}">Hello${name ? " " + esc(name) : ""},</h1>
+      <p style="margin:10px 0 0;font-size:22px;font-weight:700;color:${INK}">${esc(headline)}</p>
+      <p style="margin:18px 0 0;font-size:15px;line-height:1.55;color:${INK}">
+        Settle keeps track of what a group spends together and works out who owes whom,
+        so nobody has to remember who paid for dinner. Open it and sign in with this
+        same email address and ${esc(group)} will be waiting for you.
+      </p>
+      <p style="margin:28px 0 0">
+        <a href="${esc(appUrl)}" style="display:inline-block;background:#34c759;color:#ffffff;text-decoration:none;
+           font-size:16px;font-weight:600;padding:13px 24px;border-radius:12px">Open Settle</a>
+      </p>
+      <p style="margin:24px 0 0;font-size:13px;color:${SOFT};line-height:1.5">
+        The first time you sign in you will be asked to request access, and
+        ${esc(inviter)} or whoever runs this Settle approves it. After that you go
+        straight in.
+      </p>
+      <p style="margin:16px 0 0;font-size:12px;color:${SOFT};line-height:1.5">
+        If you were not expecting this, you can ignore it - nothing has been shared
+        with you until you sign in.
+      </p>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+
+  const text = `Hello${name ? " " + name : ""},\n\n${headline}\n\n` +
+    `Settle keeps track of what a group spends together and works out who owes whom. ` +
+    `Open it and sign in with this same email address and ${group} will be waiting for you.\n\n` +
+    `Open Settle: ${appUrl}\n\n` +
+    `The first time you sign in you will be asked to request access. If you were not ` +
+    `expecting this, ignore it - nothing has been shared with you until you sign in.\n`;
+
+  return { subject: headline, html, text };
+}
