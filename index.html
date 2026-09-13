@@ -865,6 +865,15 @@ button, input, select, textarea{ font-family:var(--f); }
 .gcard .m{ font-size:12px; color:var(--ink-3); margin-top:var(--s1); }
 .gcard .v{ font-size:13px; font-weight:700; margin-top:var(--s2); }
 
+/* Back and the group menu, as part of the page. Only on a wide screen: the
+   phone already has both in the bar at the top, and two of each would be two. */
+.pagehead{ display:none; }
+@media (min-width:1000px){
+  .pagehead{ display:flex; gap:var(--s2); justify-content:center;
+    margin:0 0 var(--s5); flex-wrap:wrap; }
+  .pagehead .btn{ padding:10px 18px; }
+}
+
 /* A single action under a screen's title. */
 .actline{ display:flex; justify-content:center; margin:0 0 var(--s5); }
 .actline .btn{ padding:12px 22px; }
@@ -1923,6 +1932,17 @@ function viewGroup(main){
   setTitle(main, groupName(gid));
   $("backBtn").hidden=false; $("gmenuBtn").hidden=false;
   $("fab").hidden=true;                      // the add form is on the page itself
+
+  // Back and the group menu live in the bar at the top of a phone, and that
+  // bar is not on a wide screen - which took People, Settle up, Rename and
+  // everything else in the menu with it. They come back as part of the page.
+  const pagehead = el("div","pagehead");
+  const back = el("button","btn s","Back to groups");
+  back.addEventListener("click", closeGroup);
+  const menu = el("button","btn s","Group settings");
+  menu.addEventListener("click", sheetGroupMenu);
+  pagehead.appendChild(back); pagehead.appendChild(menu);
+  main.appendChild(pagehead);
 
   if(FULLVIEW){                              // the standalone full list
     $("nav").hidden=true; $("backBtn").hidden=true; $("gmenuBtn").hidden=true;
