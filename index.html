@@ -1299,7 +1299,7 @@ function viewAccess(main){
       '<p>Your request has gone to the person who runs this Settle. You will get an '+
       'email at <strong>'+esc(USER.email)+'</strong> as soon as they decide.</p>'+
       '<p class="fine">This page updates by itself — there is nothing to refresh. '+
-      'The request usually reaches them within about a quarter of an hour.</p>';
+      'The request reaches them '+esc(callGap())+'.</p>';
     main.appendChild(c);
   }
   else {
@@ -2689,8 +2689,8 @@ function sheetNotifications(){
       '<div class="help">The reminder is worked out against this clock, so it arrives on your '+
       'Sunday evening rather than somebody else’s.</div></div>'+
       '<p class="fine">Reminders currently go out: '+esc(schedLine())+'.</p>'+
-      '<p class="fine">The bottom three are gathered up and sent within about a quarter of an '+
-      'hour, so four expenses added in one sitting arrive as one email rather than four.</p>';
+      '<p class="fine">The bottom three are gathered up and sent '+esc(callGap())+', so four '+
+      'expenses added in one sitting arrive as one email rather than four.</p>';
 
     const host=$("prefList");
     PREF_ROWS.forEach(r=>{
@@ -2731,7 +2731,15 @@ function savePrefs(patch){
    what the schedule is; writable only by the administrator, enforced by the
    database rules rather than by hiding the button. */
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const SCHED_DEFAULT = { enabled:true, days:[0], hour:16, windowHours:5, hourly:false };
+const SCHED_DEFAULT = { enabled:true, days:[0], hour:16, windowHours:5, callEveryMins:1440 };
+
+/* How often the outside caller actually rings the endpoint. Nothing in here
+   can detect that - it is a setting on cron-job.org or Vercel - so the
+   administrator states it, and everything that depends on it follows: the
+   warning about unreachable send times, and every promise the app makes
+   about how long an email takes to arrive. */
+const CALL_CHOICES = [[1440,"Once a day"],[60,"Every hour"],[30,"Every 30 minutes"],
+                      [15,"Every 15 minutes"],[5,"Every 5 minutes"]];
 
 function schedNow(){
   const c = (SCHED && typeof SCHED === "object") ? SCHED : {};
@@ -2743,7 +2751,10 @@ function schedNow(){
     hour: Number.isInteger(c.hour)&&c.hour>=0&&c.hour<=23 ? c.hour : SCHED_DEFAULT.hour,
     windowHours: Number.isInteger(c.windowHours)&&c.windowHours>=1&&c.windowHours<=12
       ? c.windowHours : SCHED_DEFAULT.windowHours,
-    hourly: c.hourly === true
+    // hourly was a yes/no before this was a number. Honour the old value so
+    // an existing setting does not silently revert to once a day.
+    callEveryMins: Number.isInteger(c.callEveryMins) && c.callEveryMins>0 && c.callEveryMins<=1440
+      ? c.callEveryMins : (c.hourly === true ? 60 : SCHED_DEFAULT.callEveryMins)
   };
 }
 function schedLine(){
@@ -2752,6 +2763,15 @@ function schedLine(){
   const to = (c.hour + c.windowHours) % 24;
   return c.days.map(d=>DAY_NAMES[d]).join(", ")+" between "+
          String(c.hour).padStart(2,"0")+":00 and "+String(to).padStart(2,"0")+":00";
+}
+
+/* How long something dropped in the queue waits, in words. Used wherever the
+   app tells somebody an email is on its way. */
+function callGap(){
+  const m = schedNow().callEveryMins;
+  if(m >= 1440) return "on the next daily run";
+  if(m === 60)  return "within the hour";
+  return "within about "+m+" minutes";
 }
 
 function sheetSchedule(){
@@ -2779,9 +2799,9 @@ function sheetSchedule(){
         '<div id="schWarn"></div>'+
         '<div class="sechead">Scheduler</div>'+
         '<div class="card" id="schHourly"></div>'+
-        '<p class="fine">The window exists because the scheduler runs once a day at a fixed '+
-        'UTC time, which drifts by an hour when the clocks change. Keep it at least two hours '+
-        'unless the scheduler has been set to run hourly.</p>';
+        '<p class="fine">The window exists because a once-a-day scheduler is fixed in UTC, '+
+        'and that drifts by an hour when the clocks change. Keep it at least two hours wide '+
+        'unless the scheduler runs more often than daily.</p>';
 
       const on = c.enabled;
       const row = el("button","row");
@@ -2816,28 +2836,27 @@ function sheetSchedule(){
         for(let i=0;i<c.windowHours;i++) if((c.hour+i)%24===h) return true;
         return false;
       };
-      const hr=el("button","row");
-      hr.innerHTML='<span class="cat'+(c.hourly?" teal":"")+'"><span class="ms" aria-hidden="true">'+
-        (c.hourly?"update":"hourglass_empty")+'</span></span>'+
-        '<span class="body"><span class="t1">It runs every hour</span>'+
-        '<span class="t2">'+(c.hourly
-          ? "Any time you pick will be honoured."
-          : "Off — it only runs once a day, around 16:00–17:00, so only a window covering those hours fires.")+
-        '</span></span>'+
-        '<span class="right"><span class="switch'+(c.hourly?" on":"")+'" aria-hidden="true"><i></i></span></span>';
-      hr.setAttribute("role","switch"); hr.setAttribute("aria-checked", c.hourly?"true":"false");
-      hr.addEventListener("click", ()=> saveSched({hourly: !c.hourly}).then(draw) );
+      const hr=el("div","field");
+      hr.style.cssText="padding:12px 16px 14px";
+      hr.innerHTML='<label for="schCall">How often the scheduler calls</label>'+
+        '<select id="schCall">'+CALL_CHOICES.map(x=>
+          '<option value="'+x[0]+'"'+(x[0]===c.callEveryMins?' selected':'')+'>'+x[1]+'</option>').join("")+
+        '</select>'+
+        '<div class="help">Set this to match cron-job.org. It is what decides how long '+
+        'a new expense or a request to join waits before the email goes out — right now, '+
+        esc(callGap())+'.</div>';
       $("schHourly").appendChild(hr);
+      $("schCall").addEventListener("change", ()=> saveSched({callEveryMins: Number($("schCall").value)}).then(draw) );
 
-      // Only a once-a-day scheduler can miss a window, so the warning is moot
-      // once the hourly caller is set up.
-      if(c.enabled && !c.hourly && !(covers(16) && covers(17))){
+      // Only a once-a-day scheduler can miss a window. Anything more frequent
+      // lands inside any window there is, so the warning would be wrong.
+      if(c.enabled && c.callEveryMins >= 1440 && !(covers(16) && covers(17))){
         const w=el("div","notice warn");
         w.innerHTML='<span class="ms" aria-hidden="true">warning</span>'+
           '<div><strong>Nothing will be sent at this time</strong><br>'+
           'The scheduler runs once a day and lands around 16:00–17:00. This window '+
-          'misses it. Either include those hours, or set up the hourly caller described '+
-          'in the reminders README — then any time works.</div>';
+          'misses it. Either include those hours, or call the endpoint more often and '+
+          'say so above — then any time works.</div>';
         $("schWarn").appendChild(w);
       }
       $("schHour").addEventListener("change", ()=> saveSched({hour: Number($("schHour").value)}).then(draw) );

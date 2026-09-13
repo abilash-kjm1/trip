@@ -82,9 +82,14 @@ a timetable. They are off unless somebody turns them on.
 
 The browser cannot send email: the mail key never leaves the server. So the app
 writes a line to `mail/queue` saying what it did, and this endpoint drains that
-queue on every pass. With the hourly (or quarter-hourly) caller in place, a
-notice arrives within about fifteen minutes, and everything that happened in
-that window reaches a person as one email rather than several.
+queue on every pass. So the wait is simply the gap between calls: nothing else
+sets it. Everything that happened in that gap reaches a person as one email
+rather than several.
+
+Nothing in the code can detect how often the caller runs - it is a setting on
+cron-job.org, not here - so the administrator states it under **Account ->
+Reminder schedule -> How often the scheduler calls**, and the app's wording
+follows from that rather than promising a number of its own.
 
 The queued note says **what happened and never who to tell**. Recipients are
 worked out here, from the group's own membership, so a note somebody tampered
