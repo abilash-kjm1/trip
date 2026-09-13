@@ -1,12 +1,12 @@
 {
-  "_comment": "STEP 2 of 2, and the version to keep. Publish database.rules.step1.json first, approve everyone already using Settle under Account > Requests to join, and only then publish this. It adds the approval gate: from here on, signing in with Google gets somebody an account and nothing else until the administrator lets them in. The administrator is exempt so they can never lock themselves out.",
+  "_comment": "STEP 1 of 2. Publish this first. It creates the access list and lets the administrator see everyone who has ever signed in, but does NOT yet require approval - so nobody who is already using Settle is locked out. Open the app, go to Account > Requests to join, and approve everyone who should keep working. Then publish database.rules.json, which turns the gate on.",
 
   "rules": {
     "trips": {
       ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
       "$gid": {
-        ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
-        ".write": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
+        ".read": "auth != null",
+        ".write": "auth != null"
       }
     },
 

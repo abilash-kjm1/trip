@@ -11,6 +11,6 @@
     "firebase-admin": "^12.7.0"
   },
   "scripts": {
-    "test": "node test/ledger.test.js && node test/schedule.test.js && node test/auth.test.js && node test/email.test.js && node test/activity.test.js"
+    "test": "node test/ledger.test.js && node test/schedule.test.js && node test/auth.test.js && node test/email.test.js && node test/activity.test.js && node test/access.test.js"
   }
 }

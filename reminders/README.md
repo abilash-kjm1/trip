@@ -35,6 +35,45 @@ belongs to and works out, per group:
 
 If the totals come to nothing, no email goes out.
 
+## Joining Settle
+
+Signing in with Google gets somebody an account, not access. A first-time
+visitor is shown a screen asking them to request one; the request reaches the
+administrator by email on the next cron pass; approving or declining is done
+from a link in that email, or from **Account -> Requests to join** in the app.
+
+The link opens a page with two buttons. It does not decide anything by being
+opened - mail apps, security scanners and link previewers all follow links, and
+a link that approved somebody just by being fetched would approve people nobody
+ever looked at. The decision is a POST from the form.
+
+The token in the link is an HMAC of the person's uid and an expiry, signed with
+`CRON_SECRET`, so there is one secret to look after rather than two. It names
+exactly one person, lasts a fortnight, is compared in constant time, and can
+only ever reach a request that is still pending - a forwarded or re-opened link
+cannot flip a decision or send a second email.
+
+State lives at `access/{uid}`:
+
+```
+access/{uid}  {status: pending|approved|declined, name, email, at, decidedAt, decidedBy}
+```
+
+The rules let somebody create their own record once, and only as `pending`.
+Only the administrator can change one after that, and only the administrator
+can read the list. The gate itself is in the rules, not the interface:
+
+```
+"$gid": { ".read": "... root.child('access').child(auth.uid).child('status').val() == 'approved' ..." }
+```
+
+Without that line the screens would be decoration - anybody signed in could
+still read and write the data directly. The administrator is exempt from the
+check so they can never lock themselves out.
+
+`ADMIN_EMAIL` must be set for any of this to work; the request email has
+nowhere to go otherwise, and the endpoint says so rather than failing quietly.
+
 ## Activity notices
 
 Three more switches on the Account screen - **New expenses**, **Expense
@@ -98,6 +137,8 @@ them are ever read by the browser.
 | `EMAIL_PROVIDER` | no | `brevo` or `resend`, to force one when both keys are set. Otherwise Brevo wins. |
 | `REMINDER_FROM` | no | e.g. `Settle <you@gmail.com>`. With Brevo this exact address must be verified under Senders; with Resend it must sit on a verified domain. |
 | `APP_URL` | no | Link target in the email. Defaults to the GitHub Pages URL. |
+| `ADMIN_EMAIL` | for joining | Where requests to join are sent, and the name recorded against a decision. Without it nobody can be let in by email. |
+| `API_BASE_URL` | no | Where this deployment answers, e.g. `https://trip-xi-flax.vercel.app`. Worked out from the request when it is not set; only needed behind a proxy that rewrites the host. |
 
 Generate a secret with:
 
@@ -255,6 +296,9 @@ times as many people before a daily limit of 300 came into view.
   address.
 * Groups are only read through the account's own `users/{uid}/groups` list, so
   a reminder can never quote a group the recipient is not in.
+* A request to join is checked against the database before it is passed on: a
+  queued note claiming somebody is waiting reaches nobody unless `access/{uid}`
+  actually says `pending`. At most 20 go out per run.
 * Activity notices are the one thing a user can set in motion, and all they can
   do is add a line to `mail/queue`. They cannot name the recipients, cannot
   read the queue, cannot post as somebody else, and cannot reach a group they

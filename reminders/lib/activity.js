@@ -11,7 +11,14 @@
    nobody its author could not already reach.
    --------------------------------------------------------------------------- */
 import { money } from "./ledger.js";
-import { activityEmail } from "./template.js";
+import { activityEmail, accessRequestEmail } from "./template.js";
+import { makeToken, normaliseAccess } from "./access.js";
+
+/* Asking to join is not activity in a group - there is no group yet - so it
+   travels through the same queue but down its own path, to the administrator
+   rather than to members. */
+export const JOIN_KIND = "access.request";
+export const MAX_JOINS = 20;             // per run; a ceiling on invitation spam
 
 /* What each kind of note is, and which switch on the Account screen governs
    it. The keys match the rows the app shows, so what somebody turns off is
@@ -41,12 +48,12 @@ export function normaliseEntry(key, raw, now) {
   if (!raw || typeof raw !== "object") return null;
 
   const kind = str(raw.kind, 40);
-  if (!KINDS[kind]) return null;
+  if (!KINDS[kind] && kind !== JOIN_KIND) return null;
 
   // A group id is a database key. Anything that could climb out of the path
-  // is not one.
+  // is not one. A request to join names no group.
   const gid = str(raw.gid, 200);
-  if (!gid || /[.#$/[\]]/.test(gid)) return null;
+  if (kind !== JOIN_KIND && (!gid || /[.#$/[\]]/.test(gid))) return null;
 
   const actorUid = str(raw.actorUid, 128);
   if (!actorUid) return null;
@@ -125,9 +132,10 @@ export function lineFor(e) {
  * @param {object}   p.db      { read(path), remove(path) }
  * @param {function} p.send    ({to, subject, html, text}) => Promise
  */
-export async function runActivity({ users, at, dry, appUrl, db, send }) {
+export async function runActivity({ users, at, dry, appUrl, db, send,
+                                    adminEmail, secret, apiBase }) {
   const now = at.getTime();
-  const log = { queued: 0, dropped: 0, sent: 0, failed: 0, errors: [] };
+  const log = { queued: 0, dropped: 0, sent: 0, failed: 0, joins: 0, errors: [] };
 
   const raw = await db.read("mail/queue");
   const keys = Object.keys(raw || {});
@@ -143,15 +151,48 @@ export async function runActivity({ users, at, dry, appUrl, db, send }) {
   const batch = entries.slice(0, MAX_ENTRIES);
   log.queued = batch.length;
 
+  // ---- requests to join -------------------------------------------------
+  // One per person, to the administrator, with a link that opens the decision
+  // page. The database is the authority on whether somebody is really waiting:
+  // a note claiming otherwise is dropped.
+  const joins = batch.filter((e) => e.kind === JOIN_KIND);
+  for (const e of joins.slice(0, MAX_JOINS)) {
+    try {
+      const record = normaliseAccess(await db.read("access/" + e.actorUid));
+      if (record.status !== "pending") { log.dropped++; continue; }
+      if (!adminEmail || !secret || !apiBase) {
+        throw new Error("ADMIN_EMAIL, CRON_SECRET and the site address are all needed " +
+                        "before a request to join can be sent");
+      }
+      const profile = ((users[e.actorUid] || {}).profile) || {};
+      const mail = accessRequestEmail({
+        name: record.name || String(profile.name || ""),
+        email: record.email || String(profile.email || ""),
+        decideUrl: apiBase.replace(/\/+$/, "") + "/api/access?t=" +
+                   encodeURIComponent(makeToken(e.actorUid, secret, now))
+      });
+      if (!dry) await send({ to: adminEmail, ...mail });
+      log.joins++;
+      console.log("[access] " + (dry ? "DRY " : "") + "asked the administrator about " + e.actorUid);
+    } catch (err) {
+      log.failed++;
+      log.errors.push({ uid: e.actorUid, error: ((err && err.message) || String(err)).slice(0, 600) });
+      console.error("[access] could not pass on the request from", e.actorUid, err);
+    }
+  }
+
+  // ---- notices about a group --------------------------------------------
+  const notes = batch.filter((e) => e.kind !== JOIN_KIND);
+
   // A group is read once however many notes mention it.
   const groups = {};
-  for (const gid of [...new Set(batch.map((e) => e.gid))]) {
+  for (const gid of [...new Set(notes.map((e) => e.gid))]) {
     groups[gid] = await db.read("trips/" + gid);
   }
 
   // Fold the notes into one bundle per person.
   const bundles = new Map();
-  for (const e of batch) {
+  for (const e of notes) {
     const g = groups[e.gid];
     if (!g || !g.people) { log.dropped++; continue; }
 

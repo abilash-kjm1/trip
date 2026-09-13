@@ -72,7 +72,14 @@ export default async function handler(req, res) {
       log.activity = await runActivity({
         users, at, dry, appUrl: APP_URL,
         db: { read: readPath, remove: removePath },
-        send: sendEmail
+        send: sendEmail,
+        adminEmail: process.env.ADMIN_EMAIL || "",
+        secret,
+        // Where this deployment actually answers, so the approve link points
+        // back here rather than at a hard-coded guess.
+        apiBase: process.env.API_BASE_URL ||
+                 ((req.headers["x-forwarded-proto"] || "https") + "://" +
+                  (req.headers["x-forwarded-host"] || req.headers.host || ""))
       });
     } catch (err) {
       const msg = (err && err.message) || String(err);

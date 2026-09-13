@@ -241,6 +241,7 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 .cat .ms{ font-size:23px; }
 .cat.teal{ background:var(--green-lt); color:var(--green-dk); }
 .cat.bad{ background:rgba(255,59,48,.13); color:var(--danger); }
+.cat.warn{ background:rgba(255,149,0,.18); color:#8a5200; }   /* waiting on you */
 
 .summary{
   background:var(--surface); border-radius:26px; padding:26px 20px 20px; margin-bottom:18px;
@@ -624,6 +625,12 @@ img.av{ object-fit:cover; background:var(--fill-1); }
   display:flex; align-items:center; justify-content:center;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 14px 34px rgba(52,199,89,.36);
 }
+/* Waiting and refusal do not get the welcoming green. A no-entry sign in the
+   colour of a tick reads as an error in the page rather than an answer. */
+.signin .mark.quiet{
+  background:linear-gradient(160deg, #b9bfca, #8e99a6 55%, #78838f);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 14px 34px rgba(60,70,85,.24);
+}
 .signin .mark .ms{ font-size:44px; }
 .signin h2{ font-size:28px; font-weight:700; letter-spacing:-.03em; margin:0 0 10px; line-height:1.15; }
 .signin p{ font-size:16px; color:var(--label-2); margin:0 0 26px; line-height:1.45; }
@@ -802,6 +809,9 @@ function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e)
 let USER     = null;                        // {uid, name, email, photo} from Google
 let PREFS    = {};                          // users/{uid}/prefs - notification settings
 let SCHED    = {};                          // config/reminders - when the email goes out
+let ACCESS   = undefined;                   // access/{uid} - undefined until it has loaded
+let REQUESTS = {};                          // access/* - everybody, admin only
+let ALLUSERS = {};                          // users/* - admin only, to find who never asked
 let ME       = null;                        // my person-name inside CURRENT group
 let JOINED   = lsGet(LS.grp, []);           // [{id,name}]
 let CURRENT  = null;                        // active group id
@@ -811,6 +821,32 @@ let remote   = null;                        // firebase handles
 const subs   = {};                          // gid -> unsubscribe
 
 const isAdmin = () => !!(USER && ADMIN_EMAIL && (USER.email||"").toLowerCase()===ADMIN_EMAIL);
+
+/* ---------------- joining ----------------
+   Signing in gets somebody an account, not access. The administrator is
+   always in - they are the one who would have to let themselves back in
+   otherwise. This is the same condition the database rules enforce; the rules
+   are what actually stop anything, and this only decides what to show. */
+const accessState = () => {
+  if(isAdmin()) return "approved";
+  if(ACCESS === undefined) return "loading";
+  const s = ACCESS && ACCESS.status;
+  return (s==="approved" || s==="pending" || s==="declined") ? s : "none";
+};
+const mayUse = () => accessState()==="approved";
+
+function requestAccess(){
+  if(!remote || !USER) return Promise.resolve();
+  const rec = {status:"pending", name:USER.name, email:(USER.email||"").toLowerCase(),
+               photo:USER.photo||null, at:Date.now()};
+  // The record has to exist before the note, or the mailer will look it up,
+  // find nothing waiting, and quietly throw the request away.
+  return set("access/"+USER.uid, rec).then(()=>{
+    ACCESS = rec;
+    notify("access.request", null, {});
+    render();
+  });
+}
 
 /* ---------------- helpers ---------------- */
 function money(n){ const v=Math.round((n+Number.EPSILON)*100)/100; return (v<0?"-$":"$")+Math.abs(v).toFixed(2); }
@@ -1030,11 +1066,12 @@ function upd(path, obj){
 function notify(kind, gid, what){
   if(!remote || !USER || !USER.uid) return;
   const rec = {
-    kind: kind, gid: gid, actorUid: USER.uid,
+    kind: kind, actorUid: USER.uid,
     actor: String(ME || USER.name || "Someone").slice(0,80),
     desc: String((what && what.desc) || "").slice(0,120),
     at: Date.now()
   };
+  if(gid) rec.gid = gid;              // a request to join names no group
   const amt = Number(what && what.amount);
   if(isFinite(amt) && amt > 0) rec.amount = Math.round(amt*100)/100;
   try { remote.push(ref("mail/queue"), rec).catch(()=>{}); } catch(e){}
@@ -1186,6 +1223,7 @@ function render(){
 
   const y=window.scrollY;
   if(!USER)                 viewSignIn(main);
+  else if(!mayUse())      { $("nav").hidden=true; viewAccess(main); }
   else if(CURRENT)          viewGroup(main);
   else if(ADMIN_VIEW)       viewAdmin(main);
   else if(TAB==="groups")   viewGroups(main);
@@ -1219,6 +1257,68 @@ function viewSignIn(main){
     'knows who added what. Nothing is posted anywhere.</p>';
   main.appendChild(c);
   $("gIn").addEventListener("click", signIn);
+}
+
+/* ---------- signed in, but not yet let in ----------
+   Four states, each with a different thing to say and a different thing to
+   do. Showing one screen with a spinner for all of them would leave somebody
+   who has been declined waiting forever for an answer that has arrived. */
+function viewAccess(main){
+  const state = accessState();
+  setTitle(main, "Settle");
+  const c=el("div","card pad signin");
+
+  if(state==="loading"){
+    c.innerHTML='<div class="mark quiet" aria-hidden="true"><span class="ms">hourglass_empty</span></div>'+
+      '<h2>One moment</h2><p>Checking your access.</p>';
+    main.appendChild(c);
+    return;
+  }
+
+  if(state==="none"){
+    c.innerHTML=
+      '<div class="mark" aria-hidden="true"><span class="ms">how_to_reg</span></div>'+
+      '<h2>Ask to join</h2>'+
+      '<p>You are signed in as <strong>'+esc(USER.email)+'</strong>. Settle is not open '+
+      'to everyone, so the person who runs it has to let you in first.</p>'+
+      '<button class="btn primary wide" id="askBtn">Send my request</button>'+
+      '<p class="fine">They get an email with your name and address, and press approve '+
+      'or decline. You will hear back at this address.</p>';
+    main.appendChild(c);
+    $("askBtn").addEventListener("click", ()=>{
+      $("askBtn").disabled=true; $("askBtn").textContent="Sending…";
+      requestAccess().then(()=> toast("Request sent") )
+        .catch(e=>{ $("askBtn").disabled=false; $("askBtn").textContent="Send my request";
+                    toast("Could not send it — "+(e&&e.message?e.message:"try again")); });
+    });
+  }
+  else if(state==="pending"){
+    c.innerHTML=
+      '<div class="mark quiet" aria-hidden="true"><span class="ms">schedule</span></div>'+
+      '<h2>Waiting to be let in</h2>'+
+      '<p>Your request has gone to the person who runs this Settle. You will get an '+
+      'email at <strong>'+esc(USER.email)+'</strong> as soon as they decide.</p>'+
+      '<p class="fine">This page updates by itself — there is nothing to refresh. '+
+      'The request usually reaches them within about a quarter of an hour.</p>';
+    main.appendChild(c);
+  }
+  else {
+    c.innerHTML=
+      '<div class="mark quiet" aria-hidden="true"><span class="ms">block</span></div>'+
+      '<h2>Not approved</h2>'+
+      '<p>This account has not been given access. If you think that is a mistake, '+
+      'speak to whoever runs this Settle.</p>';
+    main.appendChild(c);
+  }
+
+  const out=el("div","card");
+  const r=el("button","row");
+  r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">logout</span></span>'+
+    '<span class="body"><span class="t1">Sign out</span>'+
+    '<span class="t2">'+esc(USER.email)+'</span></span>';
+  r.addEventListener("click", signOutNow);
+  out.appendChild(r);
+  main.appendChild(out);
 }
 
 /* ---------- groups list ---------- */
@@ -1763,6 +1863,18 @@ function viewAccount(main){
       '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--label-3)">chevron_right</span></span>';
     sr.addEventListener("click", sheetSchedule);
     a.appendChild(sr);
+
+    // The email link is the quick path, but it expires and it can be missed.
+    // This is the one that is always there.
+    const waiting = Object.keys(REQUESTS).filter(u=>REQUESTS[u] && REQUESTS[u].status==="pending").length;
+    const qr=el("button","row");
+    qr.innerHTML='<span class="cat'+(waiting?" warn":" teal")+'"><span class="ms" aria-hidden="true">how_to_reg</span></span>'+
+      '<span class="body"><span class="t1">Requests to join</span>'+
+      '<span class="t2">'+(waiting ? waiting+" waiting for you" : "Nobody is waiting")+'</span></span>'+
+      '<span class="right">'+(waiting?'<span class="tag warn">'+waiting+'</span>':
+        '<span class="ms" aria-hidden="true" style="color:var(--label-3)">chevron_right</span>')+'</span>';
+    qr.addEventListener("click", sheetRequests);
+    a.appendChild(qr);
 
     main.appendChild(a);
   }
@@ -2742,6 +2854,113 @@ function saveSched(patch){
     .then(()=> toast("Schedule saved") );
 }
 
+/* ---------- admin: who is waiting to be let in ----------
+   The email link is the quick path, but it expires after a fortnight and it
+   can be deleted or missed. This is the copy that is always there, and it is
+   also the only way to change a decision already made. */
+const ACC_WORDS = { pending:"Waiting", never:"Never asked", approved:"In", declined:"Turned away" };
+
+function sheetRequests(){
+  openSheet("Requests to join", (b)=>{
+    const draw = ()=>{
+      const all = Object.keys(REQUESTS).map(uid=>Object.assign({uid}, REQUESTS[uid]||{}))
+        .filter(x=>x.status);
+
+      // Anybody who has signed in but has no record at all. Before the gate
+      // existed that was everybody, and they need approving before it shuts.
+      Object.keys(ALLUSERS).forEach(uid=>{
+        if(REQUESTS[uid] && REQUESTS[uid].status) return;
+        const p = (ALLUSERS[uid]||{}).profile || {};
+        if(!p.email) return;
+        all.push({uid, status:"never", name:p.name, email:p.email, at:p.at});
+      });
+
+      const order = {pending:0, never:1, approved:2, declined:3};
+      all.sort((x,y)=> (order[x.status]-order[y.status]) || (Number(y.at||0)-Number(x.at||0)) );
+
+      if(!all.length){
+        b.innerHTML='<p class="lead">Nobody has asked to join yet.</p>'+
+          '<p class="fine">When somebody signs in with Google for the first time they '+
+          'are shown a screen asking them to request access, and you get an email.</p>';
+        return;
+      }
+
+      const never = all.filter(x=>x.status==="never").length;
+      b.innerHTML='<p class="lead">Approving somebody lets them see the groups they '+
+        'are added to, start their own, and add expenses. Nobody can ever change or '+
+        'delete an entry somebody else made.</p>'+
+        (never ? '<p class="fine"><strong>'+never+'</strong> '+(never===1?"person has":"people have")+
+                 ' been using Settle since before this screen existed. Approve '+
+                 (never===1?"them":"them all")+' before switching the gate on, or they '+
+                 'will be locked out.</p>' : '')+
+        '<div class="card" id="reqList"></div>'+
+        '<p class="fine">Turning somebody away does not delete anything. You can change '+
+        'your mind here at any time.</p>';
+
+      const host=$("reqList");
+      all.forEach(x=>{
+        const row=el("div","row");
+        const when = x.at ? " · "+fmtDate(Number(x.at)) : "";
+        row.innerHTML=
+          '<span class="cat'+(x.status==="approved"?" teal":x.status==="declined"?" bad":" warn")+'">'+
+            '<span class="ms" aria-hidden="true">'+
+            (x.status==="approved"?"check":x.status==="declined"?"block":
+             x.status==="never"?"person":"schedule")+'</span></span>'+
+          '<span class="body"><span class="t1">'+esc(x.name||x.email||x.uid)+'</span>'+
+          '<span class="t2">'+esc(x.email||"no address")+esc(when)+'</span></span>'+
+          '<span class="right"><span class="tag'+(x.status==="approved"?" on":x.status==="declined"?"":" warn")+'">'+
+            ACC_WORDS[x.status]+'</span></span>';
+        host.appendChild(row);
+
+        const acts=el("div","arow");
+        acts.style.cssText="padding:0 16px 14px;gap:8px";
+        if(x.status!=="approved"){
+          const y=el("button","btn primary"); y.type="button"; y.style.flex="1 1 120px";
+          y.textContent = x.status==="declined" ? "Let them in" : "Approve";
+          y.addEventListener("click", ()=> decide(x, "approved") );
+          acts.appendChild(y);
+        }
+        if(x.status!=="declined"){
+          const n=el("button","btn"); n.type="button"; n.style.flex="1 1 120px";
+          n.textContent = x.status==="approved" ? "Remove access" : "Decline";
+          n.addEventListener("click", ()=>{
+            if(x.status==="approved" &&
+               !confirm("Remove access for "+(x.name||x.email)+"? They keep their expenses, "+
+                        "but will not be able to open Settle.")) return;
+            decide(x, "declined");
+          });
+          acts.appendChild(n);
+        }
+        if(acts.children.length) host.appendChild(acts);
+      });
+
+      function decide(x, status){
+        // The app writes the decision; the email telling them is sent by the
+        // server, which is the only place that may send anything.
+        const patch = {status:status, decidedAt:Date.now(),
+                       decidedBy:(USER.email||USER.name)};
+        // Somebody who never asked has no record to carry their details, and
+        // the server reads this record — not their profile — to find out
+        // where to send the answer. Without this they would be approved and
+        // never told.
+        if(!(REQUESTS[x.uid] && REQUESTS[x.uid].email)){
+          patch.name = x.name || "";
+          patch.email = (x.email||"").toLowerCase();
+          patch.at = Number(x.at) || Date.now();
+        }
+        upd("access/"+x.uid, patch)
+          .then(()=>{
+            REQUESTS[x.uid]=Object.assign({}, REQUESTS[x.uid], patch);
+            toast(status==="approved" ? (x.name||x.email)+" can use Settle"
+                                      : (x.name||x.email)+" cannot use Settle");
+            draw(); render();
+          });
+      }
+    };
+    draw();
+  }, render);
+}
+
 /* ---------- create / join / share a group ---------- */
 function slug(s){
   return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,28) || "group";
@@ -3100,6 +3319,24 @@ function onSignedIn(u){
 
   // Keep a profile record so the admin can see who is who.
   set("users/"+USER.uid+"/profile", {name:USER.name, email:USER.email, photo:USER.photo||null, at:Date.now()});
+
+  // Am I allowed in? Watched rather than read once, so somebody sitting on the
+  // waiting screen is let through the moment they are approved, without
+  // reloading and without being told to.
+  remote.onValue(ref("access/"+USER.uid), snap=>{ ACCESS = snap.val() || null; render(); },
+    ()=>{ ACCESS = null; render(); });
+
+  // Everybody's request, for the administrator's list.
+  if(isAdmin()){
+    remote.onValue(ref("access"), snap=>{ REQUESTS = snap.val() || {}; render(); },
+      ()=>{ REQUESTS = {}; });
+    // Everybody who has ever signed in. People who were using Settle before
+    // there was anything to approve have no access record at all, and would
+    // otherwise be invisible on the requests screen right up until the gate
+    // shut them out.
+    remote.onValue(ref("users"), snap=>{ ALLUSERS = snap.val() || {}; render(); },
+      ()=>{ ALLUSERS = {}; });
+  }
 
   // My groups live in the database, so they follow me to any device.
   remote.onValue(ref("users/"+USER.uid+"/groups"), snap=>{
