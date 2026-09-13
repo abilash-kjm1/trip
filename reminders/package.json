@@ -1,0 +1,16 @@
+{
+  "name": "settle-reminders",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Weekly expense reminder cron for the Settle expense tracker. Deployed to Vercel, reads the app's existing Firebase Realtime Database, sends through Resend.",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  },
+  "scripts": {
+    "test": "node test/ledger.test.js"
+  }
+}

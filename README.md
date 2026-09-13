@@ -63,6 +63,10 @@ own Google account.
 - **Activity** — a running log per group and across all your groups.
 - **Print / save as PDF** — a full statement: balances, settlements, every
   expense with its split, and every payment made.
+- **Weekly email reminder** — a Sunday round-up of what you owe and what you
+  are owed, at 5pm on your own clock, skipped entirely if you are square.
+  Switched on by default and turned off under Account → Notifications, along
+  with your timezone. See [`reminders/`](reminders/README.md).
 - **Works offline** — it opens with no signal and syncs when signal returns.
 - **Installable** — add it to your home screen and it runs like an app.
 

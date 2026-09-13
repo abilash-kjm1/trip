@@ -445,6 +445,19 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 }
 .locked .ms{ font-size:19px; flex:0 0 auto; }
 
+
+/* ---------- a switch ---------- */
+.switch{
+  display:inline-block; width:48px; height:29px; border-radius:15px; position:relative;
+  background:var(--fill-3); transition:background .22s; vertical-align:middle;
+}
+.switch.on{ background:var(--tint); }
+.switch i{
+  position:absolute; top:2px; left:2px; width:25px; height:25px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 3px rgba(16,24,48,.3); transition:transform .22s;
+}
+.switch.on i{ transform:translateX(19px); }
+
 /* ---------- expense filters ---------- */
 .filters{ margin:0 0 14px; }
 .filters input[type="search"]{
@@ -730,6 +743,7 @@ img.av{ object-fit:cover; background:var(--fill-1); }
      trips/{gid}/expenses/{k}  {desc, amount, payer, mode, between[], vals{}, cat, note, at, by}
      trips/{gid}/payments/{k}  {from, to, amount, note, at, by}
      users/{uid}/profile       {name, email, photo, at}
+     users/{uid}/prefs         {weekly, newExpense, updates, payments, tz, lastWeekly}
      users/{uid}/groups/{gid}  {name, at}      <- which groups this person is in
    Who you are comes from Google sign-in. Which groups you belong to lives in
    the database under your own uid, so it follows you to any device.
@@ -776,6 +790,7 @@ function lsGet(k, d){ try{ const v=localStorage.getItem(k); return v==null?d:JSO
 function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 
 let USER     = null;                        // {uid, name, email, photo} from Google
+let PREFS    = {};                          // users/{uid}/prefs - notification settings
 let ME       = null;                        // my person-name inside CURRENT group
 let JOINED   = lsGet(LS.grp, []);           // [{id,name}]
 let CURRENT  = null;                        // active group id
@@ -1709,6 +1724,21 @@ function viewAccount(main){
     main.appendChild(a);
   }
 
+  main.appendChild(el("div","sechead","Notifications"));
+  const nc=el("div","card");
+  const nrow=el("button","row");
+  const weeklyOn = prefOn("weekly", true);
+  nrow.innerHTML='<span class="cat'+(weeklyOn?" teal":"")+'"><span class="ms" aria-hidden="true">'+
+    (weeklyOn?"notifications_active":"notifications_off")+'</span></span>'+
+    '<span class="body"><span class="t1">Email reminders</span>'+
+    '<span class="t2">'+(weeklyOn
+      ? "Sunday round-up is on, 5pm "+esc(((PREFS.tz)||guessTz()).replace(/_/g," "))
+      : "Sunday round-up is off")+'</span></span>'+
+    '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--label-3)">chevron_right</span></span>';
+  nrow.addEventListener("click", sheetNotifications);
+  nc.appendChild(nrow);
+  main.appendChild(nc);
+
   main.appendChild(el("div","sechead","App"));
   const c2=el("div","card");
   const off=el("div","row"); off.style.cursor="default";
@@ -2453,6 +2483,81 @@ function inviteByEmail(gid, mail){
     .catch(()=>{ toast("Saved the address, but could not send the invite"); });
 }
 
+/* ---------- notification settings ----------
+   Stored at users/{uid}/prefs, which only that account can read or write.
+   The weekly reminder is on unless it has been explicitly switched off, so an
+   account that predates this setting still gets one. */
+const PREF_ROWS = [
+  ["weekly",    "Weekly Sunday reminder", "A round-up at 5pm on Sunday of what you owe and what you are owed.", true],
+  ["newExpense","New expenses",           "When somebody adds an expense to one of your groups.",              false],
+  ["updates",   "Expense changes",        "When somebody edits or deletes an expense you are part of.",        false],
+  ["payments",  "Payments",               "When somebody records a payment involving you.",                    false]
+];
+const TZ_CHOICES = [
+  "America/Toronto","America/Vancouver","America/New_York","America/Chicago","America/Denver",
+  "America/Los_Angeles","Europe/London","Europe/Paris","Europe/Berlin","Asia/Kolkata",
+  "Asia/Dubai","Asia/Singapore","Asia/Tokyo","Australia/Sydney","Pacific/Auckland","UTC"
+];
+const prefOn = (k, dflt) => {
+  const v = PREFS[k];
+  return v === undefined || v === null ? dflt : v !== false;
+};
+function guessTz(){
+  try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Toronto"; }
+  catch(e){ return "America/Toronto"; }
+}
+
+function sheetNotifications(){
+  openSheet("Notifications", (b)=>{
+    const tzNow = (typeof PREFS.tz === "string" && PREFS.tz) || guessTz();
+    const choices = TZ_CHOICES.indexOf(tzNow)>-1 ? TZ_CHOICES : [tzNow].concat(TZ_CHOICES);
+    b.innerHTML =
+      '<p class="lead">Emails go to '+esc(USER.email)+'.</p>'+
+      '<div class="card" id="prefList"></div>'+
+      '<div class="sechead">Your timezone</div>'+
+      '<div class="field"><label for="prTz">Send at 5pm where you are</label>'+
+      '<select id="prTz">'+choices.map(t=>
+        '<option value="'+esc(t)+'"'+(t===tzNow?' selected':'')+'>'+esc(t.replace(/_/g," "))+'</option>').join("")+
+      '</select>'+
+      '<div class="help">The reminder is worked out against this clock, so it arrives on your '+
+      'Sunday evening rather than somebody else’s.</div></div>'+
+      '<p class="fine">Only the Sunday reminder is sending today. The other three are recorded '+
+      'now so they take effect the moment that part is switched on.</p>';
+
+    const host=$("prefList");
+    PREF_ROWS.forEach(r=>{
+      const [key, title, sub, dflt] = r;
+      const on = prefOn(key, dflt);
+      const row=el("button","row");
+      row.innerHTML=
+        '<span class="cat'+(on?" teal":"")+'"><span class="ms" aria-hidden="true">'+
+          (on?"notifications_active":"notifications_off")+'</span></span>'+
+        '<span class="body"><span class="t1">'+esc(title)+'</span>'+
+        '<span class="t2">'+esc(sub)+'</span></span>'+
+        '<span class="right"><span class="switch'+(on?" on":"")+'" aria-hidden="true"><i></i></span></span>';
+      row.setAttribute("role","switch");
+      row.setAttribute("aria-checked", on?"true":"false");
+      row.addEventListener("click", ()=>{
+        const next = !(row.getAttribute("aria-checked")==="true");
+        PREFS[key]=next;
+        savePrefs({[key]: next});
+        sheetNotifications();                      // redraw with the new state
+      });
+      host.appendChild(row);
+    });
+
+    $("prTz").addEventListener("change", ()=>{
+      PREFS.tz=$("prTz").value;
+      savePrefs({tz: PREFS.tz});
+      toast("Reminders will follow "+PREFS.tz.replace(/_/g," "));
+    });
+  });
+}
+function savePrefs(patch){
+  if(!remote || !USER) return Promise.resolve();
+  return upd("users/"+USER.uid+"/prefs", patch);
+}
+
 /* ---------- create / join / share a group ---------- */
 function slug(s){
   return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,28) || "group";
@@ -2825,6 +2930,19 @@ function onSignedIn(u){
     setSync("bad","Cannot read your groups — "+(err&&err.message?err.message:"check the database rules"));
     render();
   });
+
+  // Notification settings, and the timezone the weekly reminder is worked out
+  // against. Recorded once so the cron has something to read even if this
+  // account never opens the settings sheet.
+  remote.onValue(ref("users/"+USER.uid+"/prefs"), snap=>{
+    PREFS = snap.val() || {};
+    if(PREFS.tz === undefined){
+      let tz="America/Toronto";
+      try{ tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; }catch(e){}
+      PREFS.tz = tz;
+      set("users/"+USER.uid+"/prefs/tz", tz);
+    }
+  }, ()=>{});
 
   // Groups somebody has added me to by email turn up on their own.
   if(USER.email){
