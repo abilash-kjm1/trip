@@ -911,6 +911,36 @@ function settlements(gid){
   }
   return out;
 }
+// Net between two people, positive when `a` still owes `b`. Counts each
+// person's share of what the other paid for, then the payments already made
+// between the two.
+function pairNet(gid, a, b){
+  let net=0;
+  expensesOf(gid).forEach(e=>{
+    const sh=sharesOf(e);
+    if(e.payer===b && sh[a]) net += sh[a];
+    if(e.payer===a && sh[b]) net -= sh[b];
+  });
+  paymentsOf(gid).forEach(p=>{
+    if(p.from===a && p.to===b) net -= Number(p.amount)||0;
+    if(p.from===b && p.to===a) net += Number(p.amount)||0;
+  });
+  return Math.round(net*100)/100;
+}
+
+// What to put in the amount box for a given pair, and why.
+function suggestSettle(gid, from, to){
+  if(from===to) return {amt:0, why:"Pick two different people."};
+  const plan=settlements(gid).find(t=>t.from===from && t.to===to);
+  if(plan) return {amt:Math.round(plan.amt*100)/100,
+                   why:"This clears "+(from===ME?"you":from)+" in the settle-up plan."};
+  const net=pairNet(gid, from, to);
+  if(net>0.004)  return {amt:net, why:(from===ME?"You owe":from+" owes")+" "+to+" this much between the two of them."};
+  if(net<-0.004) return {amt:0,   why:"The other way round \u2014 "+to+" owes "+
+                                      (from===ME?"you":from)+" "+money(-net)+"."};
+  return {amt:0, why:"Nothing outstanding between these two."};
+}
+
 const myBalance = (gid) => { const n=meIn(gid); if(!n) return 0; const b=balances(gid); return b[n]||0; };
 function totalOf(gid){ let t=0; expensesOf(gid).forEach(e=> t+=Number(e.amount)||0 ); return t; }
 
@@ -2002,7 +2032,8 @@ function sheetSettle(from, to, amt, existing){
         ppl.map(n=>'<option value="'+esc(n)+'"'+(n===to?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
       '</select></div>'+
       '<div class="field"><label for="stAmt">Amount</label><div class="amtbig"><span class="cur">$</span>'+
-      '<input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" value="'+(amt?esc(plain(amt)):"")+'"></div></div>'+
+      '<input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" value="'+(amt?esc(plain(amt)):"")+'"></div>'+
+      '<div class="help" id="stWhy"></div></div>'+
       fieldHTML("stDate","Date","date", dateVal(existing?existing.at:null))+
       '<div class="field"><label for="stNote">Note (optional)</label>'+
       '<input id="stNote" type="text" placeholder="e-transfer, cash…" value="'+
@@ -2010,6 +2041,34 @@ function sheetSettle(from, to, amt, existing){
       '<button class="btn p wide" id="stSave">'+(existing?"Save changes":"Record payment")+'</button>'+
       (existing?'<button class="btn d wide" id="stDel" style="margin-top:10px">Delete this payment</button>'+
         '<p class="fine">Recorded by '+esc(existing.by||existing.from)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
+    // The amount follows whoever is picked, so choosing a different pair shows
+    // what is outstanding between them rather than leaving a stale figure.
+    let touched = false;
+    $("stAmt").addEventListener("input", ()=>{ touched = true; });
+    function suggest(force){
+      const s2=suggestSettle(gid, $("stFrom").value, $("stTo").value);
+      $("stWhy").textContent = s2.why;
+      if(force || !touched){
+        $("stAmt").value = s2.amt ? plain(s2.amt) : "";
+        touched = false;
+      }
+    }
+    $("stFrom").addEventListener("change", ()=>{
+      if($("stFrom").value===$("stTo").value){
+        const other=ppl.filter(n=>n!==$("stFrom").value)[0];
+        if(other) $("stTo").value=other;
+      }
+      suggest(true);
+    });
+    $("stTo").addEventListener("change", ()=>{
+      if($("stTo").value===$("stFrom").value){
+        const other=ppl.filter(n=>n!==$("stTo").value)[0];
+        if(other) $("stFrom").value=other;
+      }
+      suggest(true);
+    });
+    suggest(!amt && !existing);
+
     $("stSave").addEventListener("click", ()=>{
       const f=$("stFrom").value, t=$("stTo").value;
       const a=Math.round((Number($("stAmt").value)||0)*100)/100;

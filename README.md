@@ -47,7 +47,10 @@ own Google account.
   expenses is listed, including a name that is no longer a member, so the
   figures always add up.
 - **Record a payment** — when cash or a transfer actually changes hands, log
-  it and the balances move. Tap it again in Activity to correct or delete it;
+  it and the balances move. The amount follows the two people picked: it fills
+  with the payment that clears them in the settle-up plan, or failing that
+  with what is outstanding directly between the pair, and says which of the
+  two it is. Typing over it stops it being overwritten. Tap it again in Activity to correct or delete it;
   a payment entered twice is otherwise invisible and doubles what someone
   appears to be owed.
 - **Activity** — a running log per group and across all your groups.
