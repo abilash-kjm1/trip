@@ -63,6 +63,11 @@ export default async function handler(req, res) {
 
     const users = await readPath("users");
 
+    // Who is allowed in. Only wanted for a dry run's report: turning the
+    // approval gate on without checking this first is how somebody gets
+    // locked out of an app that was working a minute ago.
+    const access = dry ? await readPath("access") : {};
+
     // ---- activity notices ------------------------------------------------
     // Drained on every pass, whatever the weekly schedule says: these are
     // individually opted into, default to off, and are about something that
@@ -115,6 +120,7 @@ export default async function handler(req, res) {
         return {
           uid,
           email: String(((users[uid] || {}).profile || {}).email || ""),
+          access: (access[uid] && access[uid].status) || "no record - would be locked out",
           lastSent: last ? new Date(last).toISOString() : "never",
           why: isDue(cfg, tzOf(prefs), prefs, at).why
         };
