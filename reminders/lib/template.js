@@ -159,3 +159,65 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
 
   return { subject, html, text: t };
 }
+
+/* ---------------------------------------------------------------------------
+   The activity notice: what has happened in your groups since we last looked.
+
+   Quieter than the weekly round-up on purpose. It carries no balances - those
+   are one tap away in the app, and recomputing them here would put a number in
+   somebody's inbox that is already out of date by the time they read it.
+   --------------------------------------------------------------------------- */
+export function activityEmail({ name, groups, appUrl }) {
+  const count = groups.reduce((n, g) => n + g.lines.length, 0);
+  const one = count === 1;
+
+  const headline = one
+    ? "One update in " + groups[0].group
+    : count + " updates" + (groups.length === 1 ? " in " + groups[0].group : "");
+
+  let body = "";
+  groups.forEach((g) => {
+    const rows = g.lines.map((line) => `<tr>
+      <td style="padding:11px 0;border-bottom:1px solid ${LINE};color:${INK};font-size:15px;line-height:1.45">${esc(line)}</td>
+    </tr>`).join("");
+    body += section(g.group, rows);
+  });
+
+  const html = `<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>${esc(headline)}</title>
+</head><body style="margin:0;padding:0;background:#f2f2f7">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2f7;padding:24px 12px">
+<tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="max-width:560px;background:#ffffff;border-radius:18px;padding:28px 26px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+    <tr><td>
+      <p style="margin:0 0 4px;font-size:14px;color:${SOFT}">Activity</p>
+      <h1 style="margin:0 0 2px;font-size:26px;line-height:1.2;color:${INK}">Hello ${esc(name)},</h1>
+      <p style="margin:10px 0 0;font-size:20px;font-weight:700;color:${INK}">${esc(headline)}</p>
+      ${body}
+      <p style="margin:30px 0 0">
+        <a href="${esc(appUrl)}" style="display:inline-block;background:#34c759;color:#ffffff;text-decoration:none;
+           font-size:16px;font-weight:600;padding:13px 24px;border-radius:12px">Open Settle</a>
+      </p>
+      <p style="margin:26px 0 0;font-size:12px;color:${SOFT};line-height:1.5">
+        You are getting this because activity notices are switched on for your account.
+        Turn them off in the app under Account &rarr; Notifications.
+      </p>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+
+  let t = `Hello ${name},\n\n${headline}\n`;
+  groups.forEach((g) => {
+    t += `\n${g.group.toUpperCase()}\n`;
+    g.lines.forEach((line) => { t += `  ${line}\n`; });
+  });
+  t += `\nOpen Settle: ${appUrl}\nTurn these off under Account > Notifications.\n`;
+
+  return { subject: headline, html, text: t };
+}

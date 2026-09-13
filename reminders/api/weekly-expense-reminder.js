@@ -7,13 +7,15 @@
    Protected by CRON_SECRET: Vercel Cron sends it as a bearer token, and
    without it the endpoint answers 401. Nobody can use this to fan out mail.
    =========================================================================== */
-import { readPath, database } from "../lib/firebase.js";
+import { readPath, removePath, database } from "../lib/firebase.js";
 import { sendEmail, provider } from "../lib/email.js";
 import { reminderEmail } from "../lib/template.js";
 import { groupSummary, cents } from "../lib/ledger.js";
 import { normalise, isDue, isValidTz, describe } from "../lib/schedule.js";
+import { runActivity } from "../lib/activity.js";
 
 const DEFAULT_TZ = process.env.DEFAULT_TZ || "America/Toronto";
+const APP_URL = process.env.APP_URL || "https://abilash-kjm1.github.io/trip/";
 
 const tzOf = (prefs) =>
   (prefs && typeof prefs.tz === "string" && isValidTz(prefs.tz)) ? prefs.tz : DEFAULT_TZ;
@@ -59,12 +61,29 @@ export default async function handler(req, res) {
     const cfg = normalise(await readPath("config/reminders"));
     log.schedule = describe(cfg);
 
+    const users = await readPath("users");
+
+    // ---- activity notices ------------------------------------------------
+    // Drained on every pass, whatever the weekly schedule says: these are
+    // individually opted into, default to off, and are about something that
+    // has just happened rather than something on a timetable. A failure here
+    // must not cost anybody their weekly round-up, hence its own try.
+    try {
+      log.activity = await runActivity({
+        users, at, dry, appUrl: APP_URL,
+        db: { read: readPath, remove: removePath },
+        send: sendEmail
+      });
+    } catch (err) {
+      const msg = (err && err.message) || String(err);
+      log.activity = { error: msg.slice(0, 600) };
+      console.error("[activity] aborted:", msg);
+    }
+
     if (!cfg.enabled && !force) {
       console.log("[reminder] schedule is switched off");
       return res.status(200).json({ ok: true, ms: Date.now() - started, ...log });
     }
-
-    const users = await readPath("users");
 
     // Is anybody due at all? Deciding this needs only preferences and a
     // timezone, never the ledger.
@@ -150,8 +169,7 @@ export default async function handler(req, res) {
 
         const { subject, html, text } = reminderEmail({
           name: String(profile.name || email.split("@")[0]),
-          owe, owed, groups,
-          appUrl: process.env.APP_URL || "https://abilash-kjm1.github.io/trip/"
+          owe, owed, groups, appUrl: APP_URL
         });
 
         if (dry) {

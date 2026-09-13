@@ -752,6 +752,8 @@ img.av{ object-fit:cover; background:var(--fill-1); }
      users/{uid}/profile       {name, email, photo, at}
      users/{uid}/prefs         {weekly, newExpense, updates, payments, tz, lastWeekly}
      config/reminders          {enabled, days[], hour, windowHours}  <- admin only
+     mail/queue/{k}            {kind, gid, actorUid, actor, desc, amount, at}
+                               <- write-only for the app, drained by the cron
      users/{uid}/groups/{gid}  {name, at}      <- which groups this person is in
    Who you are comes from Google sign-in. Which groups you belong to lives in
    the database under your own uid, so it follows you to any device.
@@ -1015,6 +1017,27 @@ function del(path){
 function upd(path, obj){
   if(!remote) return Promise.resolve();
   return remote.update(ref(path), obj).catch(e=>toast("Could not save: "+e.message));
+}
+
+/* ---------------- the activity outbox ----------------
+   The browser holds no mail key and can send nothing. It leaves a note here
+   instead; the scheduler reads it on its next pass, works out from the
+   group's own membership who ought to hear, and sends. So the note says what
+   happened and never who to tell - picking recipients stays on the server,
+   where a tampered note cannot reach anyone it could not already reach.
+   Best effort throughout: a note that fails to save must never stop the
+   thing it describes from being saved. */
+function notify(kind, gid, what){
+  if(!remote || !USER || !USER.uid) return;
+  const rec = {
+    kind: kind, gid: gid, actorUid: USER.uid,
+    actor: String(ME || USER.name || "Someone").slice(0,80),
+    desc: String((what && what.desc) || "").slice(0,120),
+    at: Date.now()
+  };
+  const amt = Number(what && what.amount);
+  if(isFinite(amt) && amt > 0) rec.amount = Math.round(amt*100)/100;
+  try { remote.push(ref("mail/queue"), rec).catch(()=>{}); } catch(e){}
 }
 
 /* ---------------- linking an account to a name ---------------- */
@@ -1403,8 +1426,10 @@ function sectionAdd(main, gid){
     if(!(a>0)) return toast("Enter an amount");
     if(!between.length) return toast("Pick at least one person to split between");
     push("trips/"+gid+"/expenses", {desc:d, amount:a, payer:payer.value, mode:"equal",
-      between:between, vals:{}, cat:"general", note:"", at:Date.now(), by:ME||USER.name})
+      between:between, vals:{}, cat:"general", note:"", at:Date.now(),
+      by:ME||USER.name, byUid:USER.uid})
       .then(()=>{
+        notify("expense.add", gid, {desc:d, amount:a});
         card.querySelector("#afDesc").value=""; card.querySelector("#afAmt").value="";
         ppl.forEach(n=> sel[n]=true ); drawChips();
         toast("Expense added");
@@ -1983,7 +2008,9 @@ function sheetExpense(existing){
     $("exSave").addEventListener("click", save);
     if(existing) $("exDel").addEventListener("click", ()=>{
       if(!confirm('Delete "'+existing.desc+'"? This removes it for everyone.')) return;
-      del("trips/"+gid+"/expenses/"+existing.k); closeSheet(); toast("Expense deleted");
+      del("trips/"+gid+"/expenses/"+existing.k);
+      notify("expense.del", gid, existing);
+      closeSheet(); toast("Expense deleted");
     });
 
     function drawMode(){
@@ -2099,6 +2126,7 @@ function sheetExpense(existing){
       };
       if(existing) set("trips/"+gid+"/expenses/"+existing.k, rec);
       else push("trips/"+gid+"/expenses", rec);
+      notify(existing?"expense.edit":"expense.add", gid, rec);
       closeSheet(); toast(existing?"Expense updated":"Expense added");
     }
   });
@@ -2182,12 +2210,18 @@ function sheetSettle(from, to, amt, existing){
                  byUid: existing ? (existing.byUid||USER.uid) : USER.uid};
       if(existing) set("trips/"+gid+"/payments/"+existing.k, rec);
       else push("trips/"+gid+"/payments", rec);
+      // A payment has no description of its own, so say who paid whom.
+      notify(existing?"payment.edit":"payment.add", gid,
+             {desc: f+" paid "+t, amount: a});
       closeSheet(); toast(existing?"Payment updated":"Payment recorded");
     });
     if(existing) $("stDel").addEventListener("click", ()=>{
       if(!confirm("Delete this "+money(existing.amount)+" payment from "+existing.from+
                   " to "+existing.to+"? Everyone's balance will move.")) return;
-      del("trips/"+gid+"/payments/"+existing.k); closeSheet(); toast("Payment deleted");
+      del("trips/"+gid+"/payments/"+existing.k);
+      notify("payment.del", gid, {desc: existing.from+" paid "+existing.to,
+                                  amount: existing.amount});
+      closeSheet(); toast("Payment deleted");
     });
   });
 }
@@ -2543,8 +2577,8 @@ function sheetNotifications(){
       '<div class="help">The reminder is worked out against this clock, so it arrives on your '+
       'Sunday evening rather than somebody else’s.</div></div>'+
       '<p class="fine">Reminders currently go out: '+esc(schedLine())+'.</p>'+
-      '<p class="fine">Only the weekly reminder is sending today. The other three are recorded '+
-      'now so they take effect the moment that part is switched on.</p>';
+      '<p class="fine">The bottom three are gathered up and sent within about a quarter of an '+
+      'hour, so four expenses added in one sitting arrive as one email rather than four.</p>';
 
     const host=$("prefList");
     PREF_ROWS.forEach(r=>{

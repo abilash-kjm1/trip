@@ -46,3 +46,8 @@ export async function readPath(path) {
   const v = snap.val();
   return (v && typeof v === "object") ? v : {};
 }
+
+/** Delete one path. Used to clear notes the mailer has already acted on. */
+export async function removePath(path) {
+  await database().ref(path).remove();
+}

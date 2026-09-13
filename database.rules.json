@@ -20,6 +20,16 @@
       }
     },
 
+    "mail": {
+      "queue": {
+        ".read": false,
+        "$k": {
+          ".write": "auth != null && !data.exists() && newData.child('actorUid').val() == auth.uid",
+          ".validate": "newData.hasChildren(['kind','gid','actorUid','at']) && newData.child('kind').isString() && newData.child('gid').isString() && newData.child('at').isNumber()"
+        }
+      }
+    },
+
     "invites": {
       "$ekey": {
         ".read": "auth != null && auth.token.email_verified == true && $ekey == auth.token.email.toLowerCase().replace('.', ',')",

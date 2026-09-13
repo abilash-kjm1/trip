@@ -35,6 +35,41 @@ belongs to and works out, per group:
 
 If the totals come to nothing, no email goes out.
 
+## Activity notices
+
+Three more switches on the Account screen - **New expenses**, **Expense
+changes** and **Payments** - send a note when something happens rather than on
+a timetable. They are off unless somebody turns them on.
+
+The browser cannot send email: the mail key never leaves the server. So the app
+writes a line to `mail/queue` saying what it did, and this endpoint drains that
+queue on every pass. With the hourly (or quarter-hourly) caller in place, a
+notice arrives within about fifteen minutes, and everything that happened in
+that window reaches a person as one email rather than several.
+
+The queued note says **what happened and never who to tell**. Recipients are
+worked out here, from the group's own membership, so a note somebody tampered
+with cannot reach anybody its author could not already reach. Before it is
+acted on, the author must still be a member of the group the note names.
+
+The rules make `mail/queue` write-only for the app - no client can read it,
+overwrite an existing entry, or post under another account's uid:
+
+```json
+"mail": {
+  "queue": {
+    ".read": false,
+    "$k": { ".write": "auth != null && !data.exists() && newData.child('actorUid').val() == auth.uid" }
+  }
+}
+```
+
+Notes older than 48 hours are discarded unread, and a run handles at most 300
+of them, 40 lines per email, 120 emails. The queue is cleared whether or not
+the mail got through: these describe something that has already happened and is
+visible in the app, so a retry loop repeating the same failure every quarter of
+an hour would be worse than one missed notice.
+
 ## The arithmetic
 
 `lib/ledger.js` is a deliberate port of the app's own split maths — all four
@@ -220,3 +255,8 @@ times as many people before a daily limit of 300 came into view.
   address.
 * Groups are only read through the account's own `users/{uid}/groups` list, so
   a reminder can never quote a group the recipient is not in.
+* Activity notices are the one thing a user can set in motion, and all they can
+  do is add a line to `mail/queue`. They cannot name the recipients, cannot
+  read the queue, cannot post as somebody else, and cannot reach a group they
+  do not belong to. Sending still happens only on the cron's own schedule,
+  behind `CRON_SECRET`.
