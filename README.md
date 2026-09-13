@@ -20,7 +20,10 @@ own Google account.
   without being asked. Names can be changed afterwards, and an account can be
   released or moved to a different name, from the group's people list.
 - **Merging a duplicate** — if the same person ends up on the list twice, fold
-  one into the other from the people list. Everything they paid, owe or were
+  one into the other from the people list. The target may be a name that is
+  only carried on the expenses and has no record of its own; in that case the
+  record is renamed onto it rather than deleted, so the account and email
+  survive and the orphaned name is absorbed. Everything they paid, owe or were
   split into moves across in one atomic write, a payment between the two
   halves is dropped as meaningless, and an equal split correctly loses the
   phantom head so the remaining people's shares go up.
@@ -33,6 +36,9 @@ own Google account.
   list, balances and the who-pays-whom chart all on a single scroll, the way
   the original tracker was laid out. The form sits on the page rather than
   behind a button, and survives somebody else's change syncing in mid-typing.
+- **A capped list** — past six expenses the list scrolls inside itself rather
+  than pushing the rest of the page away, with "Open full list" opening every
+  expense on its own page.
 - **Filters** — search the expenses, or narrow them to who paid, or to how
   many ways they were split. Each expense also names who it was split
   between rather than only counting them.

@@ -409,6 +409,34 @@ img.av{ object-fit:cover; background:var(--fill-1); }
   padding:10px 4px 2px;
 }
 
+
+/* ---------- the expense list is capped and scrolls, as it used to ---------- */
+.listwrap{ position:relative; }
+.listwrap.capped > .card{
+  max-height:58vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin; scrollbar-color:rgba(118,118,128,.4) transparent;
+}
+.listwrap.capped > .card::-webkit-scrollbar{ width:8px; }
+.listwrap.capped > .card::-webkit-scrollbar-thumb{
+  background:rgba(118,118,128,.4); border-radius:4px; }
+.listwrap.capped > .card::-webkit-scrollbar-track{ background:transparent; }
+.listwrap.capped::after{
+  content:""; position:absolute; left:0; right:0; bottom:18px; height:36px;
+  pointer-events:none; border-radius:0 0 22px 22px;
+  background:linear-gradient(180deg, rgba(255,255,255,0), var(--surface) 90%);
+}
+.scrollnote{
+  margin:-6px 0 16px; font-size:13px; color:var(--label-2); font-weight:500;
+  display:flex; align-items:center; justify-content:center; gap:6px; text-align:center;
+}
+.scrollnote .ms{ font-size:16px; }
+.fulllink{
+  display:flex; align-items:center; justify-content:center; gap:5px;
+  font-size:15px; font-weight:500; color:var(--blue); text-decoration:none;
+  margin:-4px 0 14px; padding:4px;
+}
+.fulllink .ms{ font-size:17px; }
+
 /* ---------- expense filters ---------- */
 .filters{ margin:0 0 14px; }
 .filters input[type="search"]{
@@ -700,7 +728,10 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 const $  = (id) => document.getElementById(id);
 const el = (t, c, h) => { const n=document.createElement(t); if(c) n.className=c; if(h!=null) n.innerHTML=h; return n; };
 
-const PALETTE = ["#0f9d76","#1565c0","#6a1b9a","#c62828","#ef6c00","#2e7d32",
+// The tracker's own palette. People created by the original app carry a colour
+// from this list, so any colour handed out later has to come from the same one
+// or the avatars and the bars stop matching each other.
+const PALETTE = ["#006b5d","#1565c0","#6a1b9a","#c62828","#ef6c00","#2e7d32",
                  "#ad1457","#4527a0","#00838f","#558b2f","#5d4037","#37474f"];
 const CATS = [
   {k:"general",  i:"receipt_long",   n:"General"},
@@ -717,6 +748,7 @@ const CATS = [
   {k:"health",   i:"medical_services",n:"Health"}
 ];
 const catOf = (k) => CATS.find(c=>c.k===k) || CATS[0];
+const FULLVIEW = /[?&]full=1/.test(location.search);
 const ADMIN_EMAIL = (window.ADMIN_EMAIL || "").toLowerCase();
 const PEOPLE_LINKS = (function(){
   const src=window.PEOPLE_LINKS||{}, out={};
@@ -941,8 +973,17 @@ function mergePeople(gid, from, to){
       if(t!==p.to)   u["payments/"+p.k+"/to"]=t;
     }
   });
-  const gone=membersOf(gid).find(x=>x.name===from);
-  if(gone) u["people/"+gone.k]=null;
+  const gone   = membersOf(gid).find(x=>x.name===from);
+  const target = membersOf(gid).find(x=>x.name===to);
+  if(gone){
+    // If the target is only a name carried on the expenses and has no record
+    // of its own, deleting the source would throw away the account, the email
+    // and the colour attached to it - and leave the name orphaned exactly as
+    // before. Rename the record onto that name instead: same effect on the
+    // money, and the orphan is absorbed rather than perpetuated.
+    if(target) u["people/"+gone.k]=null;
+    else       u["people/"+gone.k+"/n"]=to;
+  }
   return upd("trips/"+gid, u);
 }
 // What a merge would touch, so it can be described before it happens.
@@ -1157,10 +1198,20 @@ function viewGroup(main){
   $("backBtn").hidden=false; $("gmenuBtn").hidden=false;
   $("fab").hidden=true;                      // the add form is on the page itself
 
+  if(FULLVIEW){                              // the standalone full list
+    $("nav").hidden=true; $("backBtn").hidden=true; $("gmenuBtn").hidden=true;
+    sectionHead(main, "list_alt", "Expenses", "Every expense in this group.");
+    groupExpenses(main, gid);
+    return;
+  }
+
   sectionTotal(main, gid);
   if(!ME) sectionClaim(main, gid);
   sectionAdd(main, gid);
   sectionHead(main, "list_alt", "Expenses", "Filter by person, or see everyone.");
+  const fl=el("a","fulllink","Open full list<span class=\"ms\" aria-hidden=\"true\">open_in_new</span>");
+  fl.href=location.pathname+"?full=1#g="+gid; fl.target="_blank"; fl.rel="noopener";
+  main.appendChild(fl);
   groupExpenses(main, gid);
   sectionHead(main, "account_balance_wallet", "Balances",
               "Green is owed money back. Red still owes.");
@@ -1351,6 +1402,9 @@ function groupExpenses(main, gid){
       return;
     }
     const headcount=ppl.length;
+    const CAP=6;
+    const capped = !FULLVIEW && list.length > CAP;
+    const wrapper=el("div","listwrap"+(capped?" capped":""));
     const card=el("div","card");
     list.forEach(e=>{
       const between=(e.between&&e.between.length)?e.between:[e.payer];
@@ -1374,7 +1428,15 @@ function groupExpenses(main, gid){
       r.addEventListener("click", ()=>sheetExpense(e));
       card.appendChild(r);
     });
-    host.appendChild(card);
+    wrapper.appendChild(card);
+    host.appendChild(wrapper);
+    if(capped){
+      // the cap is by height, not by count, so do not claim how many are visible
+      const note=el("p","scrollnote");
+      note.innerHTML='<span class="ms" aria-hidden="true">swipe_vertical</span>'+
+        '<span>'+list.length+' expenses \u2014 scroll the list, or open it full</span>';
+      host.appendChild(note);
+    }
   }
 }
 function fmtAdded(ts){
@@ -2173,7 +2235,9 @@ function sheetMembers(){
 /* ---------- rename a person / move an account between names ---------- */
 function sheetPersonEdit(gid, m, after){
   const isMe = m.uid && USER && m.uid===USER.uid;
-  const others = membersOf(gid).filter(x=> x.k!==m.k );
+  // A duplicate usually needs folding into a name that has fallen off the
+  // members list, so offer those too - they still hold a balance.
+  const others = everyoneIn(gid).filter(n=> n!==m.name ).map(n=>({name:n}));
   const pv = mergePreview(gid, m.name);
   openSheet(m.name, (b)=>{
     b.innerHTML=
