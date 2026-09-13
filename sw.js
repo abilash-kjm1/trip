@@ -1,5 +1,5 @@
 /* Settle - offline service worker */
-const VERSION = 'settle-v21';
+const VERSION = 'settle-v22';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 
@@ -59,7 +59,28 @@ self.addEventListener('fetch', (e) => {
 
   if (url.origin !== self.location.origin) return;
 
-  // Page + assets: stale-while-revalidate, so it opens instantly and
+  // The page itself: network first, falling back to the cache when there is
+  // no signal. It used to be served stale and refreshed behind your back,
+  // which meant a release only arrived on the SECOND open - so somebody would
+  // open the app, get a build from before a feature existed, and quite
+  // reasonably report that the feature did not work.
+  if (req.mode === 'navigate') {
+    e.respondWith((async () => {
+      const c = await caches.open(SHELL);
+      try {
+        const res = await fetch(req);
+        if (res && res.ok) c.put(req, res.clone());
+        return res;
+      } catch (_) {
+        return (await c.match(req, { ignoreSearch: true })) ||
+               (await c.match('./index.html')) ||
+               Response.error();
+      }
+    })());
+    return;
+  }
+
+  // Everything else: stale-while-revalidate, so it opens instantly and
   // quietly refreshes in the background when there is signal.
   e.respondWith((async () => {
     const c = await caches.open(SHELL);

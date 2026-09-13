@@ -199,7 +199,9 @@ export default async function handler(req, res) {
           if (s.net < -0.004) owe += -s.net;
           else if (s.net > 0.004) owed += s.net;
         }
-        if (dry) detail.push({ uid, email, tz, groupsListed: gids.length, groups: why });
+        if (dry) detail.push({ uid, email, tz,
+                              access: (access[uid] && access[uid].status) || "no record - would be locked out",
+                              groupsListed: gids.length, groups: why });
 
         owe = cents(owe); owed = cents(owed);
 
