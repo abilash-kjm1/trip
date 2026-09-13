@@ -458,6 +458,13 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 }
 .switch.on i{ transform:translateX(19px); }
 
+
+.notice.warn{
+  background:rgba(255,149,0,.16); color:#7a4a00;
+  box-shadow:inset 0 0 0 .5px rgba(255,149,0,.3), inset 0 1px 0 rgba(255,255,255,.5);
+  margin-top:14px;
+}
+
 /* ---------- expense filters ---------- */
 .filters{ margin:0 0 14px; }
 .filters input[type="search"]{
@@ -2622,6 +2629,7 @@ function sheetSchedule(){
           '</select></div>'+
         '</div>'+
         '<p class="fine" id="schSummary"></p>'+
+        '<div id="schWarn"></div>'+
         '<p class="fine">The window exists because the scheduler runs once a day at a fixed '+
         'UTC time, which drifts by an hour when the clocks change. Keep it at least two hours '+
         'unless the scheduler has been set to run hourly.</p>';
@@ -2649,8 +2657,25 @@ function sheetSchedule(){
         $("schDays").appendChild(ch);
       });
 
-      const summary = ()=>{ $("schSummary").textContent = schedLine(); };
-      summary();
+      $("schSummary").textContent = schedLine();
+
+      // The once-a-day scheduler lands at 17:00 Toronto in summer and 16:00 in
+      // winter. A window that misses both hours will simply never fire, and
+      // the only symptom is silence - so say so here rather than let it be
+      // discovered weeks later.
+      const covers = (h)=>{
+        for(let i=0;i<c.windowHours;i++) if((c.hour+i)%24===h) return true;
+        return false;
+      };
+      if(c.enabled && !(covers(16) && covers(17))){
+        const w=el("div","notice warn");
+        w.innerHTML='<span class="ms" aria-hidden="true">warning</span>'+
+          '<div><strong>Nothing will be sent at this time</strong><br>'+
+          'The scheduler runs once a day and lands around 16:00–17:00. This window '+
+          'misses it. Either include those hours, or set up the hourly caller described '+
+          'in the reminders README — then any time works.</div>';
+        $("schWarn").appendChild(w);
+      }
       $("schHour").addEventListener("change", ()=> saveSched({hour: Number($("schHour").value)}).then(draw) );
       $("schWin").addEventListener("change", ()=> saveSched({windowHours: Number($("schWin").value)}).then(draw) );
     };
