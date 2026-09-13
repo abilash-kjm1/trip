@@ -354,6 +354,61 @@ img.av{ object-fit:cover; background:var(--fill-1); }
   .barrow .bamt{ min-width:58px; font-size:13px; }
 }
 
+
+/* ---------- expense rows: who it was split between, and when ---------- */
+.exrow{ align-items:flex-start; }
+.exrow .av{ margin-top:2px; }
+.row .who{ display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+.wchip{
+  display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:500;
+  color:var(--label-2); background:var(--fill-1); padding:3px 9px; border-radius:9px;
+}
+.wdot{ width:7px; height:7px; border-radius:50%; flex:0 0 auto; }
+.row .added{
+  display:flex; align-items:center; gap:5px; font-size:12px; color:var(--label-3);
+  margin-top:6px;
+}
+.row .added .ms{ font-size:14px; }
+.row .chev{ flex:0 0 auto; color:var(--label-3); margin-left:2px; }
+.row .chev .ms{ font-size:20px; }
+.linkbtn{
+  display:block; width:100%; margin-top:14px; border:0; background:transparent;
+  color:var(--blue); font-size:15px; font-weight:500; cursor:pointer; padding:6px;
+  letter-spacing:-.01em;
+}
+
+/* ---------- who owes whom ---------- */
+.barrow .val{
+  flex:0 0 auto; font-size:14px; font-weight:600; font-variant-numeric:tabular-nums;
+  white-space:nowrap; min-width:66px; text-align:right;
+}
+
+/* ---------- the receipt ---------- */
+.rcrole{ text-align:center; font-size:13px; color:var(--label-2); margin:0 0 14px; }
+#rcFilters{ margin-bottom:16px; }
+.paper{
+  background:var(--surface); border-radius:16px; padding:20px 18px;
+  font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size:13px;
+  color:var(--label); box-shadow:var(--card-sh); line-height:1.5;
+}
+.rc-title{ text-align:center; font-size:17px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; margin-bottom:2px; }
+.rc-sub{ text-align:center; font-size:12px; color:var(--label-2); }
+.rc-rule{ border-top:1px dashed rgba(60,60,67,.35); margin:11px 0; }
+.rc-rule.solid{ border-top:2px solid var(--label); margin:13px 0; }
+.rc-grp{ font-size:11px; font-weight:700; letter-spacing:.09em; color:var(--label-2);
+  margin:14px 0 7px; }
+.rc-line{ display:flex; justify-content:space-between; gap:12px; margin:4px 0; }
+.rc-line .d{ flex:1; min-width:0; }
+.rc-line .n{ flex:0 0 auto; font-variant-numeric:tabular-nums; }
+.rc-line .note{ color:var(--label-3); }
+.rc-tot{ display:flex; justify-content:space-between; gap:12px; font-weight:700; }
+.rc-tot .n{ font-variant-numeric:tabular-nums; }
+.rc-net{
+  text-align:center; font-size:14px; font-weight:700; letter-spacing:.04em;
+  padding:10px 4px 2px;
+}
+
 /* ---------- expense filters ---------- */
 .filters{ margin:0 0 14px; }
 .filters input[type="search"]{
@@ -1025,9 +1080,9 @@ function viewGroups(main){
   const s=el("div","summary");
   s.innerHTML =
     '<div class="big '+(net>0.004?"pos":net<-0.004?"neg":"zero")+'">'+money(net)+'</div>'+
-    '<div class="lab">'+(net>0.004?"you get back overall":net<-0.004?"you pay overall":"everything is settled")+'</div>'+
-    '<div class="split"><div><div class="k">You get back</div><div class="v pos">'+money(owed)+'</div></div>'+
-    '<div><div class="k">You pay</div><div class="v neg">'+money(owe)+'</div></div></div>';
+    '<div class="lab">'+(net>0.004?"you are owed overall":net<-0.004?"you owe overall":"all square")+'</div>'+
+    '<div class="split"><div><div class="k">You are owed</div><div class="v pos">'+money(owed)+'</div></div>'+
+    '<div><div class="k">You owe</div><div class="v neg">'+money(owe)+'</div></div></div>';
   main.appendChild(s);
 
   if(!JOINED.length){
@@ -1067,7 +1122,7 @@ function viewGroups(main){
       '<span class="t2">'+mem+' member'+(mem===1?"":"s")+' · '+money(tot)+' spent</span></span>'+
       '<span class="right"><span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
         (Math.abs(v)<0.005?"settled":money(Math.abs(v)))+'</span>'+
-      '<span class="cap">'+(v>0.004?"you get back":v<-0.004?"you pay":"")+'</span></span>';
+      '<span class="cap">'+(v>0.004?"is owed":v<-0.004?"owes":"")+'</span></span>';
     r.addEventListener("click", ()=>openGroup(g.id));
     card.appendChild(r);
   });
@@ -1105,14 +1160,14 @@ function viewGroup(main){
   sectionTotal(main, gid);
   if(!ME) sectionClaim(main, gid);
   sectionAdd(main, gid);
-  sectionHead(main, "list_alt", "Expenses");
+  sectionHead(main, "list_alt", "Expenses", "Filter by person, or see everyone.");
   groupExpenses(main, gid);
   sectionHead(main, "account_balance_wallet", "Balances",
-              "Green gets money back. Red still has some to pay.");
+              "Green is owed money back. Red still owes.");
   groupBalances(main, gid);
-  sectionHead(main, "bar_chart", "Who pays whom",
+  sectionHead(main, "bar_chart", "Who owes whom",
               "Grouped by who gets paid back. Bar length is the amount.");
-  sectionWhoPays(main, gid);
+  sectionWhoOwes(main, gid);
   sectionPayments(main, gid);
 }
 
@@ -1124,32 +1179,21 @@ function sectionHead(main, icon, title, sub){
 }
 
 function sectionTotal(main, gid){
-  const tot=totalOf(gid), n=everyoneIn(gid).length, v=myBalance(gid);
+  const tot=totalOf(gid), n=everyoneIn(gid).length;
   const s=el("div","summary");
   s.innerHTML=
     '<div class="lab" style="margin:0 0 2px">Total spent</div>'+
     '<div class="big">'+money(tot)+'</div>'+
     '<div class="lab">'+(n ? money(tot/n)+" each if split evenly across "+n
-                           : "Add people to see the split")+'</div>'+
-    (ME ? '<div class="split"><div><div class="k">'+
-            (v>0.004?"You get back":v<-0.004?"You pay":"You are")+'</div>'+
-          '<div class="v '+(v>0.004?"pos":v<-0.004?"neg":"")+'">'+
-            (Math.abs(v)<0.005?"settled":money(Math.abs(v)))+'</div></div>'+
-          '<div><div class="k">Your share so far</div><div class="v">'+money(myShare(gid))+'</div></div></div>'
-       : '');
+                           : "Add people to see the split")+'</div>';
   main.appendChild(s);
-}
-function myShare(gid){
-  const n=meIn(gid); if(!n) return 0;
-  let t=0; expensesOf(gid).forEach(e=>{ const sh=sharesOf(e); if(sh[n]) t+=sh[n]; });
-  return t;
 }
 
 function sectionClaim(main, gid){
   const w=el("div","notice");
   w.innerHTML='<span class="ms" aria-hidden="true">how_to_reg</span>'+
     '<div><strong>You are not on this list yet</strong><br>'+
-    'Tell the group which name is yours and it will work out what you pay.</div>';
+    'Tell the group which name is yours.</div>';
   const b=el("button","btn p","That is me"); b.addEventListener("click", ()=>sheetClaim(gid));
   w.appendChild(b);
   main.appendChild(w);
@@ -1169,10 +1213,10 @@ function sectionAdd(main, gid){
     '<h2 class="ah"><span class="ms" aria-hidden="true">receipt_long</span>Add an expense</h2>'+
     '<p class="asub">Who paid, how much, and who it was for.</p>'+
     '<div class="field"><label for="afDesc">Description</label>'+
-    '<input id="afDesc" type="text" autocomplete="off" placeholder="Dinner, fuel, groceries"></div>'+
+    '<input id="afDesc" type="text" autocomplete="off"></div>'+
     '<div class="arow">'+
       '<div class="field" style="flex:1 1 150px"><label for="afAmt">Amount (CAD)</label>'+
-      '<input id="afAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div>'+
+      '<input id="afAmt" type="number" inputmode="decimal" step="0.01" min="0"></div>'+
       '<div class="field" style="flex:1 1 150px"><label for="afPayer">Paid by</label>'+
       '<select id="afPayer"></select></div>'+
     '</div>'+
@@ -1182,22 +1226,20 @@ function sectionAdd(main, gid){
       '<button class="btn p" id="afAdd">Add expense</button>'+
       '<button class="btn s" id="afAll">Select everyone</button>'+
     '</div>'+
-    '<button class="btn s wide" id="afMore" style="margin-top:10px">More options: category, date, uneven split</button>';
+    '<button class="linkbtn" id="afMore">More options: category, date, uneven split</button>';
   main.appendChild(card);
 
   const sel={}; ppl.forEach(n=> sel[n]=true );
 
   function count(){
     const k=ppl.filter(n=>sel[n]).length;
-    const amt=Number(card.querySelector("#afAmt").value)||0;
-    card.querySelector("#afCount").textContent =
-      k+" of "+ppl.length + (k&&amt ? " · "+money(amt/k)+" each" : "");
+    card.querySelector("#afCount").textContent = ppl.length ? "("+k+" of "+ppl.length+")" : "";
   }
   function drawChips(){
     const host=card.querySelector("#afSplit"); host.innerHTML="";
     ppl.forEach(n=>{
       const c=el("button","chip"); c.type="button";
-      c.innerHTML='<span class="dot" style="background:'+colorOf(n,gid)+'"></span>'+esc(n)+(n===ME?" (you)":"");
+      c.innerHTML='<span class="dot" style="background:'+colorOf(n,gid)+'"></span>'+esc(n);
       c.setAttribute("aria-pressed", sel[n]?"true":"false");
       c.addEventListener("click", ()=>{ sel[n]=!sel[n]; c.setAttribute("aria-pressed", sel[n]?"true":"false"); count(); });
       host.appendChild(c);
@@ -1207,10 +1249,9 @@ function sectionAdd(main, gid){
 
   const payer=card.querySelector("#afPayer");
   payer.innerHTML = ppl.length
-    ? ppl.map(n=>'<option value="'+esc(n)+'"'+(n===ME?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")
+    ? ppl.map(n=>'<option value="'+esc(n)+'"'+(n===ME?' selected':'')+'>'+esc(n)+'</option>').join("")
     : '<option value="">Add people first</option>';
   drawChips();
-  card.querySelector("#afAmt").addEventListener("input", count);
   card.querySelector("#afAll").addEventListener("click", ()=>{ ppl.forEach(n=> sel[n]=true ); drawChips(); });
   card.querySelector("#afMore").addEventListener("click", ()=> sheetExpense(null) );
   card.querySelector("#afAdd").addEventListener("click", ()=>{
@@ -1233,63 +1274,10 @@ function sectionAdd(main, gid){
   FORM={sig:sig, node:card, refresh:count};
 }
 
-/* ---------- who pays whom, as bars grouped by who gets paid ---------- */
-function sectionWhoPays(main, gid){
-  const st=settlements(gid);
-  if(!st.length){
-    const e=el("div","notice");
-    e.innerHTML='<span class="ms" aria-hidden="true">check_circle</span>'+
-      '<div><strong>Everything is settled</strong><br>Nobody has anything to pay anybody.</div>';
-    main.appendChild(e); return;
-  }
-  const by={};
-  st.forEach(t=>{ (by[t.to]=by[t.to]||[]).push(t); });
-  let max=0; st.forEach(t=>{ if(t.amt>max) max=t.amt; });
-  Object.keys(by).forEach(to=>{
-    const rows=by[to], m=memberOf(to,gid);
-    let sum=0; rows.forEach(r=> sum+=r.amt );
-    const card=el("div","card pad owed");
-    let h='<div class="owedhead">'+avatarHTML("", to, m&&m.color, m&&m.photo)+
-      '<span class="txt"><b>'+esc(to===ME?"You":to)+'</b>'+
-      '<small>'+(to===ME?"get":"gets")+' money back from '+rows.length+
-      (rows.length===1?" person":" people")+'</small></span>'+
-      '<span class="amt pos">'+money(sum)+'</span></div>';
-    rows.forEach(r=>{
-      h+='<div class="barrow"><span class="who">'+esc(r.from===ME?"You":r.from)+'</span>'+
-         '<span class="track"><span class="fill" style="width:'+Math.max(8,(r.amt/max)*100)+
-         '%;background:'+colorOf(r.from,gid)+'"></span></span>'+
-         '<span class="bamt">'+money(r.amt)+'</span></div>';
-    });
-    card.innerHTML=h;
-    [].forEach.call(card.querySelectorAll(".barrow"), (row,i)=>{
-      row.style.cursor="pointer";
-      row.addEventListener("click", ()=>sheetSettle(rows[i].from, to, rows[i].amt));
-    });
-    main.appendChild(card);
-  });
-}
-
-function sectionPayments(main, gid){
-  const pays=paymentsOf(gid);
-  if(!pays.length) return;
-  sectionHead(main, "payments", "Payments recorded", "Tap one to correct or delete it.");
-  const card=el("div","card");
-  pays.forEach(p=>{
-    const r=el("button","row");
-    r.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">payments</span></span>'+
-      '<span class="body"><span class="t1">'+esc(p.from===ME?"You":p.from)+' paid '+esc(p.to===ME?"you":p.to)+'</span>'+
-      '<span class="t2">'+esc(fmtWhen(p.at))+(p.note?" · "+esc(p.note):"")+'</span></span>'+
-      '<span class="right"><span class="amt pos">'+money(p.amount)+'</span></span>';
-    r.addEventListener("click", ()=>sheetSettle(p.from, p.to, p.amount, p));
-    card.appendChild(r);
-  });
-  main.appendChild(card);
-}
-
+/* ---------- expenses, with the filters the tracker had ---------- */
 function groupExpenses(main, gid){
   const all=expensesOf(gid), ppl=names(gid);
 
-  // ---- filters, carried over from the original tracker ----
   const wrap=el("div","filters");
   wrap.innerHTML=
     '<input id="fq" type="search" placeholder="Search expenses" aria-label="Search expenses" autocomplete="off">'+
@@ -1301,12 +1289,12 @@ function groupExpenses(main, gid){
   let t;
   q.addEventListener("input", ()=>{ clearTimeout(t); t=setTimeout(()=>{ FILT.q=q.value; draw(); }, 140); });
 
-  const payers=["" ].concat(ppl);
+  const payers=[""].concat(ppl);
   payers.forEach(n=>{
     const c=el("button","chip"); c.type="button";
-    c.textContent = n || "Anyone";
+    c.textContent = n || "Everyone";
     c.setAttribute("aria-pressed", FILT.payer===n ? "true":"false");
-    c.addEventListener("click", ()=>{ FILT.payer = (FILT.payer===n && n) ? "" : n; refreshChips(); draw(); });
+    c.addEventListener("click", ()=>{ FILT.payer=(FILT.payer===n && n)?"":n; refreshChips(); draw(); });
     $("fPayer").appendChild(c);
   });
   const maxWays=Math.max(2, ppl.length);
@@ -1315,7 +1303,7 @@ function groupExpenses(main, gid){
     const c=el("button","chip"); c.type="button";
     c.textContent = w ? ("split "+w) : "Any split";
     c.setAttribute("aria-pressed", FILT.ways===w ? "true":"false");
-    c.addEventListener("click", ()=>{ FILT.ways = (FILT.ways===w && w) ? 0 : w; refreshChips(); draw(); });
+    c.addEventListener("click", ()=>{ FILT.ways=(FILT.ways===w && w)?0:w; refreshChips(); draw(); });
     $("fWays").appendChild(c);
   });
   function refreshChips(){
@@ -1341,103 +1329,143 @@ function groupExpenses(main, gid){
   function draw(){
     const list=all.filter(matches);
     host.innerHTML="";
-    const on = FILT.q.trim() || FILT.payer || FILT.ways;
-    if(on){
+    if(FILT.q.trim() || FILT.payer || FILT.ways){
       let sum=0; list.forEach(e=> sum+=Number(e.amount)||0 );
       const line=el("div","fcount");
-      line.innerHTML='<span>'+list.length+' of '+all.length+' · '+money(sum)+'</span>';
+      line.innerHTML='<span>Showing <b>'+list.length+'</b> of '+all.length+' &middot; '+money(sum)+'</span>';
       const clr=el("button",null,"Clear");
       clr.addEventListener("click", ()=>{
         FILT.q=""; FILT.payer=""; FILT.ways=0; $("fq").value=""; refreshChips(); draw();
       });
-      line.appendChild(clr);
-      host.appendChild(line);
+      line.appendChild(clr); host.appendChild(line);
     }
     if(!all.length){
-      const e=el("div","empty");
-      e.innerHTML='<span class="ms" aria-hidden="true">receipt_long</span><h3>No expenses yet</h3>'+
-        '<p>Add the first one and everyone in the group will see it.</p>';
-      host.appendChild(e); return;
+      host.appendChild(el("div","empty",
+        '<span class="ms" aria-hidden="true">receipt</span><h3>Nothing logged yet.</h3>'));
+      return;
     }
     if(!list.length){
-      const e=el("div","empty");
-      e.innerHTML='<span class="ms" aria-hidden="true">search_off</span><h3>Nothing matches</h3>'+
-        '<p>Try a different search, or clear the filters.</p>';
-      host.appendChild(e); return;
+      host.appendChild(el("div","empty",
+        '<span class="ms" aria-hidden="true">search_off</span><h3>Nothing matches</h3>'+
+        '<p>Try a different search, or clear the filters.</p>'));
+      return;
     }
-    const card=el("div","card"); let day=null;
+    const headcount=ppl.length;
+    const card=el("div","card");
     list.forEach(e=>{
-      const k=dayKey(e.at);
-      if(k!==day){ day=k; card.appendChild(el("div","daygroup", esc(dayLabel(e.at)))); }
-      const sh=sharesOf(e), mine=ME?(sh[ME]||0):0;
-      const iPaid=!!ME && e.payer===ME;
-      const c=catOf(e.cat);
-      const r=el("button","row"+(iPaid?" mine":""));
-      let right;
-      if(!ME) right='<span class="amt">'+money(e.amount)+'</span>';
-      else if(iPaid) right='<span class="amt pos">'+money((Number(e.amount)||0)-mine)+'</span><span class="cap">you get back</span>';
-      else if(mine)  right='<span class="amt neg">'+money(mine)+'</span><span class="cap">your share</span>';
-      else           right='<span class="amt zero">not yours</span>';
+      const between=(e.between&&e.between.length)?e.between:[e.payer];
+      const n=between.length;
+      const label = (n===1) ? "just them"
+                  : (headcount>1 && n===headcount) ? "everyone"
+                  : n+(headcount>n ? " of "+headcount : "");
+      const who=between.map(nm=>
+        '<span class="wchip"><span class="wdot" style="background:'+colorOf(nm,gid)+'"></span>'+esc(nm)+'</span>').join("");
+      const r=el("button","row exrow");
       r.innerHTML=
-        '<span class="cat"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
+        '<span class="av" style="background:'+colorOf(e.payer,gid)+'">'+esc(initials(e.payer||"?"))+'</span>'+
         '<span class="body"><span class="t1">'+esc(e.desc)+'</span>'+
-        '<span class="t2">'+esc(iPaid?"You":e.payer)+' paid '+money(e.amount)+'</span>'+
-        '<span class="t2">split between '+esc(splitWho(e, gid))+'</span></span>'+
-        '<span class="right">'+right+'</span>';
+        '<span class="t2">'+esc(e.payer)+' paid &middot; '+label+
+          (n>1 ? ' &middot; '+money(e.amount/n)+' each' : '')+'</span>'+
+        '<span class="who">'+who+'</span>'+
+        (fmtAdded(e.at) ? '<span class="added"><span class="ms" aria-hidden="true">schedule</span>'+
+           esc(fmtAdded(e.at))+'</span>' : '')+
+        '</span>'+
+        '<span class="right"><span class="amt">'+money(e.amount)+'</span></span>';
       r.addEventListener("click", ()=>sheetExpense(e));
       card.appendChild(r);
     });
     host.appendChild(card);
   }
 }
-// Who an expense was split between, in words rather than a bare count.
-function splitWho(e, gid){
-  const b=(e.between&&e.between.length)?e.between:[e.payer];
-  const everyone=names(gid);
-  if(everyone.length>1 && b.length===everyone.length) return "everyone ("+b.length+")";
-  const shown=b.map(n=> n===ME ? "you" : n );
-  if(shown.length<=3) return shown.join(", ");
-  return shown.slice(0,2).join(", ")+" and "+(shown.length-2)+" more";
+function fmtAdded(ts){
+  if(!ts) return "";
+  const d=new Date(ts); if(isNaN(d.getTime())) return "";
+  const o={weekday:"short", day:"numeric", month:"short"};
+  if(d.getFullYear()!==new Date().getFullYear()) o.year="numeric";
+  const date=d.toLocaleDateString(undefined,o).replace(/,/g,"");
+  const time=d.toLocaleTimeString(undefined,{hour:"2-digit", minute:"2-digit"});
+  return date+" · "+time;
 }
 
 function groupBalances(main, gid){
-  const b = balances(gid), all = everyoneIn(gid);
-  if(!all.length){
-    const e = el("div","empty");
-    e.innerHTML = '<span class="ms" aria-hidden="true">group</span><h3>Nobody here yet</h3>'+
-      '<p>Add people to start splitting.</p>';
-    const btn = el("button","btn p","Add people");
-    btn.addEventListener("click", sheetMembers);
-    e.appendChild(btn); main.appendChild(e); return;
+  const b=balances(gid), all=everyoneIn(gid);
+  if(!all.length || !expensesOf(gid).length){
+    main.appendChild(el("div","empty",
+      '<span class="ms" aria-hidden="true">balance</span><h3>Add people and expenses first.</h3>'));
+    if(!all.length) return;
   }
-  const c2 = el("div","card");
+  const card=el("div","card");
   all.forEach(n=>{
-    const m = memberOf(n, gid);
-    const v = Math.round((b[n]||0)*100)/100;
-    const r = el("button","row"+(n===ME?" mine":""));
-    r.innerHTML =
+    const m=memberOf(n, gid);
+    const v=Math.round((b[n]||0)*100)/100;
+    const r=el("button","row"+(n===ME?" mine":""));
+    r.innerHTML=
       avatarHTML("", n, m&&m.color, m&&m.photo)+
-      '<span class="body"><span class="t1">'+esc(n)+(n===ME?' <span class="tag on">you</span>':'')+
-        (!m ? ' <span class="tag warn">not on the list</span>'
-            : (m.uid&&n!==ME ? ' <span class="tag">signed in</span>' : ''))+'</span>'+
-      '<span class="t2">'+esc(paidShareLine(n,gid))+'</span></span>'+
-      '<span class="right"><span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
-        (Math.abs(v)<0.005?"settled":money(Math.abs(v)))+'</span>'+
-      '<span class="cap">'+(v>0.004?(n===ME?"you get back":"gets back")
-                           :v<-0.004?(n===ME?"you pay":"pays"):"")+'</span></span>';
+      '<span class="body"><span class="t1">'+esc(n)+
+        (!m?' <span class="tag warn">not on the list</span>':'')+'</span>'+
+      '<span class="t2">'+paidShareLine(n,gid)+'</span></span>'+
+      '<span class="right"><span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"")+'">'+
+        (v>0.004?"+":"")+money(v)+'</span></span>'+
+      '<span class="chev"><span class="ms" aria-hidden="true">chevron_right</span></span>';
     r.addEventListener("click", ()=>sheetPerson(n));
-    c2.appendChild(r);
+    card.appendChild(r);
   });
-  main.appendChild(c2);
+  main.appendChild(card);
 }
 
-function paidShareLine(n, gid){
-  let paid=0, share=0;
-  expensesOf(gid).forEach(e=>{
-    if(e.payer===n) paid+=Number(e.amount)||0;
-    const sh=sharesOf(e); if(sh[n]) share+=sh[n];
+function sectionWhoOwes(main, gid){
+  const st=settlements(gid);
+  if(!st.length){
+    main.appendChild(el("div","empty",
+      '<span class="ms" aria-hidden="true">check_circle</span>'+
+      '<h3>All square - nobody owes anybody.</h3>'));
+    return;
+  }
+  const by={};
+  st.forEach(t=>{ (by[t.to]=by[t.to]||[]).push(t); });
+  let widest=0; st.forEach(t=>{ if(t.amt>widest) widest=t.amt; });
+  if(!widest) widest=1;
+  Object.keys(by).sort((a,c)=>{
+    const sa=by[a].reduce((x,y)=>x+y.amt,0), sc=by[c].reduce((x,y)=>x+y.amt,0);
+    return sc-sa;
+  }).forEach(to=>{
+    const rows=by[to].slice().sort((a,c)=>c.amt-a.amt), m=memberOf(to,gid);
+    let total=0; rows.forEach(r=> total+=r.amt );
+    const card=el("div","card pad owed");
+    let h='<div class="owedhead">'+avatarHTML("", to, m&&m.color, m&&m.photo)+
+      '<span class="txt"><b>'+esc(to)+'</b><small>is owed by '+rows.length+' '+
+      (rows.length===1?"person":"people")+'</small></span>'+
+      '<span class="amt">'+money(total)+'</span></div>';
+    rows.forEach(r=>{
+      const pct=Math.max(3, Math.round(r.amt/widest*100));
+      h+='<div class="barrow"><span class="who">'+esc(r.from)+'</span>'+
+         '<span class="track"><span class="fill" style="width:'+pct+'%;background:'+colorOf(r.from,gid)+'"></span></span>'+
+         '<span class="val">'+money(r.amt)+'</span></div>';
+    });
+    card.innerHTML=h;
+    [].forEach.call(card.querySelectorAll(".barrow"), (row,i)=>{
+      row.style.cursor="pointer";
+      row.addEventListener("click", ()=>sheetSettle(rows[i].from, to, rows[i].amt));
+    });
+    main.appendChild(card);
   });
-  return "paid "+money(paid)+" · share "+money(share);
+}
+
+function sectionPayments(main, gid){
+  const pays=paymentsOf(gid);
+  if(!pays.length) return;
+  sectionHead(main, "payments", "Payments recorded", "Tap one to correct or delete it.");
+  const card=el("div","card");
+  pays.forEach(p=>{
+    const r=el("button","row");
+    r.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">payments</span></span>'+
+      '<span class="body"><span class="t1">'+esc(p.from)+' paid '+esc(p.to)+'</span>'+
+      '<span class="t2">'+esc(fmtAdded(p.at))+(p.note?" · "+esc(p.note):"")+'</span></span>'+
+      '<span class="right"><span class="amt pos">'+money(p.amount)+'</span></span>';
+    r.addEventListener("click", ()=>sheetSettle(p.from, p.to, p.amount, p));
+    card.appendChild(r);
+  });
+  main.appendChild(card);
 }
 
 function groupActivity(main, gid){
@@ -1537,7 +1565,7 @@ function viewAccount(main){
   const net=owed-owe;
   t.innerHTML='<div class="split" style="margin:0"><div><div class="k">Your share of everything</div>'+
     '<div class="v">'+money(spent)+'</div></div>'+
-    '<div><div class="k">'+(net>0.004?"You get back":net<-0.004?"You pay":"Settled")+'</div>'+
+    '<div><div class="k">'+(net>0.004?"You are owed":net<-0.004?"You owe":"All square")+'</div>'+
     '<div class="v '+(net>0.004?"pos":net<-0.004?"neg":"")+'">'+money(Math.abs(net))+'</div></div></div>';
   main.appendChild(t);
 
@@ -1941,47 +1969,149 @@ function sheetSettle(from, to, amt, existing){
 }
 
 /* ---------- one person's detail ---------- */
-function sheetPerson(n){
-  const gid=CURRENT, b0=balances(gid), v=b0[n]||0, m=memberOf(n,gid);
-  openSheet(n===ME?"You":n, (b)=>{
-    let paid=0, share=0; const lines=[];
-    expensesOf(gid).forEach(e=>{
-      const sh=sharesOf(e), mine=sh[n]||0, isPayer=e.payer===n;
-      if(!isPayer && !mine) return;
-      if(isPayer) paid+=Number(e.amount)||0;
-      share+=mine;
-      lines.push('<div class="splitrow"><span class="nm">'+esc(e.desc)+
-        '<span style="display:block;font-size:11.5px;color:var(--label-3)">'+esc(fmtDate(e.at))+
-        (isPayer?" · paid "+money(e.amount):"")+'</span></span>'+
-        '<span class="calc" style="width:96px">'+(mine?"share "+money(mine):"—")+'</span></div>');
-    });
-    const pays=paymentsOf(gid).filter(p=>p.from===n||p.to===n).map(p=>
-      '<div class="splitrow"><span class="nm">'+(p.from===n?"Paid "+esc(p.to):"Received from "+esc(p.from))+
-      '<span style="display:block;font-size:11.5px;color:var(--label-3)">'+esc(fmtDate(p.at))+'</span></span>'+
-      '<span class="calc" style="width:96px">'+money(p.amount)+'</span></div>');
-
-    b.innerHTML=
-      '<div class="summary flat" style="margin-bottom:16px">'+
-      '<div class="big '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
-        (Math.abs(v)<0.005?"All settled up":money(Math.abs(v)))+'</div>'+
-      '<div class="lab">'+(v>0.004?(n===ME?"you get back":esc(n)+" gets back"):v<-0.004?(n===ME?"you pay":esc(n)+" pays"):"everything is settled")+'</div>'+
-      (m&&m.email?'<div class="lab" style="margin-top:6px">'+esc(m.email)+'</div>':'')+
-      '<div class="split"><div><div class="k">Paid so far</div><div class="v">'+money(paid)+'</div></div>'+
-      '<div><div class="k">'+(n===ME?"Your share":"Their share")+'</div><div class="v">'+money(share)+'</div></div></div></div>'+
-      '<div class="sechead" style="margin-top:0">What they were part of</div>'+
-      (lines.length?lines.join(""):'<p class="fine">None yet.</p>')+
-      (pays.length?'<div class="sechead">Payments</div>'+pays.join(""):"")+
-      '<button class="btn p wide" id="pSettle" style="margin-top:18px">Settle up</button>';
-    $("pSettle").addEventListener("click", ()=>{
-      const amt=Math.abs(Math.round(v*100)/100);
+/* ---------- the receipt: an itemised statement, as the tracker had it ---------- */
+let rcFilter="__all__";
+function sheetPerson(name){
+  rcFilter="__all__";
+  openSheet(name, (b)=>{
+    b.innerHTML='<div class="rcrole" id="rcRole"></div>'+
+      '<div class="frow" id="rcFilters"></div>'+
+      '<div class="paper" id="rcPaper"></div>'+
+      '<button class="btn p wide" id="rcSettle" style="margin-top:18px">Settle up</button>';
+    drawFilters(); drawPaper();
+    $("rcSettle").addEventListener("click", ()=>{
+      const v=Math.round((balances(CURRENT)[name]||0)*100)/100;
       closeSheet();
       setTimeout(()=>{
-        if(v<-0.004) sheetSettle(n, null, amt);
-        else if(v>0.004) sheetSettle(null, n, amt);
+        if(v<-0.004) sheetSettle(name, null, Math.abs(v));
+        else if(v>0.004) sheetSettle(null, name, Math.abs(v));
         else sheetSettle();
       }, 220);
     });
   });
+
+  function drawFilters(){
+    const host=$("rcFilters"); host.innerHTML="";
+    const opts=["__all__"].concat(everyoneIn(CURRENT).filter(n=>n!==name));
+    opts.forEach(o=>{
+      const c=el("button","chip"); c.type="button";
+      c.textContent = o==="__all__" ? "Everything" : o;
+      c.setAttribute("aria-pressed", rcFilter===o ? "true":"false");
+      c.addEventListener("click", ()=>{ rcFilter=o; drawFilters(); drawPaper(); });
+      host.appendChild(c);
+    });
+  }
+
+  function drawPaper(){
+    const gid=CURRENT, paper=$("rcPaper");
+    let h='<div class="rc-title">'+esc(name)+'</div>';
+
+    if(rcFilter==="__all__"){
+      $("rcRole").textContent="how the balance is worked out";
+      h+='<div class="rc-sub">every line that moves '+esc(name)+'&rsquo;s balance</div><div class="rc-rule"></div>';
+
+      const all=expensesOf(gid);
+      const paid=all.filter(e=> e.payer===name );
+      const share=all.filter(e=>{
+        const b2=(e.between&&e.between.length)?e.between:[e.payer];
+        return b2.indexOf(name)!==-1;
+      });
+
+      let paidTotal=0;
+      h+='<div class="rc-grp">PAID OUT &middot; '+paid.length+' item'+(paid.length===1?"":"s")+'</div>';
+      if(!paid.length) h+='<div class="rc-line"><span class="d note">nothing</span><span class="n">'+money(0)+'</span></div>';
+      paid.forEach((e,i)=>{
+        paidTotal+=Number(e.amount)||0;
+        h+='<div class="rc-line"><span class="d">'+(i+1)+') '+esc(e.desc)+'</span><span class="n">'+money(e.amount)+'</span></div>';
+      });
+      h+='<div class="rc-rule"></div><div class="rc-tot"><span class="d">total paid</span><span class="n">'+money(paidTotal)+'</span></div>';
+
+      let shareTotal=0;
+      h+='<div class="rc-grp">THEIR SHARE &middot; '+share.length+' item'+(share.length===1?"":"s")+'</div>';
+      if(!share.length) h+='<div class="rc-line"><span class="d note">nothing</span><span class="n">'+money(0)+'</span></div>';
+      share.forEach((e,i)=>{
+        const sh=sharesOf(e), cut=sh[name]||0;
+        const b2=(e.between&&e.between.length)?e.between:[e.payer];
+        shareTotal+=cut;
+        h+='<div class="rc-line"><span class="d">'+(i+1)+') '+esc(e.desc)+
+           ' <span class="note">('+money(e.amount)+(e.mode&&e.mode!=="equal" ? "" : " &divide; "+b2.length)+')</span></span>'+
+           '<span class="n">'+money(cut)+'</span></div>';
+      });
+      h+='<div class="rc-rule"></div><div class="rc-tot"><span class="d">total share</span><span class="n">'+money(shareTotal)+'</span></div>';
+
+      let net=paidTotal-shareTotal;
+      const pays=paymentsOf(gid).filter(p=> p.from===name || p.to===name );
+      if(pays.length){
+        h+='<div class="rc-grp">PAYMENTS &middot; '+pays.length+' item'+(pays.length===1?"":"s")+'</div>';
+        pays.forEach((p,i)=>{
+          const out = p.from===name;
+          net += out ? (Number(p.amount)||0) : -(Number(p.amount)||0);
+          h+='<div class="rc-line"><span class="d">'+(i+1)+') '+
+             (out ? "paid "+esc(p.to) : "received from "+esc(p.from))+'</span>'+
+             '<span class="n">'+(out?"+":"&minus;")+money(p.amount)+'</span></div>';
+        });
+      }
+
+      h+='<div class="rc-rule solid"></div>';
+      h+='<div class="rc-line" style="margin-top:2px"><span class="d">paid</span><span class="n">'+money(paidTotal)+'</span></div>';
+      h+='<div class="rc-line"><span class="d">less their share</span><span class="n">&minus;'+money(shareTotal)+'</span></div>';
+      h+='<div class="rc-rule"></div>';
+      h+='<div class="rc-net">'+(Math.abs(net)<0.005
+          ? "SQUARE &mdash; paid exactly their share"
+          : (net>0 ? esc(name).toUpperCase()+" IS OWED "+money(net)
+                   : esc(name).toUpperCase()+" OWES "+money(-net)))+'</div>';
+      h+='<div class="rc-sub" style="margin-top:8px">Tap a name above to see it split person by person.</div>';
+    } else {
+      const other=rcFilter;
+      $("rcRole").textContent="statement with "+other;
+      h+='<div class="rc-sub">statement with '+esc(other)+'</div><div class="rc-rule"></div>';
+      const theyOwe=itemsOwedTo(name, other), weOwe=itemsOwedTo(other, name);
+      const a=sumShares(theyOwe), b2=sumShares(weOwe);
+
+      h+='<div class="rc-grp">'+esc(other).toUpperCase()+' OWES '+esc(name).toUpperCase()+'</div>';
+      if(!theyOwe.length) h+='<div class="rc-line"><span class="d note">nothing</span><span class="n">'+money(0)+'</span></div>';
+      theyOwe.forEach((x,i)=>{
+        h+='<div class="rc-line"><span class="d">'+(i+1)+') '+esc(x.desc)+' <span class="note">('+money(x.total)+' / '+x.ways+')</span></span><span class="n">'+money(x.share)+'</span></div>';
+      });
+      h+='<div class="rc-rule"></div><div class="rc-tot"><span class="d">subtotal</span><span class="n">'+money(a)+'</span></div>';
+
+      h+='<div class="rc-grp">'+esc(name).toUpperCase()+' OWES '+esc(other).toUpperCase()+'</div>';
+      if(!weOwe.length) h+='<div class="rc-line"><span class="d note">nothing</span><span class="n">'+money(0)+'</span></div>';
+      weOwe.forEach((x,i)=>{
+        h+='<div class="rc-line"><span class="d">'+(i+1)+') '+esc(x.desc)+' <span class="note">('+money(x.total)+' / '+x.ways+')</span></span><span class="n">'+money(x.share)+'</span></div>';
+      });
+      h+='<div class="rc-rule"></div><div class="rc-tot"><span class="d">subtotal</span><span class="n">'+money(b2)+'</span></div>';
+
+      const net=a-b2;
+      h+='<div class="rc-rule solid"></div>';
+      h+='<div class="rc-net">'+(Math.abs(net)<0.005
+          ? "SQUARE - nothing between you"
+          : (net>0 ? esc(other).toUpperCase()+" OWES "+esc(name).toUpperCase()+" "+money(net)
+                   : esc(name).toUpperCase()+" OWES "+esc(other).toUpperCase()+" "+money(-net)))+'</div>';
+    }
+    paper.innerHTML=h;
+  }
+}
+// Lines where `debtor` carries a share of something `creditor` paid for.
+function itemsOwedTo(creditor, debtor){
+  const out=[];
+  expensesOf(CURRENT).forEach(e=>{
+    if(e.payer!==creditor) return;
+    const b=(e.between&&e.between.length)?e.between:[e.payer];
+    if(b.indexOf(debtor)<0) return;
+    const sh=sharesOf(e);
+    out.push({desc:e.desc, total:Number(e.amount)||0, ways:b.length, share:sh[debtor]||0});
+  });
+  return out;
+}
+function sumShares(list){ let t=0; list.forEach(x=> t+=x.share ); return t; }
+function paidShareLine(n, gid){
+  let paid=0, share=0;
+  expensesOf(gid).forEach(e=>{
+    if(e.payer===n) paid+=Number(e.amount)||0;
+    const sh=sharesOf(e); if(sh[n]) share+=sh[n];
+  });
+  return 'paid '+money(paid)+' &middot; share '+money(share);
 }
 
 /* ---------- members ---------- */
@@ -2271,8 +2401,8 @@ function doPrint(){
     ' member'+(ppl.length===1?"":"s")+' · '+expensesOf(gid).length+' expense'+
     (expensesOf(gid).length===1?"":"s")+' · '+money(total)+' in total</p>';
 
-  h+='<h2>Where everyone stands</h2><table><thead><tr><th>Person</th><th class="r">Paid</th>'+
-     '<th class="r">Their share</th><th class="r">Gets back / pays</th></tr></thead><tbody>';
+  h+='<h2>Balances</h2><table><thead><tr><th>Person</th><th class="r">Paid</th>'+
+     '<th class="r">Share</th><th class="r">Balance</th></tr></thead><tbody>';
   ppl.forEach(n=>{
     let paid=0, share=0;
     expensesOf(gid).forEach(e=>{ if(e.payer===n) paid+=Number(e.amount)||0;
@@ -2284,12 +2414,12 @@ function doPrint(){
   h+='</tbody></table>';
 
   if(st.length){
-    h+='<h2>Who pays whom — the fewest payments that settle everyone</h2><ul>';
+    h+='<h2>Who owes whom — the fewest payments that clear everyone</h2><ul>';
     st.forEach(t=> h+='<li><strong>'+esc(t.from)+'</strong> pays <strong>'+esc(t.to)+
       '</strong> '+money(t.amt)+'</li>' );
     h+='</ul>';
   } else {
-    h+='<h2>Who pays whom</h2><p>Everything is settled — nobody owes anybody anything.</p>';
+    h+='<h2>Who owes whom</h2><p>All square - nobody owes anybody.</p>';
   }
 
   h+='<h2>Every expense</h2><table><thead><tr><th>Date</th><th>What</th><th>Paid by</th>'+

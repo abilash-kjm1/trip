@@ -109,9 +109,12 @@ transparency` turns every glass surface opaque, `prefers-contrast: more`
 darkens the label hierarchy and thickens separators, and an `@supports` block
 covers browsers with no `backdrop-filter` at all.
 
-Wording avoids "owed" and "owing" throughout — a balance reads as *gets back*
-or *pays*, and *you get back* or *you pay* for the person looking at it, which
-is unambiguous in a way the passive forms are not.
+Wording is the original tracker's, verbatim — "is owed" and "owes", "Green is
+owed money back. Red still owes.", "Who owes whom", "All square - nobody owes
+anybody." Tapping a name opens the itemised receipt: what they paid out, what
+their share came to with the division spelled out, any payments, and the
+subtraction that produces the balance. Picking another name turns it into a
+two-way statement between the pair.
 
 The theme is locked light (`color-scheme: light`, plus the same tokens
 re-declared under `prefers-color-scheme: dark`) so a phone's dark mode cannot
