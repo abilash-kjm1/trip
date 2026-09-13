@@ -759,6 +759,8 @@ img.av{ object-fit:cover; background:var(--fill-1); }
      users/{uid}/profile       {name, email, photo, at}
      users/{uid}/prefs         {weekly, newExpense, updates, payments, tz, lastWeekly}
      config/reminders          {enabled, days[], hour, windowHours}  <- admin only
+     access/{uid}              {status, name, email, at, decidedAt, decidedBy}
+     directory/{uid}           {name, email, photo, at}  <- so people can be picked
      mail/queue/{k}            {kind, gid, actorUid, actor, desc, amount, at}
                                <- write-only for the app, drained by the cron
      users/{uid}/groups/{gid}  {name, at}      <- which groups this person is in
@@ -812,6 +814,7 @@ let SCHED    = {};                          // config/reminders - when the email
 let ACCESS   = undefined;                   // access/{uid} - undefined until it has loaded
 let REQUESTS = {};                          // access/* - everybody, admin only
 let ALLUSERS = {};                          // users/* - admin only, to find who never asked
+let DIRECTORY= {};                          // directory/* - everybody in Settle, to pick from
 let ME       = null;                        // my person-name inside CURRENT group
 let JOINED   = lsGet(LS.grp, []);           // [{id,name}]
 let CURRENT  = null;                        // active group id
@@ -2484,6 +2487,46 @@ function paidShareLine(n, gid){
   return 'paid '+money(paid)+' &middot; share '+money(share);
 }
 
+/* Add somebody we already know, by their account rather than by their name.
+   If a seat is already waiting for them - an unclaimed name that matches, or
+   one invited at their address - take that one. Creating a second record
+   instead is how a person ends up in a group twice with their balance split
+   between the two, which has bitten this group before. */
+function addFromDirectory(gid, person){
+  const mail = String(person.email||"").toLowerCase();
+  const full = String(person.name||"").toLowerCase();
+  const first = full.split(/\s+/)[0];
+  const free = membersOf(gid).filter(m=>!m.uid);
+
+  // The address is proof. A whole name is near enough.
+  let seat = free.find(m=> m.invite && m.invite.toLowerCase()===mail )
+          || free.find(m=> m.name.toLowerCase()===full );
+
+  // A Google account says "Kelvin Raj" where the group has always said
+  // "Kelvin". Take the seat on a first name only when exactly one could be
+  // meant - with two Kelvins, guessing is worse than adding somebody new,
+  // because a wrong guess hands one person another person's balance.
+  if(!seat && first){
+    const near = free.filter(m=>{
+      const n=m.name.toLowerCase();
+      return n===first || n.split(/\s+/)[0]===first;
+    });
+    if(near.length===1) seat = near[0];
+  }
+
+  const after = ()=>{
+    toast(person.name+" added");
+    return mail ? inviteByEmail(gid, mail) : Promise.resolve();
+  };
+
+  if(seat){
+    return upd("trips/"+gid+"/people/"+seat.k,
+      {uid:person.uid, email:mail||null, photo:person.photo||null}).then(after);
+  }
+  return push("trips/"+gid+"/people", {n:person.name, c:freeColour(gid), uid:person.uid,
+    email:mail||null, photo:person.photo||null}).then(after);
+}
+
 /* ---------- members ---------- */
 function sheetMembers(){
   const gid=CURRENT;
@@ -2499,8 +2542,37 @@ function sheetMembers(){
         '<button class="btn p" id="mAdd" style="flex:0 0 auto">Add</button></div>'+
         '<div class="help">Give the address and this group appears for them the moment they sign '+
         'in, already attached to this name. Leave it blank and they will need your link.</div></div>'+
+        '<div id="mPick"></div>'+
         (list.length?'<div class="sechead" style="margin-top:18px">'+list.length+' member'+(list.length===1?"":"s")+'</div>':"")+
         '<div id="mList"></div>';
+
+      // Everybody already in Settle who is not already in this group. Typing a
+      // name that has to match exactly is how the same person ends up in a
+      // group twice, so offer the people we already know by name instead.
+      const taken = membersOf(gid).map(m=>m.uid).filter(Boolean);
+      const pool = Object.keys(DIRECTORY)
+        .map(u=>Object.assign({uid:u}, DIRECTORY[u]||{}))
+        .filter(p=>p.name && taken.indexOf(p.uid)<0)
+        .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+
+      if(pool.length){
+        $("mPick").innerHTML='<div class="sechead" style="margin-top:18px">Already in Settle</div>'+
+          '<div class="card" id="mPickList"></div>'+
+          '<p class="fine">Picking somebody links their account straight away, so their name '+
+          'and balance are theirs from the start — they never have to claim it.</p>';
+        const ph=$("mPickList");
+        pool.forEach(p=>{
+          const r=el("button","row");
+          r.innerHTML=avatarHTML("", p.name, null, p.photo)+
+            '<span class="body"><span class="t1">'+esc(p.name)+'</span>'+
+            '<span class="t2">'+esc(p.email||"")+'</span></span>'+
+            '<span class="right"><span class="ms" aria-hidden="true" '+
+            'style="color:var(--tint)">person_add</span></span>';
+          r.addEventListener("click", ()=> addFromDirectory(gid, p).then(()=>setTimeout(draw,150)) );
+          ph.appendChild(r);
+        });
+      }
+
       const host=$("mList");
       list.forEach(m=>{
         const v=bal[m.name]||0, isMe=m.name===ME, mayEdit=isAdmin()||isMe||!m.uid;
@@ -3361,6 +3433,17 @@ function onSignedIn(u){
 
   // Keep a profile record so the admin can see who is who.
   set("users/"+USER.uid+"/profile", {name:USER.name, email:USER.email, photo:USER.photo||null, at:Date.now()});
+
+  // My entry in the directory, so other people can add me to a group by
+  // picking my name instead of typing it and hoping they spell it the same.
+  // Name and picture only beyond the address - never preferences or balances.
+  set("directory/"+USER.uid, {name:USER.name, email:(USER.email||"").toLowerCase(),
+                              photo:USER.photo||null, at:Date.now()});
+
+  // Everybody else's. Readable only once you have been approved, so it is a
+  // list of people who are already in this Settle together.
+  remote.onValue(ref("directory"), snap=>{ DIRECTORY = snap.val() || {}; render(); },
+    ()=>{ DIRECTORY = {}; });
 
   // Am I allowed in? Watched rather than read once, so somebody sitting on the
   // waiting screen is let through the moment they are approved, without
