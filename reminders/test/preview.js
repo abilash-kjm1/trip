@@ -6,7 +6,7 @@ import { groupSummary } from "../lib/ledger.js";
 import { reminderEmail } from "../lib/template.js";
 
 /* ---------- the timezone gate, copied from the handler ---------- */
-const SEND_HOUR = 17;
+const WINDOW_FROM = 16, WINDOW_TO = 20;
 function localNow(tz, at) {
   try {
     const parts = new Intl.DateTimeFormat("en-US", {
@@ -18,18 +18,22 @@ function localNow(tz, at) {
 }
 function due(tz, iso) {
   const n = localNow(tz, new Date(iso));
-  return !!n && n.weekday === "Sun" && n.hour === SEND_HOUR;
+  return !!n && n.weekday === "Sun" && n.hour >= WINDOW_FROM && n.hour <= WINDOW_TO;
 }
 
 console.log("timezone gate");
 // 2026-09-13 is a Sunday. 21:00 UTC = 17:00 in Toronto while on EDT.
 const cases = [
-  ["America/Toronto", "2026-09-13T21:00:00Z", true,  "Sunday 5pm Toronto"],
-  ["America/Toronto", "2026-09-13T20:00:00Z", false, "Sunday 4pm Toronto"],
-  ["America/Toronto", "2026-09-12T21:00:00Z", false, "Saturday 5pm Toronto"],
-  ["Asia/Kolkata",    "2026-09-13T11:30:00Z", true,  "Sunday 5pm Kolkata"],
-  ["Asia/Kolkata",    "2026-09-13T21:00:00Z", false, "Kolkata is not at 5pm when Toronto is"],
-  ["Europe/London",   "2026-09-13T16:00:00Z", true,  "Sunday 5pm London"],
+  // the scheduled firing, 21:00 UTC on a Sunday, either side of the clock change
+  ["America/Toronto", "2026-09-13T21:00:00Z", true,  "summer: cron lands 17:00 Toronto"],
+  ["America/Toronto", "2026-12-13T21:00:00Z", true,  "winter: cron lands 16:00 Toronto, still sends"],
+  ["America/Vancouver","2026-09-13T21:00:00Z", false, "Vancouver is only 14:00 then"],
+  ["America/Vancouver","2026-09-14T00:00:00Z", true,  "Vancouver at 17:00 on its own Sunday"],
+  ["America/Halifax", "2026-09-13T21:00:00Z", true,  "Halifax 18:00, inside the window"],
+  ["America/Toronto", "2026-09-13T13:00:00Z", false, "Sunday 09:00 Toronto is too early"],
+  ["America/Toronto", "2026-09-13T23:00:00Z", true,  "Sunday 19:00 Toronto is still inside the window"],
+  ["America/Toronto", "2026-09-14T01:00:00Z", false, "Sunday 21:00 Toronto is past it"],
+  ["America/Toronto", "2026-09-12T21:00:00Z", false, "Saturday never fires"],
   ["Not/AZone",       "2026-09-13T21:00:00Z", false, "unknown timezone never fires"]
 ];
 let bad = 0;

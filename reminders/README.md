@@ -103,27 +103,33 @@ Without the header you should get `401`. That is the check that matters.
 The response is a summary: `{ ok, ms, considered, due, skippedNothingOwing,
 sent, failed, errors }`. Failures are per-account and never stop the run.
 
-## Timezones, and an honest limit
+## Timezones
 
-Each account stores its own timezone at `users/{uid}/prefs.tz`, defaulting to
-`America/Toronto` (the app fills in the browser's own zone on first sign-in).
-The endpoint only emails somebody when it is **Sunday, in the 17:00 hour, on
-their clock** — so the logic is per-person, not per-server.
+Each account stores its own at `users/{uid}/prefs.tz`, defaulting to
+`America/Toronto` and seeded from the browser on first sign-in. Somebody is
+only emailed when it is **Sunday, late afternoon, on their own clock** — the
+window is 16:00–20:00 local, adjustable with `SEND_HOUR_FROM` / `SEND_HOUR_TO`.
 
-The schedule in `vercel.json` is `0 21 * * 0`, which is 17:00 in Toronto during
-EDT. **On the Vercel Hobby plan a cron can only fire once a day**, so that one
-firing is the only chance anyone gets. In practice:
+It is a window rather than an exact hour because the schedule is fixed in UTC
+and the clocks move. `0 21 * * 0` is 17:00 in Toronto on EDT but **16:00 once
+EST begins**, so testing for exactly 17:00 would have gone silent every
+November. The window covers both, and the `lastWeekly` stamp means a wider
+window still cannot produce more than one email a week.
 
-* Toronto accounts get it at 17:00 as intended (16:00 once EST starts in
-  November — change the schedule to `0 22 * * 0` then, or leave it).
-* Accounts in other zones will not be in their 17:00 hour at that moment, so
-  they are skipped.
+Everyone in this group is in Canada, so with the single daily firing:
 
-To serve every timezone properly the endpoint needs to run hourly. It is
-already written for that — change the schedule to `0 * * * *`, and the
-`lastWeekly` stamp keeps anybody from being emailed twice in a week. That needs
-either a Vercel plan that allows hourly crons, or a free external pinger such
-as cron-job.org hitting the same URL with the same bearer token.
+| Zone | When it arrives (EDT) | (EST) |
+|---|---|---|
+| Toronto / Montreal | 17:00 | 16:00 |
+| Halifax | 18:00 | 17:00 |
+| Winnipeg | 16:00 | 15:00 — outside the window, see below |
+| Vancouver | 14:00 — outside the window | 13:00 — outside |
+
+Ontario, Quebec and the Maritimes are covered. If somebody joins from further
+west, widen the window (`SEND_HOUR_FROM=13`) or move to hourly: the endpoint is
+already written for it, so changing the schedule to `0 * * * *` is the only
+edit. That needs either a Vercel plan allowing hourly crons or a free external
+pinger such as cron-job.org hitting the same URL with the same bearer token.
 
 ## Cost
 

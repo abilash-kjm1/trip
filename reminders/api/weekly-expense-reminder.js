@@ -13,8 +13,15 @@ import { reminderEmail } from "../lib/template.js";
 import { groupSummary, cents } from "../lib/ledger.js";
 
 const DEFAULT_TZ = "America/Toronto";
-const SEND_HOUR = 17;              // 5pm, local to each person
 const WEEK_GUARD_MS = 6 * 24 * 3600 * 1000;
+
+/* A window rather than one exact hour, because the cron is scheduled in UTC
+   and the clocks move. `0 21 * * 0` is 17:00 in Toronto on EDT but 16:00 once
+   EST starts, so an exact-hour test would go quiet from November to March.
+   The window covers both, and the once-a-week stamp means a wider window
+   cannot turn into more than one email. */
+const WINDOW_FROM = Number(process.env.SEND_HOUR_FROM || 16);
+const WINDOW_TO   = Number(process.env.SEND_HOUR_TO   || 20);
 
 /** Weekday and hour as they read on a wall clock in `tz`. */
 function localNow(tz, at) {
@@ -39,7 +46,7 @@ function isDue(prefs, at, force) {
   const now = localNow(tz, at);
   if (!now) return { due: false, tz };
   if (now.weekday !== "Sun") return { due: false, tz };
-  if (now.hour !== SEND_HOUR) return { due: false, tz };
+  if (now.hour < WINDOW_FROM || now.hour > WINDOW_TO) return { due: false, tz };
 
   // Guard against a double send if the schedule is ever run more than once.
   const last = Number(prefs && prefs.lastWeekly) || 0;

@@ -2493,10 +2493,13 @@ const PREF_ROWS = [
   ["updates",   "Expense changes",        "When somebody edits or deletes an expense you are part of.",        false],
   ["payments",  "Payments",               "When somebody records a payment involving you.",                    false]
 ];
+// Canada first, since that is where this group is, then the rest.
 const TZ_CHOICES = [
-  "America/Toronto","America/Vancouver","America/New_York","America/Chicago","America/Denver",
-  "America/Los_Angeles","Europe/London","Europe/Paris","Europe/Berlin","Asia/Kolkata",
-  "Asia/Dubai","Asia/Singapore","Asia/Tokyo","Australia/Sydney","Pacific/Auckland","UTC"
+  "America/Toronto","America/Montreal","America/Halifax","America/St_Johns",
+  "America/Winnipeg","America/Regina","America/Edmonton","America/Vancouver",
+  "America/New_York","America/Chicago","America/Denver","America/Los_Angeles",
+  "Europe/London","Europe/Paris","Asia/Kolkata","Asia/Dubai","Asia/Singapore",
+  "Asia/Tokyo","Australia/Sydney","Pacific/Auckland","UTC"
 ];
 const prefOn = (k, dflt) => {
   const v = PREFS[k];
