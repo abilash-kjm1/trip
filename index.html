@@ -2585,7 +2585,7 @@ function savePrefs(patch){
    what the schedule is; writable only by the administrator, enforced by the
    database rules rather than by hiding the button. */
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const SCHED_DEFAULT = { enabled:true, days:[0], hour:16, windowHours:5 };
+const SCHED_DEFAULT = { enabled:true, days:[0], hour:16, windowHours:5, hourly:false };
 
 function schedNow(){
   const c = (SCHED && typeof SCHED === "object") ? SCHED : {};
@@ -2596,7 +2596,8 @@ function schedNow(){
     days: days.length ? days : SCHED_DEFAULT.days,
     hour: Number.isInteger(c.hour)&&c.hour>=0&&c.hour<=23 ? c.hour : SCHED_DEFAULT.hour,
     windowHours: Number.isInteger(c.windowHours)&&c.windowHours>=1&&c.windowHours<=12
-      ? c.windowHours : SCHED_DEFAULT.windowHours
+      ? c.windowHours : SCHED_DEFAULT.windowHours,
+    hourly: c.hourly === true
   };
 }
 function schedLine(){
@@ -2630,6 +2631,8 @@ function sheetSchedule(){
         '</div>'+
         '<p class="fine" id="schSummary"></p>'+
         '<div id="schWarn"></div>'+
+        '<div class="sechead">Scheduler</div>'+
+        '<div class="card" id="schHourly"></div>'+
         '<p class="fine">The window exists because the scheduler runs once a day at a fixed '+
         'UTC time, which drifts by an hour when the clocks change. Keep it at least two hours '+
         'unless the scheduler has been set to run hourly.</p>';
@@ -2667,7 +2670,22 @@ function sheetSchedule(){
         for(let i=0;i<c.windowHours;i++) if((c.hour+i)%24===h) return true;
         return false;
       };
-      if(c.enabled && !(covers(16) && covers(17))){
+      const hr=el("button","row");
+      hr.innerHTML='<span class="cat'+(c.hourly?" teal":"")+'"><span class="ms" aria-hidden="true">'+
+        (c.hourly?"update":"hourglass_empty")+'</span></span>'+
+        '<span class="body"><span class="t1">It runs every hour</span>'+
+        '<span class="t2">'+(c.hourly
+          ? "Any time you pick will be honoured."
+          : "Off — it only runs once a day, around 16:00–17:00, so only a window covering those hours fires.")+
+        '</span></span>'+
+        '<span class="right"><span class="switch'+(c.hourly?" on":"")+'" aria-hidden="true"><i></i></span></span>';
+      hr.setAttribute("role","switch"); hr.setAttribute("aria-checked", c.hourly?"true":"false");
+      hr.addEventListener("click", ()=> saveSched({hourly: !c.hourly}).then(draw) );
+      $("schHourly").appendChild(hr);
+
+      // Only a once-a-day scheduler can miss a window, so the warning is moot
+      // once the hourly caller is set up.
+      if(c.enabled && !c.hourly && !(covers(16) && covers(17))){
         const w=el("div","notice warn");
         w.innerHTML='<span class="ms" aria-hidden="true">warning</span>'+
           '<div><strong>Nothing will be sent at this time</strong><br>'+
