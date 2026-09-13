@@ -1,6 +1,12 @@
+// STEP 2 of 2, and the version to keep.
+// 
+// Publish database.rules.step1.json first and approve everyone already using
+// Settle under Account > Requests to join. Only then publish this.
+// 
+// It adds the approval gate: from here on, signing in with Google gets somebody
+// an account and nothing else until the administrator lets them in. The
+// administrator is exempt, so they can never lock themselves out.
 {
-  "_comment": "STEP 2 of 2, and the version to keep. Publish database.rules.step1.json first, approve everyone already using Settle under Account > Requests to join, and only then publish this. It adds the approval gate: from here on, signing in with Google gets somebody an account and nothing else until the administrator lets them in. The administrator is exempt so they can never lock themselves out.",
-
   "rules": {
     "trips": {
       ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
@@ -9,7 +15,6 @@
         ".write": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
       }
     },
-
     "access": {
       ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
       "$uid": {
@@ -18,20 +23,17 @@
         ".validate": "newData.hasChildren(['status','at']) && newData.child('status').isString()"
       }
     },
-
     "config": {
       ".read": "auth != null",
       ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'"
     },
-
     "users": {
       ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
       "$uid": {
-        ".read":  "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
+        ".read": "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
         ".write": "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
       }
     },
-
     "mail": {
       "queue": {
         ".read": false,
@@ -41,7 +43,6 @@
         }
       }
     },
-
     "invites": {
       "$ekey": {
         ".read": "auth != null && auth.token.email_verified == true && $ekey == auth.token.email.toLowerCase().replace('.', ',')",
