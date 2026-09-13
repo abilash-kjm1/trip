@@ -14,6 +14,13 @@ own Google account.
   answer "what do *I* owe?" rather than just listing totals.
 - **Your own groups** — you only see the groups you belong to. Which groups
   those are is stored against your account, not against the device.
+- **Invite by email** — add someone with their Google address and the group
+  appears for them the moment they sign in, already attached to the name you
+  gave them. No link to pass around, nothing for them to claim.
+- **Who may change what** — anyone in a group can add an expense or record a
+  payment, but only whoever added a line can edit or delete it. Everyone else
+  sees it, read-only, with a note saying whose it is. The administrator can
+  change anything.
 - **Claiming your name** — a group keeps its own list of names. The first time
   you open one, you pick which name is yours and your account takes it over.
   Regulars can be pinned to a name in `PEOPLE_LINKS`, and are linked silently
@@ -78,6 +85,9 @@ Three things have to be true in the Firebase console for this to work:
 2. **Authentication → Settings → Authorised domains** includes the site's
    domain (and `localhost` for local work).
 3. **Realtime Database → Rules** matches `database.rules.json` in this repo.
+   The `invites` block is what lets an invited person find their groups: it is
+   keyed by their email with the dots swapped for commas, and the rule performs
+   the same substitution so nobody can read anybody else's invitations.
    Those rules are what confine each person to their own `users/{uid}` record
    and what grant the administrator a read over every group.
 

@@ -437,6 +437,14 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 }
 .fulllink .ms{ font-size:17px; }
 
+
+.locked{
+  display:flex; align-items:center; justify-content:center; gap:8px; text-align:center;
+  background:var(--fill-1); border-radius:14px; padding:14px 16px; margin:4px 0 0;
+  font-size:14px; color:var(--label-2); line-height:1.4;
+}
+.locked .ms{ font-size:19px; flex:0 0 auto; }
+
 /* ---------- expense filters ---------- */
 .filters{ margin:0 0 14px; }
 .filters input[type="search"]{
@@ -717,7 +725,8 @@ img.av{ object-fit:cover; background:var(--fill-1); }
    SETTLE — shared expense app
    Data model (Firebase Realtime Database):
      trips/{gid}/meta          {name, type, at, by}
-     trips/{gid}/people/{k}    {n, c, uid?, email?, photo?}
+     trips/{gid}/people/{k}    {n, c, uid?, email?, photo?, invite?}
+     invites/{emailKey}/{gid}  {name, at, by}   <- so an invited person sees it
      trips/{gid}/expenses/{k}  {desc, amount, payer, mode, between[], vals{}, cat, note, at, by}
      trips/{gid}/payments/{k}  {from, to, amount, note, at, by}
      users/{uid}/profile       {name, email, photo, at}
@@ -827,7 +836,8 @@ function membersOf(gid){
       while(next<PALETTE.length && taken.has(PALETTE[next].toLowerCase())) next++;
       color=PALETTE[next%PALETTE.length]; taken.add(color.toLowerCase()); next++;
     }
-    return {k, name, color, uid:obj.uid||null, email:obj.email||null, photo:obj.photo||null};
+    return {k, name, color, uid:obj.uid||null, email:obj.email||null,
+            photo:obj.photo||null, invite:(obj.invite||"").toLowerCase()||null};
   }).sort((a,b)=>a.name.localeCompare(b.name));
 }
 const names   = (gid) => membersOf(gid||CURRENT).map(m=>m.name);
@@ -856,6 +866,26 @@ function everyoneIn(gid){
   Object.keys(balances(gid)).forEach(n=>{ if(out.indexOf(n)<0) out.push(n); });
   return out;
 }
+
+/* ---------------- who may change what ----------------
+   Anyone in a group can add. Only whoever added a line may change or remove
+   it - except the administrator, who may touch anything. Older rows predate
+   uid stamping, so they fall back to matching the recorded name. */
+function addedByMe(rec){
+  if(!USER || !rec) return false;
+  if(rec.byUid) return rec.byUid===USER.uid;
+  return !!ME && rec.by===ME;
+}
+const canEdit = (rec) => isAdmin() || addedByMe(rec);
+function ownerOf(rec){
+  if(!rec) return "someone else";
+  return rec.by || "someone else";
+}
+
+// Emails are keys under invites/, and RTDB keys cannot contain a dot.
+// The database rule performs the same substitution, so this must match it.
+function emailKey(e){ return String(e||"").trim().toLowerCase().replace(/\./g, ","); }
+const emailOk = (e) => /^[^\s@#$\[\]/]+@[^\s@#$\[\]/]+\.[^\s@#$\[\]/]+$/.test(String(e||"").trim());
 
 /* ---------------- split maths ---------------- */
 // Returns {name: amountOwed}. Modes: equal | exact | percent | shares
@@ -1083,9 +1113,14 @@ const autoLinked = {};       // gid -> the silent link has been attempted
 // asked, as long as it is on the list and nobody else has it.
 function autoLink(gid){
   if(!USER || !remote || autoLinked[gid] || meIn(gid)) return false;
-  const want = linkedName(USER.email);
-  if(!want) return false;
-  const m = membersOf(gid).find(x=> !x.uid && x.name.toLowerCase()===want.toLowerCase() );
+  const mine=(USER.email||"").toLowerCase();
+  // Somebody added them by email, so the seat is already theirs.
+  let m = membersOf(gid).find(x=> !x.uid && x.invite && x.invite===mine );
+  if(!m){
+    const want = linkedName(USER.email);
+    if(!want) return false;
+    m = membersOf(gid).find(x=> !x.uid && x.name.toLowerCase()===want.toLowerCase() );
+  }
   if(!m) return false;
   autoLinked[gid]=true; claimAsked[gid]=true;
   linkPerson(gid, m.k);
@@ -1843,7 +1878,8 @@ function sheetExpense(existing){
   let cat  = existing ? (existing.cat||"general") : "general";
   const payerDefault = existing ? existing.payer : (ME && ppl.indexOf(ME)>-1 ? ME : ppl[0]);
 
-  openSheet(existing?"Edit expense":"Add an expense", (b)=>{
+  const mayEdit = !existing || canEdit(existing);
+  openSheet(existing?(mayEdit?"Edit expense":"Expense"):"Add an expense", (b)=>{
     b.innerHTML =
       '<div class="field"><label for="exDesc">What was it for?</label>'+
       '<input id="exDesc" type="text" placeholder="Dinner, fuel, groceries…" value="'+esc(existing?existing.desc:"")+'"></div>'+
@@ -1865,8 +1901,11 @@ function sheetExpense(existing){
       fieldHTML("exDate","Date","date", dateVal(existing?existing.at:null))+
       '<div class="field"><label for="exNote">Note (optional)</label>'+
       '<textarea id="exNote" placeholder="Anything worth remembering">'+esc(existing?(existing.note||""):"")+'</textarea></div>'+
-      '<div class="btnrow"><button class="btn p" id="exSave">'+(existing?"Save changes":"Add expense")+'</button></div>'+
-      (existing?'<button class="btn d wide" id="exDel" style="margin-top:10px">Delete this expense</button>':'')+
+      (mayEdit
+        ? '<div class="btnrow"><button class="btn p" id="exSave">'+(existing?"Save changes":"Add expense")+'</button></div>'+
+          (existing?'<button class="btn d wide" id="exDel" style="margin-top:10px">Delete this expense</button>':'')
+        : '<p class="locked"><span class="ms" aria-hidden="true">lock</span>'+
+          'Only '+esc(ownerOf(existing))+' can change this, because they added it.</p>')+
       (existing?'<p class="fine" style="text-align:center;margin-top:12px">Added by '+
         esc(existing.by||existing.payer)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
 
@@ -1887,6 +1926,12 @@ function sheetExpense(existing){
     $("exAmt").addEventListener("input", drawSplit);
     drawMode(); drawSplit();
 
+    if(!mayEdit){
+      // read only: let them look, not touch
+      [].forEach.call(b.querySelectorAll("input,select,textarea"), x=>{ x.disabled=true; });
+      [].forEach.call(b.querySelectorAll(".chip,.seg button"), x=>{ x.disabled=true; x.style.opacity=".75"; });
+      return;
+    }
     $("exSave").addEventListener("click", save);
     if(existing) $("exDel").addEventListener("click", ()=>{
       if(!confirm('Delete "'+existing.desc+'"? This removes it for everyone.')) return;
@@ -2001,7 +2046,8 @@ function sheetExpense(existing){
         desc: desc, amount: amt, payer: $("exPayer").value, mode: mode,
         between: eff, vals: v, cat: cat, note: $("exNote").value.trim(),
         at: tsFromDate($("exDate").value, existing?existing.at:null),
-        by: existing ? (existing.by||ME||USER.name) : (ME||USER.name)
+        by: existing ? (existing.by||ME||USER.name) : (ME||USER.name),
+        byUid: existing ? (existing.byUid||USER.uid) : USER.uid
       };
       if(existing) set("trips/"+gid+"/expenses/"+existing.k, rec);
       else push("trips/"+gid+"/expenses", rec);
@@ -2022,7 +2068,8 @@ function sheetSettle(from, to, amt, existing){
   if(ppl.length<2){ toast("You need at least two people"); return; }
   from = from || (ME && ppl.indexOf(ME)>-1 ? ME : ppl[0]);
   to   = to   || ppl.filter(n=>n!==from)[0] || ppl[0];
-  openSheet(existing?"Edit payment":"Record a payment", (b)=>{
+  const mayEdit = !existing || canEdit(existing);
+  openSheet(existing?(mayEdit?"Edit payment":"Payment"):"Record a payment", (b)=>{
     b.innerHTML=
       '<p class="lead">Use this when cash or a transfer has actually changed hands.</p>'+
       '<div class="field"><label for="stFrom">Who paid</label><select id="stFrom">'+
@@ -2038,9 +2085,16 @@ function sheetSettle(from, to, amt, existing){
       '<div class="field"><label for="stNote">Note (optional)</label>'+
       '<input id="stNote" type="text" placeholder="e-transfer, cash…" value="'+
         esc(existing?(existing.note||""):"")+'"></div>'+
-      '<button class="btn p wide" id="stSave">'+(existing?"Save changes":"Record payment")+'</button>'+
-      (existing?'<button class="btn d wide" id="stDel" style="margin-top:10px">Delete this payment</button>'+
-        '<p class="fine">Recorded by '+esc(existing.by||existing.from)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
+      (mayEdit
+        ? '<button class="btn p wide" id="stSave">'+(existing?"Save changes":"Record payment")+'</button>'+
+          (existing?'<button class="btn d wide" id="stDel" style="margin-top:10px">Delete this payment</button>':'')
+        : '<p class="locked"><span class="ms" aria-hidden="true">lock</span>'+
+          'Only '+esc(ownerOf(existing))+' can change this, because they recorded it.</p>')+
+      (existing?'<p class="fine">Recorded by '+esc(existing.by||existing.from)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
+    if(!mayEdit){
+      [].forEach.call(b.querySelectorAll("input,select"), x=>{ x.disabled=true; });
+      return;
+    }
     // The amount follows whoever is picked, so choosing a different pair shows
     // what is outstanding between them rather than leaving a stale figure.
     let touched = false;
@@ -2076,7 +2130,8 @@ function sheetSettle(from, to, amt, existing){
       if(!(a>0)) return toast("Enter an amount");
       const rec={from:f, to:t, amount:a, note:$("stNote").value.trim(),
                  at:tsFromDate($("stDate").value, existing?existing.at:null),
-                 by: existing ? (existing.by||ME||USER.name) : (ME||USER.name)};
+                 by: existing ? (existing.by||ME||USER.name) : (ME||USER.name),
+                 byUid: existing ? (existing.byUid||USER.uid) : USER.uid};
       if(existing) set("trips/"+gid+"/payments/"+existing.k, rec);
       else push("trips/"+gid+"/payments", rec);
       closeSheet(); toast(existing?"Payment updated":"Payment recorded");
@@ -2243,9 +2298,13 @@ function sheetMembers(){
       const list=membersOf(gid), bal=balances(gid);
       b.innerHTML=
         '<div class="field"><label for="mName">Add someone</label>'+
-        '<div style="display:flex;gap:8px"><input id="mName" type="text" placeholder="Their name">'+
+        '<input id="mName" type="text" placeholder="Their name"></div>'+
+        '<div class="field"><label for="mMail">Their Google address (optional)</label>'+
+        '<div style="display:flex;gap:8px"><input id="mMail" type="email" inputmode="email" '+
+        'autocapitalize="off" autocorrect="off" placeholder="name@gmail.com">'+
         '<button class="btn p" id="mAdd" style="flex:0 0 auto">Add</button></div>'+
-        '<div class="help">Add the name now; they take it over when they sign in and open your link.</div></div>'+
+        '<div class="help">Give the address and this group appears for them the moment they sign '+
+        'in, already attached to this name. Leave it blank and they will need your link.</div></div>'+
         (list.length?'<div class="sechead" style="margin-top:18px">'+list.length+' member'+(list.length===1?"":"s")+'</div>':"")+
         '<div id="mList"></div>';
       const host=$("mList");
@@ -2255,7 +2314,9 @@ function sheetMembers(){
         r.innerHTML=avatarHTML("sm", m.name, m.color, m.photo)+
           '<span class="nm">'+esc(m.name)+(isMe?' <span class="tag on">you</span>':'')+
           '<span style="display:block;font-size:11.5px;color:var(--label-3)">'+
-            (m.email?esc(m.email):"not signed in yet")+'</span></span>'+
+            (m.email?esc(m.email)
+                    :m.invite?"invited \u00b7 "+esc(m.invite)
+                    :"not signed in yet")+'</span></span>'+
           '<span class="calc">'+(Math.abs(v)<0.005?"settled":money(v))+'</span>';
         if(mayEdit){
           const p=el("button","ibtn");
@@ -2280,9 +2341,17 @@ function sheetMembers(){
       });
       const add=()=>{
         const v=$("mName").value.trim();
+        const mail=$("mMail").value.trim().toLowerCase();
         if(!v) return toast("Enter a name");
         if(names(gid).some(n=>n.toLowerCase()===v.toLowerCase())) return toast(v+" is already in this group");
-        push("trips/"+gid+"/people", {n:v, c:freeColour(gid)}).then(()=>setTimeout(draw,150));
+        if(mail && !emailOk(mail)) return toast("That does not look like an email address");
+        const rec={n:v, c:freeColour(gid)};
+        if(mail) rec.invite=mail;
+        push("trips/"+gid+"/people", rec).then(()=>{
+          if(mail) inviteByEmail(gid, mail);
+          $("mName").value=""; $("mMail").value="";
+          setTimeout(draw,150);
+        });
       };
       $("mAdd").addEventListener("click", add);
       $("mName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } });
@@ -2305,7 +2374,13 @@ function sheetPersonEdit(gid, m, after){
       'payment in the group, so the balances stay right.</div>'+
       '<button class="btn p wide" id="pnSave">Save name</button>'+
       (m.email?'<div class="sechead">Account</div>'+
-        '<p class="fine" style="margin:0 0 12px">'+esc(m.name)+' is signed in as '+esc(m.email)+'.</p>':'')+
+        '<p class="fine" style="margin:0 0 12px">'+esc(m.name)+' is signed in as '+esc(m.email)+'.</p>'
+       :'<div class="sechead">Invite by email</div>'+
+        '<div class="field"><label for="pnMail">Their Google address</label>'+
+        '<input id="pnMail" type="email" inputmode="email" autocapitalize="off" autocorrect="off" '+
+        'value="'+esc(m.invite||"")+'" placeholder="name@gmail.com"></div>'+
+        '<button class="btn s wide" id="pnInvite">Save address and invite</button>'+
+        '<p class="fine">The group shows up for them when they sign in, already on this name.</p>')+
       (isMe?'<button class="btn s wide" id="pnFree">This is not me — release this name</button>'+
         '<p class="fine">You will be asked which name is yours next time you open the group.</p>':'')+
       ((!m.uid && USER)?'<div class="sechead">Or</div>'+
@@ -2340,6 +2415,14 @@ function sheetPersonEdit(gid, m, after){
         closeSheet(); toast("Released — pick your name again"); render();
       });
     });
+    if($("pnInvite")) $("pnInvite").addEventListener("click", ()=>{
+      const mail=$("pnMail").value.trim().toLowerCase();
+      if(!emailOk(mail)) return toast("That does not look like an email address");
+      upd("trips/"+gid+"/people/"+m.k, {invite:mail})
+        .then(()=> inviteByEmail(gid, mail) )
+        .then(()=>{ closeSheet(); toast(m.name+" will see this group when they sign in");
+                    if(after) setTimeout(after,220); });
+    });
     if($("pnMerge")) $("pnMerge").addEventListener("click", ()=>{
       const into=$("pnInto").value;
       if(into===m.name) return toast("Pick a different person");
@@ -2360,6 +2443,14 @@ function sheetPersonEdit(gid, m, after){
       });
     });
   });
+}
+
+// The invitee cannot be reached by uid before they have ever signed in, so the
+// pointer is filed under their email and they pick it up on first sign-in.
+function inviteByEmail(gid, mail){
+  return set("invites/"+emailKey(mail)+"/"+gid,
+             {name:groupName(gid), at:Date.now(), by:(ME||USER.name)})
+    .catch(()=>{ toast("Saved the address, but could not send the invite"); });
 }
 
 /* ---------- create / join / share a group ---------- */
@@ -2734,6 +2825,18 @@ function onSignedIn(u){
     setSync("bad","Cannot read your groups — "+(err&&err.message?err.message:"check the database rules"));
     render();
   });
+
+  // Groups somebody has added me to by email turn up on their own.
+  if(USER.email){
+    remote.onValue(ref("invites/"+emailKey(USER.email)), snap=>{
+      const v=snap.val()||{};
+      Object.keys(v).forEach(gid=>{
+        if(!JOINED.some(g=>g.id===gid)) rememberGroup(gid, (v[gid]&&v[gid].name)||gid);
+        watchGroup(gid);
+      });
+      render();
+    }, ()=>{});   // no invites index, or rules not updated yet: carry on
+  }
 
   if(isAdmin()){
     remote.onValue(ref("trips"), snap=>{ ADMIN_GROUPS = snap.val() || {}; if(ADMIN_VIEW) render(); },

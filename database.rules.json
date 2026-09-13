@@ -13,6 +13,13 @@
         ".read":  "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
         ".write": "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
       }
+    },
+
+    "invites": {
+      "$ekey": {
+        ".read": "auth != null && auth.token.email_verified == true && $ekey == auth.token.email.toLowerCase().replace('.', ',')",
+        ".write": "auth != null"
+      }
     }
   }
 }
