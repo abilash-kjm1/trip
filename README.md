@@ -29,6 +29,10 @@ own Google account.
   each person's figure as you type and refuses to save a split that does not
   add up.
 - **Categories** — twelve of them, so the feed is readable at a glance.
+- **One page per group** — total spent, the add-expense form, the expense
+  list, balances and the who-pays-whom chart all on a single scroll, the way
+  the original tracker was laid out. The form sits on the page rather than
+  behind a button, and survives somebody else's change syncing in mid-typing.
 - **Filters** — search the expenses, or narrow them to who paid, or to how
   many ways they were split. Each expense also names who it was split
   between rather than only counting them.

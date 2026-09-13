@@ -308,6 +308,52 @@ img.av{ object-fit:cover; background:var(--fill-1); }
 .nav button .ms{ font-size:25px; }
 .nav button[aria-current="page"]{ color:var(--green-dk); background:var(--green-lt); }
 
+
+/* ---------- section headings, as the original tracker had them ---------- */
+.sect{ margin:26px 2px 12px; text-align:center; }
+.sect h2{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-size:20px; font-weight:700; letter-spacing:-.025em; margin:0; color:var(--label);
+}
+.sect h2 .ms{ font-size:22px; color:var(--label-2); }
+.sect p{ font-size:14px; color:var(--label-2); margin:5px 0 0; letter-spacing:-.01em; }
+
+/* ---------- the inline add form ---------- */
+.addform .ah{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-size:18px; font-weight:700; letter-spacing:-.025em; margin:0 0 4px;
+}
+.addform .ah .ms{ font-size:21px; color:var(--label-2); }
+.addform .asub{ font-size:14px; color:var(--label-2); margin:0 0 16px; text-align:center; }
+.arow{ display:flex; gap:12px; flex-wrap:wrap; }
+.arow .field{ margin-bottom:18px; }
+
+/* ---------- who pays whom ---------- */
+.owed{ padding:18px 18px 16px; }
+.owedhead{ display:flex; align-items:center; gap:13px; margin-bottom:6px; }
+.owedhead .txt{ flex:1; min-width:0; }
+.owedhead .txt b{ display:block; font-weight:600; font-size:17px; letter-spacing:-.02em; }
+.owedhead .txt small{ display:block; font-size:13px; color:var(--label-2); margin-top:1px; }
+.owedhead .amt{ font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.barrow{ display:flex; align-items:center; gap:11px; margin:10px 0 0; }
+.barrow .who{
+  flex:0 0 78px; font-size:14px; color:var(--label-2); font-weight:500;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.barrow .track{
+  flex:1; height:24px; min-width:36px; border-radius:12px; overflow:hidden;
+  background:var(--fill-1); display:block;
+}
+.barrow .fill{ display:block; height:100%; min-width:10px; border-radius:12px; }
+.barrow .bamt{
+  flex:0 0 auto; font-size:14px; font-weight:600; font-variant-numeric:tabular-nums;
+  white-space:nowrap; min-width:66px; text-align:right;
+}
+@media(max-width:359px){
+  .barrow .who{ flex-basis:58px; font-size:13px; }
+  .barrow .bamt{ min-width:58px; font-size:13px; }
+}
+
 /* ---------- expense filters ---------- */
 .filters{ margin:0 0 14px; }
 .filters input[type="search"]{
@@ -638,7 +684,6 @@ let ME       = null;                        // my person-name inside CURRENT gro
 let JOINED   = lsGet(LS.grp, []);           // [{id,name}]
 let CURRENT  = null;                        // active group id
 let TAB      = "groups";                    // groups | activity | account
-let GTAB     = "expenses";                  // expenses | balances | activity
 let DATA     = {};                          // gid -> {meta, people, expenses, payments}
 let remote   = null;                        // firebase handles
 const subs   = {};                          // gid -> unsubscribe
@@ -1040,7 +1085,7 @@ function groupIcon(gid){
 /* ---------- one group ---------- */
 function openGroup(id){
   if(CURRENT!==id) FILT={q:"", payer:"", ways:0};
-  CURRENT=id; GTAB="expenses"; lsSet(LS.cur, id);
+  CURRENT=id; lsSet(LS.cur, id);
   if(location.hash!=="#g="+id) location.hash="g="+id;
   watchGroup(id);
   window.scrollTo(0,0); render();
@@ -1055,44 +1100,190 @@ function viewGroup(main){
   const gid=CURRENT;
   setTitle(main, groupName(gid));
   $("backBtn").hidden=false; $("gmenuBtn").hidden=false;
-  $("fab").hidden=false; $("fabLabel").textContent="Add expense";
+  $("fab").hidden=true;                      // the add form is on the page itself
 
-  const v=myBalance(gid), tot=totalOf(gid), mem=everyoneIn(gid).length;
+  sectionTotal(main, gid);
+  if(!ME) sectionClaim(main, gid);
+  sectionAdd(main, gid);
+  sectionHead(main, "list_alt", "Expenses");
+  groupExpenses(main, gid);
+  sectionHead(main, "account_balance_wallet", "Balances",
+              "Green gets money back. Red still has some to pay.");
+  groupBalances(main, gid);
+  sectionHead(main, "bar_chart", "Who pays whom",
+              "Grouped by who gets paid back. Bar length is the amount.");
+  sectionWhoPays(main, gid);
+  sectionPayments(main, gid);
+}
+
+function sectionHead(main, icon, title, sub){
+  const h=el("div","sect");
+  h.innerHTML='<h2><span class="ms" aria-hidden="true">'+icon+'</span>'+esc(title)+'</h2>'+
+    (sub?'<p>'+esc(sub)+'</p>':'');
+  main.appendChild(h);
+}
+
+function sectionTotal(main, gid){
+  const tot=totalOf(gid), n=everyoneIn(gid).length, v=myBalance(gid);
   const s=el("div","summary");
-  s.innerHTML =
-    '<div class="big '+(v>0.004?"pos":v<-0.004?"neg":"zero")+'">'+
-      (!ME ? money(tot) : Math.abs(v)<0.005?"All settled up":money(Math.abs(v)))+'</div>'+
-    '<div class="lab">'+(!ME ? "spent by the group so far"
-        : v>0.004?"you get back" : v<-0.004?"you pay" : "everything is settled")+'</div>'+
-    '<div class="split">'+
-      (ME ? '<div><div class="k">Total spent</div><div class="v">'+money(tot)+'</div></div>'
-          : '<div><div class="k">People</div><div class="v">'+mem+'</div></div>')+
-    '<div><div class="k">Per person</div><div class="v">'+money(mem?tot/mem:0)+'</div></div></div>';
+  s.innerHTML=
+    '<div class="lab" style="margin:0 0 2px">Total spent</div>'+
+    '<div class="big">'+money(tot)+'</div>'+
+    '<div class="lab">'+(n ? money(tot/n)+" each if split evenly across "+n
+                           : "Add people to see the split")+'</div>'+
+    (ME ? '<div class="split"><div><div class="k">'+
+            (v>0.004?"You get back":v<-0.004?"You pay":"You are")+'</div>'+
+          '<div class="v '+(v>0.004?"pos":v<-0.004?"neg":"")+'">'+
+            (Math.abs(v)<0.005?"settled":money(Math.abs(v)))+'</div></div>'+
+          '<div><div class="k">Your share so far</div><div class="v">'+money(myShare(gid))+'</div></div></div>'
+       : '');
   main.appendChild(s);
+}
+function myShare(gid){
+  const n=meIn(gid); if(!n) return 0;
+  let t=0; expensesOf(gid).forEach(e=>{ const sh=sharesOf(e); if(sh[n]) t+=sh[n]; });
+  return t;
+}
 
-  if(!ME){
-    const w=el("div","notice");
-    w.innerHTML='<span class="ms" aria-hidden="true">how_to_reg</span>'+
-      '<div><strong>You are not on this list yet</strong><br>'+
-      'Tell the group which name is yours and it will start working out what you owe.</div>';
-    const b=el("button","btn p","That’s me"); b.addEventListener("click", ()=>sheetClaim(gid));
-    w.appendChild(b);
-    main.appendChild(w);
+function sectionClaim(main, gid){
+  const w=el("div","notice");
+  w.innerHTML='<span class="ms" aria-hidden="true">how_to_reg</span>'+
+    '<div><strong>You are not on this list yet</strong><br>'+
+    'Tell the group which name is yours and it will work out what you pay.</div>';
+  const b=el("button","btn p","That is me"); b.addEventListener("click", ()=>sheetClaim(gid));
+  w.appendChild(b);
+  main.appendChild(w);
+}
+
+/* ---------- the add form lives on the page, as it used to ----------
+   It is cached, because a sync from anyone else re-renders the screen and
+   would otherwise wipe out whatever is half-typed into it. */
+let FORM=null;
+function sectionAdd(main, gid){
+  const ppl=names(gid);
+  const sig=gid+"|"+ppl.join("|");
+  if(FORM && FORM.sig===sig){ main.appendChild(FORM.node); FORM.refresh(); return; }
+
+  const card=el("div","card pad addform");
+  card.innerHTML=
+    '<h2 class="ah"><span class="ms" aria-hidden="true">receipt_long</span>Add an expense</h2>'+
+    '<p class="asub">Who paid, how much, and who it was for.</p>'+
+    '<div class="field"><label for="afDesc">Description</label>'+
+    '<input id="afDesc" type="text" autocomplete="off" placeholder="Dinner, fuel, groceries"></div>'+
+    '<div class="arow">'+
+      '<div class="field" style="flex:1 1 150px"><label for="afAmt">Amount (CAD)</label>'+
+      '<input id="afAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div>'+
+      '<div class="field" style="flex:1 1 150px"><label for="afPayer">Paid by</label>'+
+      '<select id="afPayer"></select></div>'+
+    '</div>'+
+    '<p class="asub" style="margin:4px 0 10px">Split between <span id="afCount"></span></p>'+
+    '<div class="chips" id="afSplit"></div>'+
+    '<div class="btnrow" style="margin-top:18px">'+
+      '<button class="btn p" id="afAdd">Add expense</button>'+
+      '<button class="btn s" id="afAll">Select everyone</button>'+
+    '</div>'+
+    '<button class="btn s wide" id="afMore" style="margin-top:10px">More options: category, date, uneven split</button>';
+  main.appendChild(card);
+
+  const sel={}; ppl.forEach(n=> sel[n]=true );
+
+  function count(){
+    const k=ppl.filter(n=>sel[n]).length;
+    const amt=Number(card.querySelector("#afAmt").value)||0;
+    card.querySelector("#afCount").textContent =
+      k+" of "+ppl.length + (k&&amt ? " · "+money(amt/k)+" each" : "");
+  }
+  function drawChips(){
+    const host=card.querySelector("#afSplit"); host.innerHTML="";
+    ppl.forEach(n=>{
+      const c=el("button","chip"); c.type="button";
+      c.innerHTML='<span class="dot" style="background:'+colorOf(n,gid)+'"></span>'+esc(n)+(n===ME?" (you)":"");
+      c.setAttribute("aria-pressed", sel[n]?"true":"false");
+      c.addEventListener("click", ()=>{ sel[n]=!sel[n]; c.setAttribute("aria-pressed", sel[n]?"true":"false"); count(); });
+      host.appendChild(c);
+    });
+    count();
   }
 
-  const seg=el("div","seg");
-  [["expenses","Expenses"],["balances","Balances"],["activity","Activity"]].forEach(([k,lab])=>{
-    const b=el("button",null,lab);
-    b.setAttribute("aria-pressed", GTAB===k?"true":"false");
-    b.addEventListener("click", ()=>{ GTAB=k; window.scrollTo(0,0); render(); });
-    seg.appendChild(b);
+  const payer=card.querySelector("#afPayer");
+  payer.innerHTML = ppl.length
+    ? ppl.map(n=>'<option value="'+esc(n)+'"'+(n===ME?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")
+    : '<option value="">Add people first</option>';
+  drawChips();
+  card.querySelector("#afAmt").addEventListener("input", count);
+  card.querySelector("#afAll").addEventListener("click", ()=>{ ppl.forEach(n=> sel[n]=true ); drawChips(); });
+  card.querySelector("#afMore").addEventListener("click", ()=> sheetExpense(null) );
+  card.querySelector("#afAdd").addEventListener("click", ()=>{
+    const d=card.querySelector("#afDesc").value.trim();
+    const a=Math.round((Number(card.querySelector("#afAmt").value)||0)*100)/100;
+    const between=ppl.filter(n=>sel[n]);
+    if(!ppl.length) return toast("Add people to the group first");
+    if(!d) return toast("Give it a description");
+    if(!(a>0)) return toast("Enter an amount");
+    if(!between.length) return toast("Pick at least one person to split between");
+    push("trips/"+gid+"/expenses", {desc:d, amount:a, payer:payer.value, mode:"equal",
+      between:between, vals:{}, cat:"general", note:"", at:Date.now(), by:ME||USER.name})
+      .then(()=>{
+        card.querySelector("#afDesc").value=""; card.querySelector("#afAmt").value="";
+        ppl.forEach(n=> sel[n]=true ); drawChips();
+        toast("Expense added");
+      });
   });
-  seg.style.marginBottom="14px";
-  main.appendChild(seg);
 
-  if(GTAB==="expenses") groupExpenses(main, gid);
-  if(GTAB==="balances") groupBalances(main, gid);
-  if(GTAB==="activity") groupActivity(main, gid);
+  FORM={sig:sig, node:card, refresh:count};
+}
+
+/* ---------- who pays whom, as bars grouped by who gets paid ---------- */
+function sectionWhoPays(main, gid){
+  const st=settlements(gid);
+  if(!st.length){
+    const e=el("div","notice");
+    e.innerHTML='<span class="ms" aria-hidden="true">check_circle</span>'+
+      '<div><strong>Everything is settled</strong><br>Nobody has anything to pay anybody.</div>';
+    main.appendChild(e); return;
+  }
+  const by={};
+  st.forEach(t=>{ (by[t.to]=by[t.to]||[]).push(t); });
+  let max=0; st.forEach(t=>{ if(t.amt>max) max=t.amt; });
+  Object.keys(by).forEach(to=>{
+    const rows=by[to], m=memberOf(to,gid);
+    let sum=0; rows.forEach(r=> sum+=r.amt );
+    const card=el("div","card pad owed");
+    let h='<div class="owedhead">'+avatarHTML("", to, m&&m.color, m&&m.photo)+
+      '<span class="txt"><b>'+esc(to===ME?"You":to)+'</b>'+
+      '<small>'+(to===ME?"get":"gets")+' money back from '+rows.length+
+      (rows.length===1?" person":" people")+'</small></span>'+
+      '<span class="amt pos">'+money(sum)+'</span></div>';
+    rows.forEach(r=>{
+      h+='<div class="barrow"><span class="who">'+esc(r.from===ME?"You":r.from)+'</span>'+
+         '<span class="track"><span class="fill" style="width:'+Math.max(8,(r.amt/max)*100)+
+         '%;background:'+colorOf(r.from,gid)+'"></span></span>'+
+         '<span class="bamt">'+money(r.amt)+'</span></div>';
+    });
+    card.innerHTML=h;
+    [].forEach.call(card.querySelectorAll(".barrow"), (row,i)=>{
+      row.style.cursor="pointer";
+      row.addEventListener("click", ()=>sheetSettle(rows[i].from, to, rows[i].amt));
+    });
+    main.appendChild(card);
+  });
+}
+
+function sectionPayments(main, gid){
+  const pays=paymentsOf(gid);
+  if(!pays.length) return;
+  sectionHead(main, "payments", "Payments recorded", "Tap one to correct or delete it.");
+  const card=el("div","card");
+  pays.forEach(p=>{
+    const r=el("button","row");
+    r.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">payments</span></span>'+
+      '<span class="body"><span class="t1">'+esc(p.from===ME?"You":p.from)+' paid '+esc(p.to===ME?"you":p.to)+'</span>'+
+      '<span class="t2">'+esc(fmtWhen(p.at))+(p.note?" · "+esc(p.note):"")+'</span></span>'+
+      '<span class="right"><span class="amt pos">'+money(p.amount)+'</span></span>';
+    r.addEventListener("click", ()=>sheetSettle(p.from, p.to, p.amount, p));
+    card.appendChild(r);
+  });
+  main.appendChild(card);
 }
 
 function groupExpenses(main, gid){
@@ -1210,47 +1401,21 @@ function splitWho(e, gid){
 }
 
 function groupBalances(main, gid){
-  const b=balances(gid), all=everyoneIn(gid);
+  const b = balances(gid), all = everyoneIn(gid);
   if(!all.length){
-    const e=el("div","empty");
-    e.innerHTML='<span class="ms" aria-hidden="true">group</span><h3>Nobody here yet</h3>'+
+    const e = el("div","empty");
+    e.innerHTML = '<span class="ms" aria-hidden="true">group</span><h3>Nobody here yet</h3>'+
       '<p>Add people to start splitting.</p>';
-    const btn=el("button","btn p","Add people"); btn.addEventListener("click", sheetMembers);
+    const btn = el("button","btn p","Add people");
+    btn.addEventListener("click", sheetMembers);
     e.appendChild(btn); main.appendChild(e); return;
   }
-
-  const st=settlements(gid);
-  if(st.length){
-    main.appendChild(el("div","sechead","Who pays whom"));
-    const c=el("div","card");
-    st.forEach(t=>{
-      const involves = t.from===ME || t.to===ME;
-      const r=el("button","row"+(involves?" mine":""));
-      const m=memberOf(t.from, gid);
-      r.innerHTML=
-        avatarHTML("", t.from, m&&m.color, m&&m.photo)+
-        '<span class="body"><span class="t1">'+esc(t.from===ME?"You":t.from)+
-          ' '+(t.from===ME?"pay":"pays")+' '+esc(t.to===ME?"you":t.to)+'</span>'+
-        '<span class="t2">tap when this is paid</span></span>'+
-        '<span class="right"><span class="amt">'+money(t.amt)+'</span></span>';
-      r.addEventListener("click", ()=>sheetSettle(t.from, t.to, t.amt));
-      c.appendChild(r);
-    });
-    main.appendChild(c);
-  } else {
-    const e=el("div","notice");
-    e.innerHTML='<span class="ms" aria-hidden="true">check_circle</span>'+
-      '<div><strong>Everything is settled</strong><br>Nobody owes anybody anything.</div>';
-    main.appendChild(e);
-  }
-
-  main.appendChild(el("div","sechead","Everyone"));
-  const c2=el("div","card");
+  const c2 = el("div","card");
   all.forEach(n=>{
-    const m=memberOf(n, gid);
-    const v=Math.round((b[n]||0)*100)/100;
-    const r=el("button","row"+(n===ME?" mine":""));
-    r.innerHTML=
+    const m = memberOf(n, gid);
+    const v = Math.round((b[n]||0)*100)/100;
+    const r = el("button","row"+(n===ME?" mine":""));
+    r.innerHTML =
       avatarHTML("", n, m&&m.color, m&&m.photo)+
       '<span class="body"><span class="t1">'+esc(n)+(n===ME?' <span class="tag on">you</span>':'')+
         (!m ? ' <span class="tag warn">not on the list</span>'
