@@ -59,8 +59,9 @@ them are ever read by the browser.
 | `CRON_SECRET` | yes | Any long random string. Vercel sends it as a bearer token on scheduled runs; the endpoint answers `401` without it. This is what stops anybody on the internet triggering a mass send. |
 | `FIREBASE_SERVICE_ACCOUNT` | yes | The whole service-account JSON, pasted as one line. Firebase Console → Project settings → Service accounts → **Generate new private key**. |
 | `FIREBASE_DATABASE_URL` | yes | `https://trip-expense-35c6d-default-rtdb.firebaseio.com` |
-| `RESEND_API_KEY` | yes | From resend.com → API Keys. Sending permission is enough. |
-| `REMINDER_FROM` | no | e.g. `Settle <reminders@yourdomain.com>`. Defaults to `Settle <onboarding@resend.dev>`, which Resend allows **only to your own address** until you verify a domain. |
+| `BREVO_API_KEY` *or* `RESEND_API_KEY` | one of them | See **Choosing a sender** below. |
+| `EMAIL_PROVIDER` | no | `brevo` or `resend`, to force one when both keys are set. Otherwise Brevo wins. |
+| `REMINDER_FROM` | no | e.g. `Settle <you@gmail.com>`. With Brevo this exact address must be verified under Senders; with Resend it must sit on a verified domain. |
 | `APP_URL` | no | Link target in the email. Defaults to the GitHub Pages URL. |
 
 Generate a secret with:
@@ -68,6 +69,33 @@ Generate a secret with:
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+## Choosing a sender
+
+The two differ in what they make you prove before they will mail anybody.
+
+| | Brevo | Resend |
+|---|---|---|
+| Verifies | a single **email address** | a whole **domain** |
+| Need a domain? | **no** | yes |
+| Before that | sends to anyone | only to the account owner |
+| Free tier | 300 a day | 100 a day, 3,000 a month |
+
+**Without a domain, use Brevo.** Resend will accept the API call and then
+refuse each recipient who is not the account holder, which looks like success
+in the dashboard and silence in everyone's inbox.
+
+Brevo setup, about five minutes:
+
+1. brevo.com → sign up free
+2. **Senders, Domains & Dedicated IPs → Senders → Add a sender** — put in the
+   address you want the mail to come from, e.g. your own Gmail
+3. Click the link in the confirmation email that arrives at that address
+4. **SMTP & API → API Keys → Generate a new API key**
+5. In Vercel set `BREVO_API_KEY`, and `REMINDER_FROM` to that same verified
+   address. Remove `RESEND_API_KEY` or leave it; Brevo takes precedence.
+
+Switching later costs one environment variable and a redeploy. No code change.
 
 ## Deploying
 
