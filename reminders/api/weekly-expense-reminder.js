@@ -81,12 +81,47 @@ export default async function handler(req, res) {
     // Who is allowed in. Only wanted for a dry run's report: turning the
     // approval gate on without checking this first is how somebody gets
     // locked out of an app that was working a minute ago.
-    const access = dry ? await readPath("access") : {};
+    const access = await readPath("access");
 
     // A heartbeat, so "how often is this actually being called" stops being a
     // matter of inference. Nothing in here can see cron-job.org's settings;
     // it can see when it was last woken, and the gap between the last two
     // wakings is the interval, measured rather than believed.
+    // Keep the directory in step with who is actually allowed in. It used to be
+    // written only when somebody opened the app, so an approved person stayed
+    // invisible - and unpickable when adding members - until they happened to
+    // sign in again. Everything needed is already here, so fill it in for them.
+    const directory = await readPath("directory");
+    if (!dry) {
+      const fixes = {};
+      for (const uid of Object.keys(access)) {
+        const status = (access[uid] || {}).status;
+        const has = directory[uid] && directory[uid].name;
+        if (status === "approved" && !has) {
+          const profile = ((users[uid] || {}).profile) || {};
+          const name = String(profile.name || access[uid].name || "").trim();
+          if (!name) continue;
+          fixes[uid] = {
+            name,
+            email: String(profile.email || access[uid].email || "").trim().toLowerCase(),
+            photo: profile.photo || null,
+            at: Number(access[uid].decidedAt) || Date.now()
+          };
+        }
+        // Somebody turned away should not stay in a list people pick from.
+        // Only an explicit refusal removes an entry: a missing record might
+        // just be the administrator, who never needed one.
+        if (status === "declined" && directory[uid]) fixes[uid] = null;
+      }
+      const uids = Object.keys(fixes).slice(0, 50);
+      if (uids.length) {
+        const patch = {};
+        uids.forEach((u) => { patch[u] = fixes[u]; });
+        await database().ref("directory").update(patch);
+        console.log("[directory] brought " + uids.length + " entr(ies) up to date");
+      }
+    }
+
     const beat = await readPath("config/heartbeat");
     if (!dry) {
       await database().ref("config/heartbeat")
@@ -94,9 +129,9 @@ export default async function handler(req, res) {
     } else {
       const last = Number(beat.at) || 0;
       const gapMins = last && beat.prevAt ? Math.round((last - Number(beat.prevAt)) / 60000) : null;
-      const dir = await readPath("directory");
-      log.directory = Object.keys(dir).length + " listed: " +
-        (Object.keys(dir).map((u) => (dir[u] || {}).name).filter(Boolean).join(", ") || "nobody yet");
+      log.directory = Object.keys(directory).length + " listed: " +
+        (Object.keys(directory).map((u) => (directory[u] || {}).name).filter(Boolean).join(", ")
+         || "nobody yet");
       log.heartbeat = {
         lastRun: last ? new Date(last).toISOString() : "never",
         agoMins: last ? Math.round((at.getTime() - last) / 60000) : null,
