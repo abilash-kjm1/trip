@@ -2950,6 +2950,27 @@ function sheetRequests(){
           });
           acts.appendChild(n);
         }
+        // Taking somebody off the list is not the same as turning them away.
+        // Declined is an answer and they are told it; removed is a clean slate,
+        // and the next time they open Settle they are asked to request again.
+        // It is also the only way back from a decision made by mistake.
+        if(x.status!=="never"){
+          const rm=el("button","btn"); rm.type="button"; rm.style.flex="1 1 100%";
+          rm.textContent="Remove from the list";
+          rm.addEventListener("click", ()=>{
+            if(!confirm("Take "+(x.name||x.email)+" off the list?\n\n"+
+                        "Nothing of theirs is deleted — their expenses and their name in "+
+                        "any group stay exactly as they are. They simply go back to being "+
+                        "asked to request access next time they open Settle.")) return;
+            del("access/"+x.uid).then(()=>{
+              delete REQUESTS[x.uid];
+              toast((x.name||x.email)+" taken off the list");
+              draw(); render();
+            });
+          });
+          acts.appendChild(rm);
+        }
+
         if(acts.children.length) host.appendChild(acts);
       });
 
