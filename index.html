@@ -1157,7 +1157,9 @@ function groupActivity(main, gid){
   }
   const card=el("div","card");
   items.forEach(it=>{
-    const r=el("div","row"); r.style.cursor="default";
+    const r=el(it.t==="p"?"button":"div","row");
+    if(it.t!=="p") r.style.cursor="default";
+    else r.addEventListener("click", ()=>sheetSettle(it.p.from, it.p.to, it.p.amount, it.p));
     if(it.t==="e"){
       const e=it.e, c=catOf(e.cat);
       r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
@@ -1594,12 +1596,17 @@ function sheetExpense(existing){
 }
 
 /* ---------- record a payment ---------- */
-function sheetSettle(from, to, amt){
-  const gid=CURRENT, ppl=names(gid);
+function sheetSettle(from, to, amt, existing){
+  const gid=CURRENT;
+  // A payment can name someone who is no longer on the members list, so the
+  // pickers have to offer those names too or editing it would silently move
+  // the money to somebody else.
+  const ppl=names(gid).slice();
+  if(existing){ [existing.from, existing.to].forEach(n=>{ if(n && ppl.indexOf(n)<0) ppl.push(n); }); }
   if(ppl.length<2){ toast("You need at least two people"); return; }
   from = from || (ME && ppl.indexOf(ME)>-1 ? ME : ppl[0]);
   to   = to   || ppl.filter(n=>n!==from)[0] || ppl[0];
-  openSheet("Record a payment", (b)=>{
+  openSheet(existing?"Edit payment":"Record a payment", (b)=>{
     b.innerHTML=
       '<p class="lead">Use this when cash or a transfer has actually changed hands.</p>'+
       '<div class="field"><label for="stFrom">Who paid</label><select id="stFrom">'+
@@ -1610,18 +1617,29 @@ function sheetSettle(from, to, amt){
       '</select></div>'+
       '<div class="field"><label for="stAmt">Amount</label><div class="amtbig"><span class="cur">$</span>'+
       '<input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" value="'+(amt?esc(plain(amt)):"")+'"></div></div>'+
-      fieldHTML("stDate","Date","date", dateVal(null))+
+      fieldHTML("stDate","Date","date", dateVal(existing?existing.at:null))+
       '<div class="field"><label for="stNote">Note (optional)</label>'+
-      '<input id="stNote" type="text" placeholder="e-transfer, cash…"></div>'+
-      '<button class="btn p wide" id="stSave">Record payment</button>';
+      '<input id="stNote" type="text" placeholder="e-transfer, cash…" value="'+
+        esc(existing?(existing.note||""):"")+'"></div>'+
+      '<button class="btn p wide" id="stSave">'+(existing?"Save changes":"Record payment")+'</button>'+
+      (existing?'<button class="btn d wide" id="stDel" style="margin-top:10px">Delete this payment</button>'+
+        '<p class="fine">Recorded by '+esc(existing.by||existing.from)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
     $("stSave").addEventListener("click", ()=>{
       const f=$("stFrom").value, t=$("stTo").value;
       const a=Math.round((Number($("stAmt").value)||0)*100)/100;
       if(f===t) return toast("Pick two different people");
       if(!(a>0)) return toast("Enter an amount");
-      push("trips/"+gid+"/payments", {from:f, to:t, amount:a,
-        note:$("stNote").value.trim(), at:tsFromDate($("stDate").value,null), by:ME||USER.name});
-      closeSheet(); toast("Payment recorded");
+      const rec={from:f, to:t, amount:a, note:$("stNote").value.trim(),
+                 at:tsFromDate($("stDate").value, existing?existing.at:null),
+                 by: existing ? (existing.by||ME||USER.name) : (ME||USER.name)};
+      if(existing) set("trips/"+gid+"/payments/"+existing.k, rec);
+      else push("trips/"+gid+"/payments", rec);
+      closeSheet(); toast(existing?"Payment updated":"Payment recorded");
+    });
+    if(existing) $("stDel").addEventListener("click", ()=>{
+      if(!confirm("Delete this "+money(existing.amount)+" payment from "+existing.from+
+                  " to "+existing.to+"? Everyone's balance will move.")) return;
+      del("trips/"+gid+"/payments/"+existing.k); closeSheet(); toast("Payment deleted");
     });
   });
 }

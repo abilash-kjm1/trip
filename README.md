@@ -32,7 +32,9 @@ own Google account.
 - **Balances** — what everyone paid against their share, plus "settle up":
   the fewest payments that clear the whole group.
 - **Record a payment** — when cash or a transfer actually changes hands, log
-  it and the balances move.
+  it and the balances move. Tap it again in Activity to correct or delete it;
+  a payment entered twice is otherwise invisible and doubles what someone
+  appears to be owed.
 - **Activity** — a running log per group and across all your groups.
 - **Print / save as PDF** — a full statement: balances, settlements, every
   expense with its split, and every payment made.
