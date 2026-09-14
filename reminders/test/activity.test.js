@@ -38,12 +38,15 @@ is(isMember(group, "u2"), true, "a member is a member");
 is(isMember(group, "u9"), false, "a stranger is not");
 
 console.log("\nthe switches on the Account screen");
-is(wants({ newExpense: true }, "expense.add"), true, "asked for new expenses");
-is(wants({}, "expense.add"), false, "off unless switched on");
-is(wants({ newExpense: true }, "expense.del"), false, "new expenses does not cover deletions");
-is(wants({ updates: true }, "expense.del"), true, "changes covers deletions");
-is(wants({ updates: true }, "payment.add"), false, "changes does not cover payments");
-is(wants({ payments: true }, "payment.add"), true, "payments does");
+is(wants({}, "expense.add"), true, "on for somebody who never touched the switch");
+is(wants(undefined, "payment.add"), true, "and for somebody with no preferences at all");
+is(wants({ newExpense: true }, "expense.add"), true, "switched on is on");
+is(wants({ newExpense: false }, "expense.add"), false, "switched off stays off");
+is(wants({ newExpense: false }, "expense.del"), true, "turning off new expenses leaves changes alone");
+is(wants({ updates: false }, "expense.del"), false, "turning off changes covers deletions");
+is(wants({ updates: false }, "payment.add"), true, "and leaves payments alone");
+is(wants({ payments: false }, "payment.add"), false, "payments can be turned off on their own");
+is(wants({}, "expense.nuke"), false, "a kind that does not exist is never wanted");
 
 console.log("\nhow a line reads");
 is(lineFor(normaliseEntry("k", good, NOW)), "Kalai added Dinner - $84.50", "with an amount");
@@ -72,7 +75,8 @@ function fakeDb(queue, groups) {
 const users = {
   u1: { profile: { name: "Kalai", email: "kalai@example.com" }, prefs: { newExpense: true } },
   u2: { profile: { name: "Abilash", email: "abi@example.com" }, prefs: { newExpense: true, payments: true } },
-  u3: { profile: { name: "Kavya", email: "kavya@example.com" }, prefs: {} }
+  u3: { profile: { name: "Kavya", email: "kavya@example.com" },
+        prefs: { newExpense: false, updates: false, payments: false } }
 };
 const at = new Date(NOW);
 
@@ -89,7 +93,7 @@ async function run(queue, groups = { montreal: group }) {
 console.log("\na full pass");
 let r = await run({ n1: good });
 is(r.log.sent, 1, "one email, not three");
-is(r.sent[0].to, "abi@example.com", "to the one who asked for it");
+is(r.sent[0].to, "abi@example.com", "to the one who has it on, not the one who turned it off");
 is(r.sent[0].subject, "One update in Montreal", "named the group in the subject");
 is(r.removed, ["mail/queue/n1"], "the note is cleared");
 
@@ -114,7 +118,14 @@ r = await run({ n1: { ...good, kind: "payment.add" } });
 is(r.log.sent, 1, "Abilash wants payments");
 r = await run({ n1: { ...good, actorUid: "u2" } });          // Abilash did it himself
 is([r.log.sent, r.sent[0].to], [1, "kalai@example.com"],
-   "the author hears nothing about their own doing; Kalai, who asked, does");
+   "the author hears nothing about their own doing; Kalai, who has it on, does");
+
+users.u5 ={ profile: { name: "Newcomer", email: "new@example.com" } };   // no prefs yet
+r = await run({ n1: good }, { montreal: { ...group,
+  people: { ...group.people, e: { n: "Newcomer", uid: "u5" } } } });
+is(r.sent.map((m) => m.to).sort(), ["abi@example.com", "new@example.com"],
+   "somebody who joined and never opened settings is told, by default");
+delete users.u5;
 
 console.log("\na dry run changes nothing");
 const db = fakeDb({ n1: good }, { montreal: group });
@@ -138,7 +149,7 @@ const flog = await runActivity({
 });
 is([flog.sent, flog.failed], [1, 1], "one got through, one did not");
 is(db2.removed.length, 2, "the queue is cleared either way");
-users.u3.prefs = {};
+users.u3.prefs = { newExpense: false, updates: false, payments: false };
 
 console.log("\nan empty queue costs nothing");
 r = await run({});

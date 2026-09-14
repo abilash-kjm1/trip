@@ -94,11 +94,13 @@ export function recipientUids(group, actorUid) {
   return out;
 }
 
-/** Did this account ask for this sort of note? Off unless switched on. */
+/** Does this account want this sort of note? On unless they switched it off -
+    so somebody who joins tomorrow hears about their group without having to
+    find a settings screen first, and somebody who turned it off stays off. */
 export function wants(prefs, kind) {
   const k = KINDS[kind];
   if (!k) return false;
-  return (prefs || {})[k.pref] === true;
+  return (prefs || {})[k.pref] !== false;
 }
 
 /** Is the author of a note actually in the group it is about? */

@@ -3581,9 +3581,11 @@ function inviteByEmail(gid, mail){
    account that predates this setting still gets one. */
 const PREF_ROWS = [
   ["weekly",    "Weekly reminder",        "A round-up of what you owe and what you are owed.",                  true],
-  ["newExpense","New expenses",           "When somebody adds an expense to one of your groups.",              false],
-  ["updates",   "Expense changes",        "When somebody edits or deletes an expense you are part of.",        false],
-  ["payments",  "Payments",               "When somebody records a payment involving you.",                    false]
+  // On for everybody unless they switch it off, the same as the weekly one -
+  // and the same rule the mailer applies, so the switch shows what will happen.
+  ["newExpense","New expenses",           "When somebody adds an expense to one of your groups.",              true],
+  ["updates",   "Expense changes",        "When somebody edits or deletes an expense you are part of.",        true],
+  ["payments",  "Payments",               "When somebody records a payment involving you.",                    true]
 ];
 // Canada first, since that is where this group is, then the rest.
 const TZ_CHOICES = [
