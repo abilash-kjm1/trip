@@ -1022,6 +1022,8 @@ button, input, select, textarea{ font-family:var(--f); }
 
 
 
+
+
 /* ============================================================
    THEMES
 
@@ -1111,6 +1113,32 @@ button, input, select, textarea{ font-family:var(--f); }
   :root[data-theme="purple"] .hero{ background-size:176px auto;
     background-position:right -26px top -6px; }
 }
+
+/* ---- a colour for each group -----------------------------------------
+   Cycled down the list, so two groups next to each other never share one.
+   The colour marks a group's icon and a stripe down its left edge - never its
+   amount, which keeps the green and red that mean money. No red-leaning hue in
+   either set, for the same reason. Each theme brings its own six, so the
+   colours sit with the palette around them rather than on top of it. */
+.row.gc0, .row.gc1, .row.gc2, .row.gc3, .row.gc4, .row.gc5{
+  box-shadow:inset 4px 0 0 var(--gc);
+}
+.row[class*=" gc"] .cat{ background:var(--gc-lt); color:var(--gc); }
+
+.gc0{ --gc:#B4703E; --gc-lt:#F8E3CF; }   /* apricot */
+.gc1{ --gc:#4F7A5C; --gc-lt:#DDEBDF; }   /* sage */
+.gc2{ --gc:#4A6A8A; --gc-lt:#DCE6F0; }   /* dusty blue */
+.gc3{ --gc:#3F7F7A; --gc-lt:#D8ECEA; }   /* teal */
+.gc4{ --gc:#86691A; --gc-lt:#F2E6BF; }   /* mustard */
+.gc5{ --gc:#7A5A86; --gc-lt:#E8DDEE; }   /* mauve */
+
+:root[data-theme="purple"] .gc0{ --gc:#6D3FBF; --gc-lt:#EDE4FB; }   /* violet */
+:root[data-theme="purple"] .gc1{ --gc:#A2457E; --gc-lt:#F6DDEC; }   /* orchid pink */
+:root[data-theme="purple"] .gc2{ --gc:#4F5BB8; --gc-lt:#E0E3F8; }   /* periwinkle */
+:root[data-theme="purple"] .gc3{ --gc:#2D7A7A; --gc-lt:#D9EFEE; }   /* teal */
+:root[data-theme="purple"] .gc4{ --gc:#946A1E; --gc-lt:#F4E7C8; }   /* honey gold - grape sat too
+                                                                   close to violet and lavender */
+:root[data-theme="purple"] .gc5{ --gc:#6A5F8F; --gc-lt:#E6E2F1; }   /* lavender grey */
 
 
 /* ---------- printing (kept last so it wins the cascade) ---------- */
@@ -1892,9 +1920,10 @@ function viewGroups(main){
   }
 
   const card=el("div","card");
-  JOINED.slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).forEach(g=>{
+  // Each group takes the next colour in the theme's set, so neighbours differ.
+  JOINED.slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).forEach((g,i)=>{
     const v=myBalance(g.id), mem=membersOf(g.id).length, tot=totalOf(g.id);
-    const r=el("button","row");
+    const r=el("button","row gc"+(i%6));
     r.innerHTML=
       '<span class="cat"><span class="ms" aria-hidden="true">'+groupIcon(g.id)+'</span></span>'+
       '<span class="body"><span class="t1">'+esc(groupName(g.id))+'</span>'+
