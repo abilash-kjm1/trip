@@ -1038,6 +1038,34 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
+/* ---- A group's top card: what was spent, and where you stand ------------ */
+.gtop{ background:var(--ink); color:var(--cream); border-radius:var(--r3); padding:var(--s5);
+  margin:0 0 var(--s4); box-shadow:var(--shadow); }
+.gt-row{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.gt-lab{ font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(252,250,245,.62); }
+.gt-meta{ font-size:12.5px; color:rgba(252,250,245,.62); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.gt-big{ margin:8px 0 0; font-family:var(--serif); font-size:clamp(40px,11vw,54px); font-weight:600;
+  line-height:1; letter-spacing:-.025em; color:var(--cream); font-variant-numeric:tabular-nums; }
+.gt-note{ margin-top:10px; font-size:13.5px; color:rgba(252,250,245,.66); }
+.gt-me{ display:flex; align-items:center; flex-wrap:wrap; gap:10px 22px; margin-top:var(--s4);
+  padding-top:var(--s3); border-top:1px solid rgba(252,250,245,.14); }
+.gt-me .st{ display:flex; flex-direction:column; }
+.gt-me .k{ font-size:11.5px; color:rgba(252,250,245,.6); }
+.gt-me .v{ margin-top:1px; font-size:16px; font-weight:700; letter-spacing:-.01em; color:var(--cream);
+  font-variant-numeric:tabular-nums; }
+.gt-pill{ margin-left:auto; display:inline-flex; align-items:center; gap:6px; border:0; border-radius:999px;
+  padding:9px 14px; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
+  background:rgba(252,250,245,.12); color:var(--cream); -webkit-tap-highlight-color:transparent; }
+.gt-pill b{ font-weight:700; font-variant-numeric:tabular-nums; }
+.gt-pill .ms{ font-size:16px; }
+.gt-pill.pos{ background:rgba(127,208,168,.18); color:#A5E3C4; }
+.gt-pill.neg{ background:rgba(240,162,142,.18); color:#F6BCAC; }
+.gt-pill.zero{ cursor:default; }
+.gt-pill:focus:not(:focus-visible){ outline:none; }
+@media (max-width:520px){
+  .gt-pill{ margin-left:0; width:100%; justify-content:center; }
+}
+
 /* ---- A group's expenses: one search, one row of filters, calm rows ------ */
 .exbar{ display:flex; gap:8px; margin:0 0 10px; }
 .exsearch{ flex:1; min-width:0; display:flex; align-items:center; gap:8px; min-height:46px; margin:0;
@@ -2441,14 +2469,45 @@ function sectionHead(main, icon, title, sub){
   main.appendChild(h);
 }
 
+/* The top of a group: what has been spent, and where I stand in it. "Each if
+   split evenly" is gone - splits are not all even, and it counted names that
+   are no longer on the list. What I paid, my share, and the one line that
+   matters: do I get money back or owe it. That line jumps to Who owes whom. */
 function sectionTotal(main, gid){
-  const tot=totalOf(gid), n=everyoneIn(gid).length;
-  const s=el("div","summary");
-  s.innerHTML=
-    '<div class="lab" style="margin:0 0 2px">Total spent</div>'+
-    '<div class="big">'+money(tot)+'</div>'+
-    '<div class="lab">'+(n ? money(tot/n)+" each if split evenly across "+n
-                           : "Add people to see the split")+'</div>';
+  const tot=totalOf(gid), exps=expensesOf(gid), people=names(gid).length;
+  const s=el("div","gtop");
+  let html=
+    '<div class="gt-row"><span class="gt-lab">Total spent</span>'+
+      '<span class="gt-meta">'+exps.length+' expense'+(exps.length===1?'':'s')+' &middot; '+
+        people+' '+(people===1?'person':'people')+'</span></div>'+
+    '<div class="gt-big">'+money(tot)+'</div>';
+  if(ME && exps.length){
+    let paid=0, share=0;
+    exps.forEach(e=>{
+      if(e.payer===ME) paid+=Number(e.amount)||0;
+      share+=sharesOf(e)[ME]||0;
+    });
+    const net=Math.round(((balances(gid)[ME])||0)*100)/100;
+    const tone = net>0.004 ? "pos" : net<-0.004 ? "neg" : "zero";
+    const say = tone==="pos" ? 'You get back <b>+'+money(net)+'</b>'
+              : tone==="neg" ? 'You owe <b>'+money(-net)+'</b>'
+              : "You\u2019re all settled";
+    html+=
+      '<div class="gt-me">'+
+        '<span class="st"><span class="k">You paid</span><span class="v">'+money(paid)+'</span></span>'+
+        '<span class="st"><span class="k">Your share</span><span class="v">'+money(share)+'</span></span>'+
+        '<button class="gt-pill '+tone+'" type="button">'+say+
+          (tone!=="zero" ? '<span class="ms" aria-hidden="true">arrow_downward</span>' : '')+'</button>'+
+      '</div>';
+  } else if(!people){
+    html+='<div class="gt-note">Add people to start splitting.</div>';
+  }
+  s.innerHTML=html;
+  const pill=s.querySelector(".gt-pill");
+  if(pill) pill.addEventListener("click", ()=>{
+    const head=[].find.call(document.querySelectorAll(".sect"), h=> /Who owes whom/.test(h.textContent));
+    if(head) head.scrollIntoView({behavior:"smooth", block:"start"});
+  });
   main.appendChild(s);
 }
 
