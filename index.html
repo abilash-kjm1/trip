@@ -4409,6 +4409,12 @@ function viewAccount(main){
     '<span class="body"><span class="t1">Works offline</span>'+
     '<span class="t2">Open it with no signal. Anything you add syncs when you reconnect.</span></span>';
   c2.appendChild(off);
+  // Which release this is. Updates arrive by themselves; this shows they have.
+  const ver=el("div","row"); ver.style.cursor="default";
+  ver.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">system_update</span></span>'+
+    '<span class="body"><span class="t1">Always up to date</span>'+
+    '<span class="t2">Version '+esc(buildLabel())+' · new versions install by themselves</span></span>';
+  c2.appendChild(ver);
   const out=el("button","row");
   out.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">logout</span></span>'+
     '<span class="body"><span class="t1">Sign out</span>'+
@@ -8017,31 +8023,95 @@ if("serviceWorker" in navigator){
 // Coming back to the app - perhaps from turning them on in Settings.
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && USER) pushRefresh(); });
 
-/* A tab left open keeps running the version it loaded, however many releases
-   come after - and an old copy saves payments the new server cannot ask
-   anybody about. So an open copy looks for a new version when it comes back
-   into view and every half hour, and reloads onto it when it arrives - but
-   never in the middle of something: with a sheet or a question open, it waits
-   until they are closed. */
-if("serviceWorker" in navigator && !window.__NO_SW){
-  const hadController = !!navigator.serviceWorker.controller;
-  let pending=false, reloading=false;
-  const busy=()=> !$("sheet").hidden || !!document.querySelector(".arr:not(.arr-quiet)");
-  const reloadWhenFree=()=>{
-    if(reloading) return;
-    if(busy()){ pending=true; return; }
-    reloading=true; location.reload();
-  };
-  const check=()=>{
-    navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update(); }).catch(()=>{});
-    if(pending) reloadWhenFree();
-  };
-  // The first install on a fresh visit changes the controller too; that is
-  // not an update, and reloading for it would only flash the page.
-  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(hadController) reloadWhenFree(); });
-  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) check(); });
-  setInterval(check, 30*60e3);
-  setInterval(()=>{ if(pending) reloadWhenFree(); }, 5000);
+/* ======================= STAYING UP TO DATE =======================
+   Everybody runs the newest Settle without having to refresh.
+
+   Every build stamps its id into this file and into version.json beside the
+   page. While Settle is on screen it asks for version.json once a minute, and
+   whenever it comes back into view. When the id there is not this one, a new
+   release is live: the new service worker is fetched and the app reloads onto
+   it - at once if nothing is happening, or as soon as the person stops typing,
+   closes a sheet or answers a question. Whichever tab they were on, they are
+   still on after. */
+const APP_BUILD = "20260914204534";
+const UPDATE_EVERY_MS = 60e3;
+const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
+const UPDATE_TRIED = "settle.updateTried.v1";
+let UPDATE_WAITING = false, UPDATE_RELOADING = false;
+
+function updateBusy(){
+  const a=document.activeElement;
+  if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+  const sheet=$("sheet");
+  if(sheet && !sheet.hidden) return true;
+  return !!document.querySelector(".arr:not(.arr-quiet), .paid-pop");
+}
+
+function updateNow(build){
+  if(UPDATE_RELOADING) return;
+  if(updateBusy()){ UPDATE_WAITING=true; return; }
+  // A page the browser still holds from before the release would come back
+  // just as old, and ask again, and reload again. One try per build every
+  // ten minutes stops that ever becoming a loop.
+  try{
+    const t=JSON.parse(sessionStorage.getItem(UPDATE_TRIED)||"null");
+    if(build && t && t.build===build && Date.now()-t.at < 10*60e3) return;
+    if(build) sessionStorage.setItem(UPDATE_TRIED, JSON.stringify({build, at:Date.now()}));
+    sessionStorage.setItem(UPDATE_KEY, JSON.stringify({tab:TAB, at:Date.now()}));
+  }catch(e){}
+  UPDATE_RELOADING=true;
+  location.reload();
+}
+
+async function updateCheck(){
+  if(window.__NO_SW || document.hidden || UPDATE_RELOADING) return;
+  if(UPDATE_WAITING){ UPDATE_WAITING=false; return updateNow(); }
+  try{
+    const r=await fetch("version.json?t="+Date.now(), {cache:"no-store"});
+    if(!r.ok) return;
+    const v=await r.json();
+    if(!v || typeof v.build!=="string" || !v.build || v.build===APP_BUILD) return;
+    if("serviceWorker" in navigator){
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg){ try{ await reg.update(); }catch(e){} }
+    }
+    updateNow(v.build);
+  }catch(e){ /* offline, or the site is mid-deploy: try again next time */ }
+}
+
+if(!window.__NO_SW){
+  // A new service worker taking over is a release arriving by the other road.
+  if("serviceWorker" in navigator){
+    const hadController=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(hadController) updateNow(); });
+  }
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) updateCheck(); });
+  window.addEventListener("pageshow", e=>{ if(e.persisted) updateCheck(); });   // iPhone returning from the background
+  window.addEventListener("online", updateCheck);
+  setInterval(updateCheck, UPDATE_EVERY_MS);
+  // Waiting for somebody to finish: look again every few seconds.
+  setInterval(()=>{ if(UPDATE_WAITING && !updateBusy()){ UPDATE_WAITING=false; updateNow(); } }, 4000);
+  setTimeout(updateCheck, 8000);
+}
+
+// Straight after an update: back on the same tab, and say so.
+function updateRestore(){
+  try{
+    const u=JSON.parse(sessionStorage.getItem(UPDATE_KEY)||"null");
+    sessionStorage.removeItem(UPDATE_KEY);
+    if(!u || Date.now()-Number(u.at) > 60e3) return;
+    if(["home","groups","activity","account","interac","insights"].indexOf(u.tab)>-1) TAB=u.tab;
+    setTimeout(()=> toast("Settle is up to date"), 1400);
+  }catch(e){}
+}
+
+// "Version 14 Sep, 18:30" - so anyone can see they have the latest.
+function buildLabel(){
+  const m=/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(APP_BUILD);
+  if(!m) return "Development copy";
+  const d=new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5]));
+  return d.toLocaleDateString(undefined, {day:"numeric", month:"short"})+", "+
+         d.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"});
 }
 
 /* =========================== PRINT =========================== */
@@ -8420,6 +8490,7 @@ function adoptLegacy(){
 
 /* =========================== BOOT =========================== */
 (function boot(){
+  updateRestore();          // just updated: back on the tab they were on
   render();
   const cfg=window.FIREBASE_CONFIG;
   const ok = cfg && cfg.apiKey && cfg.apiKey.indexOf("PASTE_")!==0 && cfg.databaseURL;
@@ -8468,7 +8539,7 @@ function adoptLegacy(){
 })();
 
 if(!window.__NO_SW && "serviceWorker" in navigator){
-  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).catch(()=>{}); });
 }
 
 </script>

@@ -1,5 +1,5 @@
 /* Settle - offline service worker */
-const VERSION = 'settle-v78';
+const VERSION = 'settle-20260914204534';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 
@@ -18,7 +18,9 @@ self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     const c = await caches.open(SHELL);
     // addAll is atomic - one failure kills the install, so add individually
-    await Promise.all(PRECACHE.map((u) => c.add(u).catch(() => {})));
+    // From the network, not the browser's own cache, or a new release could
+    // install with last release's files.
+    await Promise.all(PRECACHE.map((u) => c.add(new Request(u, { cache: 'reload' })).catch(() => {})));
     await self.skipWaiting();
   })());
 });
@@ -59,6 +61,10 @@ self.addEventListener('fetch', (e) => {
 
   if (url.origin !== self.location.origin) return;
 
+  // Which release is live. Never from a cache, or nobody would ever hear
+  // that there is a new one.
+  if (url.pathname.endsWith('/version.json')) return;
+
   // The page itself: network first, falling back to the cache when there is
   // no signal. It used to be served stale and refreshed behind your back,
   // which meant a release only arrived on the SECOND open - so somebody would
@@ -68,7 +74,12 @@ self.addEventListener('fetch', (e) => {
     e.respondWith((async () => {
       const c = await caches.open(SHELL);
       try {
-        const res = await fetch(req);
+        // Checked with the server every time (a quick "not modified" when
+        // nothing changed), so a reload after a release gets the release.
+        let res = await fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' }));
+        // A page may not be answered with a redirect it followed itself; let
+        // the browser make that request the ordinary way instead.
+        if (res && res.redirected) res = await fetch(req);
         if (res && res.ok) c.put(req, res.clone());
         return res;
       } catch (_) {
