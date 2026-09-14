@@ -1654,29 +1654,6 @@ button, input, select, textarea{ font-family:var(--f); }
   .netlight[data-state] .net-dot::after, .netlight[data-state="wait"] .net-dot{ animation:none; }
 }
 
-/* ---- The same light and refresh, in the sidebar on a computer ----
-   Specific enough to beat the sidebar's own rule that makes every button a
-   full-width menu row. */
-.side .side-status{ display:flex; align-items:center; gap:8px; margin:var(--s3) 6px var(--s2); }
-.side .side-status .netlight{ flex:1 1 auto; width:auto; min-width:0; justify-content:flex-start;
-  height:34px; padding:0 12px; font-size:12.5px; font-weight:650;
-  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:rgba(252,250,245,.82); }
-.side .side-status .netlight:hover{ background:rgba(255,255,255,.10); color:var(--cream); }
-.side .side-status .netlight[data-state="on"]{ --dot:#3DD47F; --ring:rgba(61,212,127,.45); color:var(--cream); }
-.side .side-status .netlight[data-state="off"]{ --dot:#FF6B63; color:#FFC2BD;
-  background:rgba(224,68,62,.18); border-color:rgba(255,107,99,.40); }
-.side .side-status .netlight[data-state="sync"]{ --dot:#F5B83D; --ring:rgba(245,184,61,.5); color:var(--cream); }
-.side .side-status .netlight[hidden]{ display:none; }
-.side .side-status .side-refresh{ flex:0 0 auto; width:34px; height:34px; padding:0; justify-content:center;
-  border-radius:50%; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06);
-  color:rgba(252,250,245,.82); }
-.side .side-status .side-refresh:hover{ background:rgba(255,255,255,.12); color:var(--cream); }
-.side .side-status .side-refresh .ms{ font-size:19px; display:block; }
-.side .side-status .side-refresh.spin .ms{ animation:refreshSpin .75s linear infinite; }
-.side .side-status .side-refresh:disabled{ cursor:progress; }
-.side .side-status .netlight:focus-visible, .side .side-status .side-refresh:focus-visible{
-  outline:2px solid var(--apricot); outline-offset:2px; }
-@media (prefers-reduced-motion:reduce){ .side .side-status .side-refresh.spin .ms{ animation-duration:2.4s; } }
 
 /* ---- Refresh, in the top bar: turns while it reloads ---- */
 #refreshBtn .ms{ display:block; transform-origin:50% 50%; }
@@ -2322,6 +2299,132 @@ span.af-pill{ cursor:default; padding-right:12px; }
 
 
 /* ============================================================
+   THE TOP BAR - a floating island
+   Clear at the top of a screen; once the page moves under it, it becomes
+   a frosted island with a thin line of the theme's accent beneath. Where
+   you are sits on the left with room of its own, so a long group name
+   shortens with "…" instead of disappearing under a button. Everything
+   about the app - connection, refresh, the group menu - shares one
+   capsule on the right, beside your picture. On a computer it is always an
+   island, above the page, with the screen's name large and a label above.
+   Every colour comes from the theme, so Warm and Purple each get their own.
+   ============================================================ */
+.bar, .bar.scrolled{ display:block; min-height:0; padding:calc(6px + var(--safe-t)) 10px 6px;
+  background:transparent; box-shadow:none; border:0; backdrop-filter:none; -webkit-backdrop-filter:none;
+  pointer-events:none; }
+.bar [hidden]{ display:none !important; }
+.bar-in{ pointer-events:auto; position:relative; display:flex; align-items:center; gap:10px;
+  max-width:620px; margin:0 auto; min-height:52px; padding:6px 6px 6px 8px; border-radius:24px;
+  border:1px solid transparent; background:transparent;
+  transition:background .3s ease, border-color .3s ease, box-shadow .3s ease; }
+.bar.scrolled .bar-in{
+  background:color-mix(in srgb, var(--cream) 80%, transparent);
+  -webkit-backdrop-filter:blur(18px) saturate(170%); backdrop-filter:blur(18px) saturate(170%);
+  border-color:color-mix(in srgb, var(--line) 85%, transparent);
+  box-shadow:0 14px 34px -18px rgba(30,32,28,.38), inset 0 1px 0 rgba(255,255,255,.75); }
+/* the accent under the island: grows out from the middle as it lifts */
+.bar-in::after{ content:""; position:absolute; left:26px; right:26px; bottom:-1px; height:2px; border-radius:2px;
+  background:linear-gradient(90deg, transparent, var(--apricot) 28%, var(--apricot-dk) 50%, var(--apricot) 72%, transparent);
+  opacity:0; transform:scaleX(.3); pointer-events:none;
+  transition:opacity .35s ease, transform .5s cubic-bezier(.22,.61,.36,1); }
+.bar.scrolled .bar-in::after{ opacity:.6; transform:scaleX(1); }
+
+.bar-lead{ flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:10px; }
+.bar .brandwrap{ padding-left:4px; }
+.bar-titles{ min-width:0; display:flex; flex-direction:column; justify-content:center; gap:1px; }
+.bar-eyebrow{ display:none; font-size:10.5px; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--apricot-dk); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bar h1{ position:static; left:auto; transform:translateY(4px); max-width:100%; margin:0; text-align:left;
+  font-family:var(--serif); font-size:18px; font-weight:600; letter-spacing:-.01em; line-height:1.2; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  opacity:0; transition:opacity .25s ease, transform .3s ease; }
+.bar.scrolled h1{ opacity:1; transform:none; }
+.bar.is-home h1{ display:none; }
+
+.bar .bar-back{ flex:0 0 auto; width:38px; height:38px; border-radius:50%; padding:0; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--line); background:var(--surface); color:var(--ink);
+  box-shadow:0 6px 14px -9px rgba(30,32,28,.45); -webkit-tap-highlight-color:transparent;
+  transition:background .2s, transform .15s ease, box-shadow .25s; }
+.bar .bar-back .ms{ font-size:21px; transition:transform .2s ease; }
+.bar .bar-back:hover{ background:var(--apricot-lt); }
+.bar .bar-back:hover .ms, .bar .bar-back:active .ms{ transform:translateX(-2px); }
+.bar .bar-back:active{ transform:scale(.92); }
+.bar.scrolled .bar-back{ box-shadow:none; }
+
+.bar-tools{ flex:0 0 auto; display:flex; align-items:center; gap:8px; }
+.bar-cap{ display:flex; align-items:center; gap:1px; height:38px; padding:0 3px; border-radius:999px;
+  background:var(--surface); border:1px solid var(--line); box-shadow:0 8px 18px -12px rgba(30,32,28,.4); }
+.bar.scrolled .bar-cap{ background:color-mix(in srgb, var(--surface) 72%, transparent); box-shadow:none; }
+.bar-cap .netlight, .bar.scrolled .bar-cap .netlight{ height:30px; border:0; background:transparent;
+  padding:0 10px 0 9px; border-radius:999px; }
+.bar-cap .netlight:hover{ background:var(--fill-1); }
+.bar-cap .netlight[data-state="off"], .bar.scrolled .bar-cap .netlight[data-state="off"]{
+  background:color-mix(in srgb, #E0443E 11%, transparent); }
+.bar-sep{ flex:none; width:1px; height:18px; margin:0 2px; background:var(--line); }
+.bar-cap .netlight[hidden] + .bar-sep{ display:none; }
+.cap-btn{ flex:none; width:32px; height:32px; padding:0; border:0; border-radius:50%; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; background:transparent; color:var(--ink-2);
+  -webkit-tap-highlight-color:transparent; transition:background .2s, color .2s, transform .15s ease; }
+.cap-btn .ms{ font-size:20px; }
+.cap-btn:hover{ background:var(--fill-1); color:var(--ink); }
+.cap-btn:active{ transform:scale(.9); }
+.cap-btn:focus:not(:focus-visible), .bar .bar-back:focus:not(:focus-visible), .bar .me:focus:not(:focus-visible){ outline:none; }
+.cap-btn:focus-visible, .bar .bar-back:focus-visible, .bar .me:focus-visible{ outline:2px solid var(--apricot-dk); outline-offset:2px; }
+/* inside a group the name needs the room: the light alone says it */
+.bar.in-group .bar-cap .netlight{ width:30px; padding:0; justify-content:center; }
+.bar.in-group .bar-cap .net-l{ display:none; }
+
+/* your picture, ringed in the theme's accent */
+.bar .me{ flex:0 0 auto; width:38px; height:38px;
+  box-shadow:0 0 0 2px var(--cream), 0 0 0 3.5px color-mix(in srgb, var(--apricot) 85%, transparent);
+  transition:transform .2s ease, box-shadow .3s ease; }
+.bar .me:hover{ transform:translateY(-1px);
+  box-shadow:0 0 0 2px var(--cream), 0 0 0 3.5px var(--apricot-dk); }
+.bar .me:active{ transform:scale(.94); }
+
+@media (max-width:370px){
+  .bar-in{ gap:6px; padding-left:6px; }
+  .bar .brand{ font-size:20px; }
+  .bar .byline{ display:none; }
+}
+
+/* Sheets: the title and the close button always where they can be seen */
+.sheet .shead{ padding:8px 12px 12px; }
+.sheet #sheetClose{ width:36px; height:36px; border:0; border-radius:50%; background:var(--ink); color:var(--cream);
+  box-shadow:0 6px 14px -8px rgba(0,0,0,.45); cursor:pointer; transition:background .2s, transform .15s ease; }
+.sheet #sheetClose .ms{ font-size:20px; }
+.sheet #sheetClose:hover{ background:var(--apricot-dk); }
+.sheet #sheetClose:active{ transform:scale(.9); }
+@media (max-width:619px){
+  /* --vvh is the part of the screen actually visible - less the keyboard */
+  .sheet{ max-height:min(93vh, calc(var(--vvh, 100vh) - var(--safe-t) - 12px)); transition:bottom .2s ease; }
+}
+
+/* ---- on a computer: always an island, above the page ---- */
+@media (min-width:1000px){
+  .bar, .bar.scrolled{ display:block; position:sticky; top:0; z-index:30; max-width:980px;
+    margin:calc(-1 * var(--s6)) auto var(--s4); padding:var(--s4) 0 var(--s2); }
+  .bar-in, .bar.scrolled .bar-in{ max-width:none; min-height:64px; padding:10px 12px 10px 14px; border-radius:22px;
+    background:color-mix(in srgb, var(--surface) 80%, transparent); border-color:var(--line);
+    -webkit-backdrop-filter:blur(16px) saturate(160%); backdrop-filter:blur(16px) saturate(160%);
+    box-shadow:0 1px 2px rgba(30,32,28,.04), 0 16px 36px -24px rgba(30,32,28,.4); }
+  .bar-in::after{ opacity:.5; transform:scaleX(1); }
+  .bar .brandwrap{ display:none !important; }
+  .bar-eyebrow{ display:block; }
+  .bar h1, .bar.scrolled h1, .bar.is-home h1{ display:block; opacity:1; transform:none; font-size:24px; }
+  .bar .bar-back{ width:42px; height:42px; }
+  .bar-cap{ height:42px; padding:0 4px; }
+  .cap-btn{ width:34px; height:34px; }
+  .bar .me{ width:40px; height:40px; }
+  /* room enough on a computer for the light to keep its word, even in a group */
+  .bar.in-group .bar-cap .netlight{ width:auto; padding:0 10px 0 9px; }
+  .bar.in-group .bar-cap .net-l{ display:inline; }
+  /* the bar carries the screen's name, back and group settings now */
+  .ltitle, .pagehead{ display:none; }
+}
+
+/* ============================================================
    THEMES
 
    A theme is a palette and nothing else. Every colour in the app
@@ -2479,11 +2582,6 @@ span.af-pill{ cursor:default; padding-right:12px; }
 <aside class="side" id="side" aria-label="Sections">
   <div class="brand">Set<i>tle</i></div>
   <div class="byline">Created by Abilash</div>
-  <!-- On a computer the top bar is not shown, so its light and refresh live here. -->
-  <div class="side-status">
-    <button class="netlight" data-net type="button" data-state="wait" aria-label="Connecting to Settle" hidden><i class="net-dot" aria-hidden="true"></i><span class="net-l">Connecting</span></button>
-    <button class="side-refresh" data-refresh type="button" aria-label="Refresh Settle" title="Refresh"><span class="ms" aria-hidden="true">refresh</span></button>
-  </div>
   <div class="grp">Home</div>
   <button data-tab="home"><span class="ms" aria-hidden="true">explore</span>Today</button>
   <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
@@ -2498,15 +2596,27 @@ span.af-pill{ cursor:default; padding-right:12px; }
 <div class="shell">
 <div class="panel">
 
+<!-- The top bar: a floating island. Where you are on the left - back, the
+     brand or the screen's name - and everything about the app on the right,
+     in one capsule beside your picture. The title has its own room, so no
+     button can ever sit on top of it. -->
 <header class="bar" id="bar">
-  <button class="ibtn glass" id="backBtn" aria-label="Back" hidden><span class="ms" aria-hidden="true">arrow_back</span></button>
-  <span class="brandwrap" id="barBrand"><span class="brand">Set<i>tle</i></span><span class="byline">Created by Abilash</span></span>
-  <h1 id="barTitle" hidden>Today</h1>
-  <span class="spacer"></span>
-  <button class="netlight" id="netPill" data-net type="button" data-state="wait" aria-label="Connecting to Settle" hidden><i class="net-dot" aria-hidden="true"></i><span class="net-l">Connecting</span></button>
-  <button class="ibtn glass" id="refreshBtn" data-refresh type="button" aria-label="Refresh Settle" title="Refresh"><span class="ms" aria-hidden="true">refresh</span></button>
-  <button class="ibtn glass" id="gmenuBtn" aria-label="Group settings" hidden><span class="ms" aria-hidden="true">more_horiz</span></button>
-  <button class="me" id="meBtn" aria-label="Your account"></button>
+  <div class="bar-in">
+    <div class="bar-lead">
+      <button class="bar-back" id="backBtn" type="button" aria-label="Back" hidden><span class="ms" aria-hidden="true">arrow_back</span></button>
+      <span class="brandwrap" id="barBrand"><span class="brand">Set<i>tle</i></span><span class="byline">Created by Abilash</span></span>
+      <div class="bar-titles"><span class="bar-eyebrow" id="barEyebrow"></span><h1 id="barTitle" hidden>Today</h1></div>
+    </div>
+    <div class="bar-tools">
+      <div class="bar-cap">
+        <button class="netlight" id="netPill" data-net type="button" data-state="wait" aria-label="Connecting to Settle" hidden><i class="net-dot" aria-hidden="true"></i><span class="net-l">Connecting</span></button>
+        <span class="bar-sep" aria-hidden="true"></span>
+        <button class="cap-btn" id="refreshBtn" data-refresh type="button" aria-label="Refresh Settle" title="Refresh"><span class="ms" aria-hidden="true">refresh</span></button>
+        <button class="cap-btn" id="gmenuBtn" type="button" aria-label="Group settings" title="Group settings" hidden><span class="ms" aria-hidden="true">more_horiz</span></button>
+      </div>
+      <button class="me" id="meBtn" type="button" aria-label="Your account"></button>
+    </div>
+  </div>
 </header>
 <div class="sync" id="syncBar" hidden></div>
 
@@ -3284,6 +3394,17 @@ function render(){
   else if(TAB==="insights") viewInsights(main);
   if(y) window.scrollTo(0, Math.min(y, document.body.scrollHeight));
   if(typeof syncBar==="function") syncBar();
+  // The top bar: which screen this is - for its name, the label above it on
+  // a computer, and how much room the name needs.
+  const bar=$("bar");
+  if(bar){
+    bar.classList.toggle("in-group", !!CURRENT);
+    bar.classList.toggle("is-home", !CURRENT && !ADMIN_VIEW && TAB==="home" && !!USER && mayUse());
+    const eb=$("barEyebrow");
+    if(eb) eb.textContent = CURRENT ? "Group" : ADMIN_VIEW ? "Administrator"
+      : TAB==="home" && USER ? new Date().toLocaleDateString(undefined, {weekday:"long", month:"long", day:"numeric"})
+      : "Settle";
+  }
   // Payments waiting on me to say they arrived, and answers to mine.
   if(typeof arrivals==="function") arrivals();
 
@@ -4729,7 +4850,10 @@ function addExpenseAnywhere(){
 }
 
 function viewHome(main){
-  $("barTitle").hidden = true;
+  // A phone shows the brand here; a computer, whose sidebar already carries
+  // the brand, shows the screen's name.
+  $("barTitle").textContent = "Today";
+  $("barTitle").hidden = false;
   $("barBrand").hidden = false;
   $("fab").hidden = true;
 
@@ -5063,12 +5187,33 @@ function openSheet(title, build, onClose){
   $("scrim").hidden=false; $("sheet").hidden=false;
   $("sheet").scrollTop=0;
   document.body.style.overflow="hidden";
+  sheetFit();
 }
 function closeSheet(){
   $("scrim").hidden=true; $("sheet").hidden=true;
+  const s=$("sheet"); s.style.bottom=""; s.style.removeProperty("--vvh");
   document.body.style.overflow="";
   const f=sheetOnClose; sheetOnClose=null; if(f) f();
 }
+/* On a phone the keyboard covers the bottom of the screen without moving
+   anything that is fixed in place, so a tall sheet could end up with its top
+   - title and close button - above the part of the screen you can see. Keep
+   the sheet inside what is actually visible, keyboard or not. */
+function sheetFit(){
+  const s=$("sheet");
+  if(!s || s.hidden) return;
+  const vv=window.visualViewport;
+  if(!vv || window.innerWidth>=620){ s.style.bottom=""; s.style.removeProperty("--vvh"); return; }
+  const below=Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+  s.style.setProperty("--vvh", Math.round(vv.height)+"px");
+  s.style.bottom = below ? below+"px" : "";
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize", sheetFit);
+  window.visualViewport.addEventListener("scroll", sheetFit);
+}
+window.addEventListener("resize", sheetFit);
+
 function fieldHTML(id, label, type, value, extra){
   return '<div class="field"><label for="'+id+'">'+label+'</label>'+
     '<input id="'+id+'" type="'+type+'" value="'+esc(value==null?"":value)+'" '+(extra||"")+'></div>';
@@ -8334,7 +8479,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260914221414";
+const APP_BUILD = "20260914225622";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
