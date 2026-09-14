@@ -1038,6 +1038,75 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
+/* ---- Purple theme: the Today card as a sky, Bora peeking over the edge --- */
+.hero-wrap{ position:relative; }
+.hero-wrap > .hero{ position:relative; z-index:1; }
+.hero-deco{ display:none; }
+:root[data-theme="purple"] .hero-wrap{ padding-top:50px; }
+:root[data-theme="purple"] .hero-deco{ display:block; position:absolute; inset:0; pointer-events:none; }
+:root[data-theme="purple"] .hero-deco.back{ z-index:0; }
+:root[data-theme="purple"] .hero-deco.front{ z-index:2; }
+.hero-deco svg{ position:absolute; overflow:visible; }
+.hd-bora{ left:50%; width:104px; height:73px; margin-left:-52px; top:calc(50px + var(--s4) - 54px);
+  animation:hdBob 3s ease-in-out infinite; }
+.hd-paw{ width:30px; height:20px; left:calc(50% - 56px); top:calc(50px + var(--s4) - 10px); }
+.hd-finger{ width:34px; height:34px; left:calc(50% + 20px); top:calc(50px + var(--s4) - 27px); }
+.hd-sky.moon{ width:40px; height:40px; left:20px; top:8px; }
+.hd-sky.sun{ width:48px; height:48px; left:14px; top:2px; }
+.hd-rays{ transform-box:view-box; transform-origin:50% 50%; animation:hdSpin 16s linear infinite; }
+.hd-star{ fill:#B996F2; animation:hdTwinkle 2.4s ease-in-out infinite; }
+.hd-star.s1{ width:12px; height:12px; left:72px; top:22px; }
+.hd-star.s2{ width:9px; height:9px; right:70px; top:10px; fill:#FFD66B; animation-delay:.8s; }
+.hd-star.s3{ width:11px; height:11px; right:30px; top:28px; animation-delay:1.6s; }
+.hd-cloud{ width:44px; height:28px; animation:hdDrift 6s ease-in-out infinite; }
+.hd-cloud.c1{ right:24px; top:12px; }
+.hd-cloud.c2{ left:74px; top:28px; width:30px; height:19px; animation-delay:2s; }
+.hd-heart{ width:20px; height:20px; }
+.hd-heart.h1{ left:calc(50% + 52px); top:6px; animation:hdFloat 3.2s ease-in-out infinite; }
+.hd-heart.h2{ left:calc(50% - 76px); top:16px; width:14px; height:14px; animation:hdFloat 3.2s ease-in-out 1s infinite; }
+.hd-heart.h3{ width:24px; height:24px; left:-8px; bottom:-10px; transform:rotate(-14deg); }
+.hd-blink{ transform-box:fill-box; transform-origin:center; animation:hdBlink 4.2s infinite; }
+.hd-z{ animation:hdZ 2.6s ease-in-out infinite; }
+.hd-pop{ transform-box:fill-box; transform-origin:50% 100%; animation:hdPop 1.8s ease-in-out infinite; }
+@keyframes hdBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3px); } }
+@keyframes hdFloat{ 0%,100%{ transform:translateY(0) rotate(-8deg); } 50%{ transform:translateY(-6px) rotate(8deg); } }
+@keyframes hdTwinkle{ 0%,100%{ opacity:.3; transform:scale(.75); } 50%{ opacity:1; transform:scale(1); } }
+@keyframes hdSpin{ to{ transform:rotate(360deg); } }
+@keyframes hdDrift{ 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(6px); } }
+@keyframes hdBlink{ 0%,93%,100%{ transform:scaleY(1); } 96%{ transform:scaleY(.1); } }
+@keyframes hdZ{ 0%{ opacity:0; transform:translate(0,4px); } 40%{ opacity:1; } 100%{ opacity:0; transform:translate(7px,-12px); } }
+@keyframes hdPop{ 0%,100%{ transform:scale(.85); } 50%{ transform:translateY(-2px) scale(1.15); } }
+@media (prefers-reduced-motion:reduce){
+  .hd-bora, .hd-rays, .hd-star, .hd-cloud, .hd-heart.h1, .hd-heart.h2, .hd-blink, .hd-z, .hd-pop{ animation:none; }
+}
+
+/* Day: a soft lilac sky fading to pink. The card's words keep their colours. */
+:root[data-theme="purple"] .hero-wrap .hero.carousel::before,
+:root[data-theme="purple"] .hero-wrap .hero.carousel::after{ display:none; }
+:root[data-theme="purple"] .hero-wrap.sky-day .hero.carousel{
+  background-image:linear-gradient(170deg, #D6C7FA 0%, #EBE2FF 52%, #FFE4F1 100%);
+  background-size:100% 100%; background-repeat:no-repeat; background-position:0 0; }
+/* Night: a deep purple sky. Every word, chip and button on it turns light so
+   it reads as easily as the day card. */
+:root[data-theme="purple"] .hero-wrap.sky-night .hero.carousel{
+  --hero-ink:#F7F3FE; --hero-soft:#D2C2F2; --hero-owe:#FFC6DC; --hero-get:#A6E6C8;
+  --hero-line:rgba(247,243,254,.18); --hero-track:rgba(247,243,254,.26); --hero-glow:rgba(30,20,60,.6);
+  background-image:
+    radial-gradient(1.2px 1.2px at 18% 22%, rgba(255,255,255,.75) 50%, transparent 55%),
+    radial-gradient(1px 1px at 72% 14%, rgba(255,255,255,.6) 50%, transparent 55%),
+    radial-gradient(1.4px 1.4px at 88% 58%, rgba(255,255,255,.55) 50%, transparent 55%),
+    radial-gradient(1px 1px at 40% 88%, rgba(255,255,255,.45) 50%, transparent 55%),
+    linear-gradient(160deg, #3A2A58 0%, #563C8A 60%, #7E62BE 100%);
+  background-size:100% 100%; background-repeat:no-repeat; background-position:0 0; color:#F7F3FE; }
+:root[data-theme="purple"] .hero-wrap.sky-night .hero,
+:root[data-theme="purple"] .hero-wrap.sky-night .hero p{ color:#D2C2F2; }
+:root[data-theme="purple"] .hero-wrap.sky-night .hero .net small{ color:#D2C2F2; }
+:root[data-theme="purple"] .hero-wrap.sky-night .hc-av{ background:rgba(247,243,254,.16); color:#F7F3FE; }
+:root[data-theme="purple"] .hero-wrap.sky-night .hc-chip{ background:rgba(247,243,254,.14); color:#E4D7F9; }
+:root[data-theme="purple"] .hero-wrap.sky-night .hero .hc-foot .net{ background:rgba(247,243,254,.12); }
+:root[data-theme="purple"] .hero-wrap.sky-night .hc-btn:not(:disabled){ background:#F7F3FE; color:#3A2A58; }
+:root[data-theme="purple"] .hero-wrap.sky-night .hc-btn:disabled{ background:rgba(247,243,254,.16); color:#A6E6C8; }
+
 /* ---- Bottom bar: five equal tabs, and the + floating centred above ------- */
 :root{ --nav-h:66px; --nav-gap:12px; }
 .nav{ display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); align-items:stretch; gap:2px;
@@ -4281,6 +4350,70 @@ function heroSlides(){
     .concat(plan.filter(t=>t.dir==="get").sort(big));
 }
 
+/* ---- Purple theme: the Today card as a little sky ----
+   Day from 6am to 7pm by the phone's own clock, night otherwise. Bora - an
+   original bunny-bear - peeks over the top edge: awake under the sun, dozing
+   in a nightcap under the moon. Everything here is decoration around the card,
+   never on top of what it says, and the other theme never shows it. */
+function heroSky(){ const h=new Date().getHours(); return (h>=6 && h<19) ? "day" : "night"; }
+const HD_BORA_BASE =
+  '<g stroke="#fff" stroke-width="5" stroke-linejoin="round" paint-order="stroke">'+
+    '<ellipse cx="36" cy="22" rx="11" ry="19" fill="#E9DDFC" transform="rotate(-12 36 22)"/>'+
+    '<ellipse cx="84" cy="22" rx="11" ry="19" fill="#E9DDFC" transform="rotate(12 84 22)"/>'+
+    '<ellipse cx="60" cy="56" rx="43" ry="34" fill="#E9DDFC"/></g>'+
+  '<ellipse cx="36" cy="23" rx="5" ry="12" fill="#F9C3DC" transform="rotate(-12 36 23)"/>'+
+  '<ellipse cx="84" cy="23" rx="5" ry="12" fill="#F9C3DC" transform="rotate(12 84 23)"/>'+
+  '<ellipse cx="30" cy="66" rx="10" ry="6" fill="#F9C3DC"/><ellipse cx="90" cy="66" rx="10" ry="6" fill="#F9C3DC"/>'+
+  '<ellipse cx="60" cy="61" rx="2.6" ry="1.9" fill="#2A1F3D"/>';
+const HD_BORA_AWAKE =
+  '<ellipse class="hd-blink" cx="45" cy="52" rx="8.5" ry="10" fill="#2A1F3D"/>'+
+  '<ellipse class="hd-blink" cx="75" cy="52" rx="8.5" ry="10" fill="#2A1F3D"/>'+
+  '<circle cx="48.5" cy="47.5" r="3.4" fill="#fff"/><circle cx="78.5" cy="47.5" r="3.4" fill="#fff"/>'+
+  '<circle cx="42" cy="56" r="1.6" fill="#fff"/><circle cx="72" cy="56" r="1.6" fill="#fff"/>'+
+  '<path d="M54 66q6 8 12 0z" fill="#E8739F" stroke="#2A1F3D" stroke-width="1.8" stroke-linejoin="round"/>'+
+  '<path d="M80 14c-10-8-18-4-14 4 3 6 11 3 14-4zM80 14c10-8 18-4 14 4-3 6-11 3-14-4z" fill="#8F63D8" stroke="#fff" stroke-width="2.5" paint-order="stroke"/>'+
+  '<circle cx="80" cy="15" r="3.6" fill="#6D3FBF"/>';
+const HD_BORA_ASLEEP =
+  '<path d="M37 54q8 6 16 0M67 54q8 6 16 0" fill="none" stroke="#2A1F3D" stroke-width="3" stroke-linecap="round"/>'+
+  '<path d="M57 67q3 2 6 0" fill="none" stroke="#2A1F3D" stroke-width="2" stroke-linecap="round"/>'+
+  '<path d="M30 20C40 -6 84 -8 92 18c-20-8-42-8-62 2z" fill="#8F63D8" stroke="#fff" stroke-width="3" paint-order="stroke"/>'+
+  '<circle cx="100" cy="6" r="6" fill="#fff" stroke="#E9DDFC" stroke-width="1.5"/>'+
+  '<text class="hd-z" x="104" y="36" font-size="14" font-weight="700" fill="#8F63D8" font-family="sans-serif">z</text>';
+const hdHeart = (cls, fill)=> '<svg class="hd-heart '+cls+'" viewBox="0 0 40 40"><path d="M20 35C8 27 3 20 3 13a8 8 0 0 1 17-4 8 8 0 0 1 17 4c0 7-5 14-17 22z" fill="'+fill+'" stroke="#fff" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke"/></svg>';
+const hdStar = (cls)=> '<svg class="hd-star '+cls+'" viewBox="0 0 20 20"><path d="M10 0l2.4 7.6L20 10l-7.6 2.4L10 20l-2.4-7.6L0 10l7.6-2.4z"/></svg>';
+function heroDecoBack(sky){
+  const night = sky==="night";
+  return '<div class="hero-deco back" aria-hidden="true">'+
+    (night
+      ? '<svg class="hd-sky moon" viewBox="0 0 40 40"><path d="M26 4a16 16 0 1 0 10 26A13 13 0 0 1 26 4z" fill="#FFE9A8" stroke="#fff" stroke-width="2.5" paint-order="stroke"/>'+
+          '<circle cx="15" cy="20" r="1.4" fill="#C9A84F"/><circle cx="21" cy="26" r="1" fill="#C9A84F"/></svg>'+
+        hdStar("s1")+hdStar("s2")+hdStar("s3")
+      : '<svg class="hd-sky sun" viewBox="0 0 48 48"><g class="hd-rays" stroke="#FFD66B" stroke-width="3" stroke-linecap="round">'+
+          '<path d="M24 2v6M24 40v6M2 24h6M40 24h6M8.5 8.5l4 4M35.5 35.5l4 4M39.5 8.5l-4 4M12.5 35.5l-4 4"/></g>'+
+          '<circle cx="24" cy="24" r="12" fill="#FFE08A" stroke="#fff" stroke-width="2.5" paint-order="stroke"/>'+
+          '<circle cx="20" cy="23" r="1.5" fill="#2A1F3D"/><circle cx="28" cy="23" r="1.5" fill="#2A1F3D"/>'+
+          '<path d="M21 27q3 2.5 6 0" fill="none" stroke="#2A1F3D" stroke-width="1.4" stroke-linecap="round"/>'+
+          '<ellipse cx="17" cy="27" rx="2.2" ry="1.4" fill="#F9B6C9"/><ellipse cx="31" cy="27" rx="2.2" ry="1.4" fill="#F9B6C9"/></svg>'+
+        '<svg class="hd-cloud c1" viewBox="0 0 48 30"><path d="M12 27a8 8 0 0 1 0-16 11 11 0 0 1 21-3 9 9 0 0 1 3 19z" fill="#fff" stroke="#E4D7F9" stroke-width="2"/></svg>'+
+        '<svg class="hd-cloud c2" viewBox="0 0 48 30"><path d="M12 27a8 8 0 0 1 0-16 11 11 0 0 1 21-3 9 9 0 0 1 3 19z" fill="#fff" stroke="#E4D7F9" stroke-width="2"/></svg>')+
+    '<svg class="hd-bora" viewBox="0 0 120 84" overflow="visible">'+HD_BORA_BASE+(night ? HD_BORA_ASLEEP : HD_BORA_AWAKE)+'</svg>'+
+    hdHeart("h1","#8F63D8")+hdHeart("h2","#C9B3F2")+
+  '</div>';
+}
+function heroDecoFront(){
+  return '<div class="hero-deco front" aria-hidden="true">'+
+    '<svg class="hd-paw" viewBox="0 0 30 20"><ellipse cx="15" cy="10" rx="13" ry="8.5" fill="#E9DDFC" stroke="#fff" stroke-width="3.5" paint-order="stroke"/>'+
+      '<path d="M9 8v4M15 7v5M21 8v4" stroke="#C7B3EC" stroke-width="1.6" stroke-linecap="round"/></svg>'+
+    // A paw making a finger heart, with a little heart popping out of it.
+    '<svg class="hd-finger" viewBox="0 0 40 40" overflow="visible"><g stroke="#fff" stroke-width="3" stroke-linejoin="round" paint-order="stroke">'+
+      '<ellipse cx="17" cy="31" rx="13" ry="8.5" fill="#E9DDFC"/>'+
+      '<path d="M13 27c-1.5-6 0-12 3.5-13s4.5 3.5 2.5 10z" fill="#E9DDFC"/>'+
+      '<path d="M18 25c1.5-5.5 5.5-9 8.5-8.2s2.4 5-2.8 9.4z" fill="#E9DDFC"/></g>'+
+      '<path class="hd-pop" d="M30 11c-3.2-2.3-4.8-3.8-4.8-5.3a2 2 0 0 1 4.8-.8 2 2 0 0 1 4.8.8c0 1.5-1.6 3-4.8 5.3z" fill="#E8739F" stroke="#fff" stroke-width="1.6" paint-order="stroke"/></svg>'+
+    hdHeart("h3","#8F63D8")+
+  '</div>';
+}
+
 function addExpenseAnywhere(){
   if(!JOINED.length) return sheetGroupNew();
   if(JOINED.length===1){ openGroup(JOINED[0].id); setTimeout(()=>sheetExpense(null), 260); return; }
@@ -4410,7 +4543,14 @@ function viewHome(main){
   foot.insertAdjacentHTML("beforeend",
     '<span class="net '+tone+'"><small>Overall balance</small><b>'+figure+'</b></span>');
   hero.appendChild(foot);
-  main.appendChild(hero);
+  // The card sits in a wrapper so the sky and Bora can go behind and in front
+  // of it. The decoration shows in the purple theme only.
+  const sky = heroSky();
+  const heroWrap = el("div","hero-wrap sky-"+sky);
+  heroWrap.innerHTML = heroDecoBack(sky);
+  heroWrap.appendChild(hero);
+  heroWrap.insertAdjacentHTML("beforeend", heroDecoFront());
+  main.appendChild(heroWrap);
 
   if(slides.length > 1){
     slides.forEach((t,j)=>{
