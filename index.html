@@ -930,7 +930,22 @@ button, input, select, textarea{ font-family:var(--f); }
   border-radius:50%; background:var(--apricot); color:#3A2414; padding:0; gap:0;
   box-shadow:0 6px 18px rgba(180,112,62,.42);
 }
-.nav .add .ms{ font-size:26px; }
+/* The bar's buttons stack icon over label from the top. The + has no label,
+   so stacked from the top it sat in the upper half of its own circle. */
+.nav .add{ display:flex; flex-direction:column; align-items:center; justify-content:center;
+  line-height:1; }
+.nav .add .ms{ font-size:26px; line-height:1; display:block; }
+
+/* quick add */
+.qa-money{ display:flex; align-items:center; gap:var(--s2); }
+.qa-money span{ font-size:26px; font-weight:600; color:var(--ink-3); }
+.qa-money input{ font-size:30px; font-weight:700; letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums; }
+.qa-new{ display:flex; gap:var(--s2); margin-top:var(--s2); }
+.qa-new[hidden]{ display:none; }
+.qa-new input{ flex:1; min-width:0; }
+.chip.add{ border-style:dashed; color:var(--apricot-dk); background:transparent; }
+.qa-each{ font-size:13px; color:var(--ink-2); margin:var(--s2) 0 0; }
 .nav .add[aria-current="page"]{ background:var(--apricot); color:#3A2414; }
 .fab{ display:none; }
 
@@ -1762,7 +1777,7 @@ function render(){
       : esc(initials(USER.name));
   }
   const nAdd = $("navAdd");
-  if(nAdd) nAdd.hidden = !USER || !mayUse() || (!CURRENT && !JOINED.length);
+  if(nAdd) nAdd.hidden = !USER || !mayUse();
   ME = CURRENT ? meIn(CURRENT) : null;
   document.querySelectorAll(".nav button[data-tab], .side button[data-tab]").forEach(b=>{
     if(b.dataset.tab===TAB && !CURRENT && !ADMIN_VIEW) b.setAttribute("aria-current","page");
@@ -2651,7 +2666,7 @@ function viewHome(main){
   // On a phone this button would sit beside the raised one in the bar below,
   // so it only appears where there is no bar.
   const addBtn = el("button","btn dark","+  Add expense");
-  addBtn.addEventListener("click", addExpenseAnywhere);
+  addBtn.addEventListener("click", sheetQuickAdd);
   head.appendChild(addBtn);
   main.appendChild(head);
 
@@ -4115,6 +4130,184 @@ function sheetGroupRename(){
   });
 }
 
+/* ---------- quick add ----------
+   The raised + in the bar. One sheet, top to bottom: how much, what for,
+   which group, who paid, who it was for. Every group is already listed and
+   the one you were last in is picked; if the right group is not there it can
+   be made on the spot, and so can a person - so adding an expense never means
+   leaving to set something up first and finding your way back. */
+let QA_LAST = null;          // the group used last time, picked first next time
+
+/* A group's people, each name once. Somebody added from this sheet is shown
+   straight away, before the database's own copy of them arrives - and for that
+   moment both copies are in the list. Counted twice, they would be split twice
+   and charged twice. */
+function qaPeople(gid){ return [...new Set(names(gid))]; }
+
+function sheetQuickAdd(){
+  if(!USER || !remote) return;
+  let gid = CURRENT || QA_LAST || null;
+  if(gid && !JOINED.some(g=>g.id===gid)) gid = null;
+  if(!gid && JOINED.length===1) gid = JOINED[0].id;
+  let payer = null;
+  let picked = {};
+  let pickedFor = null;      // which group `picked` was filled for
+
+  openSheet("Quick add", (b)=>{
+    b.innerHTML =
+      '<div class="field"><label for="qaAmt">Amount</label>'+
+        '<div class="qa-money"><span aria-hidden="true">$</span>'+
+        '<input id="qaAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'+
+      '<div class="field"><label for="qaDesc">What was it for?</label>'+
+        '<input id="qaDesc" type="text" autocomplete="off" placeholder="Dinner, petrol, tickets…"></div>'+
+      '<div class="field"><label>Group</label><div class="chips" id="qaGroups"></div>'+
+        '<div class="qa-new" id="qaNewGroup" hidden>'+
+          '<input id="qaGroupName" type="text" autocomplete="off" placeholder="New group name">'+
+          '<button class="btn p" id="qaGroupGo" type="button">Create</button></div></div>'+
+      '<div id="qaWho"></div>'+
+      '<button class="btn p wide" id="qaSave" type="button">Add expense</button>';
+
+    function drawGroups(){
+      const host=$("qaGroups"); host.innerHTML="";
+      JOINED.slice().sort((a,c)=>groupName(a.id).localeCompare(groupName(c.id))).forEach(g=>{
+        const ch=el("button","chip"); ch.type="button";
+        ch.textContent=groupName(g.id);
+        ch.setAttribute("aria-pressed", g.id===gid ? "true" : "false");
+        ch.addEventListener("click", ()=>{ gid=g.id; drawGroups(); drawWho(); });
+        host.appendChild(ch);
+      });
+      const nw=el("button","chip add"); nw.type="button";
+      nw.innerHTML='<span class="ms" aria-hidden="true" style="font-size:17px">add</span>New group';
+      nw.addEventListener("click", ()=>{
+        $("qaNewGroup").hidden = !$("qaNewGroup").hidden;
+        if(!$("qaNewGroup").hidden) $("qaGroupName").focus();
+      });
+      host.appendChild(nw);
+    }
+
+    function drawWho(){
+      const host=$("qaWho"); host.innerHTML="";
+      if(!gid){
+        host.innerHTML='<p class="fine">Pick a group above, or make a new one.</p>';
+        return;
+      }
+      const ppl = qaPeople(gid);
+      const me = meIn(gid) || ppl[0] || null;
+      // A different group has different people, so the choices start over.
+      if(pickedFor!==gid){
+        picked={}; ppl.forEach(n=>picked[n]=true);
+        payer = me; pickedFor = gid;
+      }
+      if(payer && ppl.indexOf(payer)<0) payer = me;
+
+      host.innerHTML =
+        '<div class="field"><label>Paid by</label><div class="chips" id="qaPayer"></div></div>'+
+        '<div class="field"><label>Split equally between</label><div class="chips" id="qaSplit"></div>'+
+          '<div class="qa-new" id="qaNewPerson" hidden>'+
+            '<input id="qaPersonName" type="text" autocomplete="off" placeholder="Their name">'+
+            '<button class="btn p" id="qaPersonGo" type="button">Add</button></div>'+
+          '<p class="qa-each" id="qaEach"></p></div>';
+
+      ppl.forEach(n=>{
+        const c=el("button","chip"); c.type="button"; c.textContent = n===me ? n+" (you)" : n;
+        c.setAttribute("aria-pressed", n===payer ? "true" : "false");
+        c.addEventListener("click", ()=>{ payer=n; drawWho(); });
+        $("qaPayer").appendChild(c);
+      });
+
+      ppl.forEach(n=>{
+        const c=el("button","chip"); c.type="button"; c.textContent = n===me ? n+" (you)" : n;
+        c.setAttribute("aria-pressed", picked[n] ? "true" : "false");
+        c.addEventListener("click", ()=>{ picked[n]=!picked[n]; drawWho(); });
+        $("qaSplit").appendChild(c);
+      });
+      const ap=el("button","chip add"); ap.type="button";
+      ap.innerHTML='<span class="ms" aria-hidden="true" style="font-size:17px">person_add</span>Person';
+      ap.addEventListener("click", ()=>{
+        $("qaNewPerson").hidden = !$("qaNewPerson").hidden;
+        if(!$("qaNewPerson").hidden) $("qaPersonName").focus();
+      });
+      $("qaSplit").appendChild(ap);
+
+      $("qaPersonGo").addEventListener("click", addPerson);
+      $("qaPersonName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addPerson(); } });
+      each();
+    }
+
+    // What each person's share comes to, updated as the amount is typed.
+    function each(){
+      const out=$("qaEach"); if(!out) return;
+      const amt=Number($("qaAmt").value)||0;
+      const n=Object.keys(picked).filter(k=>picked[k]).length;
+      out.textContent = n && amt>0 ? money(Math.round(amt/n*100)/100)+" each, split between "+n
+                      : n ? "Split between "+n : "Pick at least one person";
+    }
+
+    function addPerson(){
+      const nm=$("qaPersonName").value.trim();
+      if(!nm) return toast("Enter a name");
+      if(qaPeople(gid).some(x=>x.toLowerCase()===nm.toLowerCase())) return toast(nm+" is already in this group");
+      const rec={n:nm, c:freeColour(gid)};
+      // Shown straight away; the database's own copy replaces this when it lands.
+      DATA[gid]=DATA[gid]||{}; DATA[gid].people=DATA[gid].people||{};
+      DATA[gid].people["qa"+uid()]=rec;
+      picked[nm]=true;
+      push("trips/"+gid+"/people", rec);
+      toast(nm+" added to "+groupName(gid));
+      drawWho();
+    }
+
+    function createGroup(){
+      const nm=$("qaGroupName").value.trim();
+      if(!nm) return toast("Give the group a name");
+      const id=slug(nm)+"-"+Math.random().toString(36).slice(2,6);
+      const people={};
+      people["m0"+uid().slice(-4)]={n:USER.name, c:PALETTE[0], uid:USER.uid, email:USER.email, photo:USER.photo||null};
+      const meta={name:nm, type:"other", at:Date.now(), by:USER.name, byUid:USER.uid};
+      // The creator goes on the membership list the rules read, or they could
+      // not open the group they have just made.
+      set("trips/"+id, {meta:meta, people:people, uids:{[USER.uid]:true}}).then(()=>{
+        DATA[id]={meta:meta, people:people, uids:{[USER.uid]:true}};
+        rememberGroup(id, nm); watchGroup(id); claimAsked[id]=true;
+        gid=id;
+        $("qaNewGroup").hidden=true; $("qaGroupName").value="";
+        drawGroups(); drawWho();
+        toast(nm+" created");
+      });
+    }
+
+    function save(){
+      const amt=Math.round((Number($("qaAmt").value)||0)*100)/100;
+      const desc=$("qaDesc").value.trim();
+      if(!(amt>0)) return toast("Enter an amount");
+      if(!desc) return toast("Say what it was for");
+      if(!gid) return toast("Pick a group");
+      const ppl=qaPeople(gid);
+      const between=ppl.filter(n=>picked[n]);
+      if(!between.length) return toast("Pick who it is split between");
+      if(!payer || ppl.indexOf(payer)<0) return toast("Pick who paid");
+      const rec={ desc:desc, amount:amt, payer:payer, mode:"equal", between:between, vals:{},
+                  cat:"general", note:"", at:Date.now(),
+                  by:(meIn(gid)||USER.name), byUid:USER.uid };
+      const where=gid;
+      $("qaSave").disabled=true;
+      push("trips/"+where+"/expenses", rec).then(()=>{
+        notify("expense.add", where, rec);
+        QA_LAST=where;
+        closeSheet();
+        toast("Added to "+groupName(where));
+      }).catch(()=>{ $("qaSave").disabled=false; });
+    }
+
+    drawGroups(); drawWho();
+    $("qaAmt").addEventListener("input", each);
+    $("qaGroupGo").addEventListener("click", createGroup);
+    $("qaGroupName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); createGroup(); } });
+    $("qaSave").addEventListener("click", save);
+    setTimeout(()=>{ const a=$("qaAmt"); if(a) a.focus(); }, 90);
+  }, render);
+}
+
 /* =========================== PRINT =========================== */
 function doPrint(){
   const gid=CURRENT; if(!gid) return;
@@ -4189,13 +4382,9 @@ $("gmenuBtn").addEventListener("click", sheetGroupMenu);
 $("sheetClose").addEventListener("click", closeSheet);
 $("scrim").addEventListener("click", closeSheet);
 $("fab").addEventListener("click", ()=>{ CURRENT ? sheetExpense(null) : sheetGroupNew(); });
-// The raised button in the bar adds an expense wherever you are; inside a
-// group that group is the answer, and outside one it asks which.
-$("navAdd").addEventListener("click", ()=>{
-  if(CURRENT) sheetExpense(null);
-  else if(TAB==="groups") sheetGroupNew();   // on the groups screen, a group
-  else addExpenseAnywhere();
-});
+// The raised + is the quick way to add an expense from anywhere. Groups and
+// people can be made from inside it, so it no longer changes meaning by screen.
+$("navAdd").addEventListener("click", sheetQuickAdd);
 $("meBtn").addEventListener("click", ()=>{
   ADMIN_VIEW=false; CURRENT=null; TAB="account"; window.scrollTo(0,0); render();
 });
