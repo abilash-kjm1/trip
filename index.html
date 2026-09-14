@@ -1038,6 +1038,59 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
+/* ---- Add an expense on a group's page: amount first, one line of choices -- */
+.qa2{ padding:var(--s4); }
+.qa2 .af-head{ display:flex; align-items:center; justify-content:space-between; gap:var(--s3);
+  margin:0 2px var(--s3); }
+.qa2 .ah{ display:block; margin:0; font-family:var(--serif); font-size:21px; font-weight:600;
+  letter-spacing:-.01em; color:var(--ink); text-align:left; }
+.af-more{ border:0; background:transparent; padding:6px 2px; font:inherit; font-size:13px;
+  font-weight:600; color:var(--apricot-dk); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.af-main{ display:flex; gap:var(--s2); align-items:stretch; }
+.af-amt, .af-desc{ min-height:56px; border-radius:14px; background:var(--surface);
+  border:1px solid rgba(180,112,62,.24); transition:border-color .15s, box-shadow .15s; }
+.af-amt{ flex:0 0 40%; display:flex; align-items:center; gap:4px; padding:0 14px; margin:0; cursor:text; }
+.af-cur{ font-size:22px; font-weight:600; color:var(--ink-3); }
+.af-amt input{ flex:1; min-width:0; width:100%; min-height:0; border:0; background:transparent;
+  padding:0; box-shadow:none; font:inherit; font-size:26px; font-weight:700; letter-spacing:-.02em;
+  color:var(--ink); font-variant-numeric:tabular-nums; outline:none; -moz-appearance:textfield; }
+.af-amt input::-webkit-outer-spin-button, .af-amt input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.af-desc{ flex:1; min-width:0; padding:0 14px; font:inherit; font-size:16px; color:var(--ink); outline:none; }
+.af-amt:focus-within, .af-desc:focus{ border-color:var(--apricot-dk); box-shadow:0 0 0 3px rgba(238,181,134,.35); }
+.af-sum{ display:flex; flex-wrap:wrap; gap:8px; margin:var(--s3) 0 0; }
+.af-pill{ display:inline-flex; align-items:center; gap:4px; padding:7px 9px 7px 12px; border-radius:999px;
+  border:1px solid rgba(180,112,62,.22); background:rgba(255,255,255,.72); font:inherit; font-size:13.5px;
+  color:var(--ink-2); cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:background .15s, color .15s, border-color .15s; }
+span.af-pill{ cursor:default; padding-right:12px; }
+.af-pill b{ font-weight:700; color:var(--ink); }
+.af-pill .ms{ font-size:18px; color:var(--ink-3); transition:transform .2s; }
+.af-pill[aria-expanded="true"]{ background:var(--ink); border-color:var(--ink); color:rgba(252,250,245,.72); }
+.af-pill[aria-expanded="true"] b, .af-pill[aria-expanded="true"] .ms{ color:var(--cream); }
+.af-pill[aria-expanded="true"] .ms{ transform:rotate(180deg); }
+.af-pill:focus:not(:focus-visible){ outline:none; }
+.af-panel{ margin:var(--s2) 0 0; padding:12px; border-radius:14px; background:rgba(255,255,255,.55); }
+.af-panel[hidden]{ display:none; }
+.af-panel .chips{ margin:0; }
+.af-hint{ display:flex; align-items:center; justify-content:space-between; margin:0 2px 8px;
+  font-size:12.5px; font-weight:600; color:var(--ink-3); }
+.af-link{ border:0; background:transparent; padding:2px 0; font:inherit; font-size:12.5px; font-weight:600;
+  color:var(--apricot-dk); cursor:pointer; }
+.af-foot{ display:flex; align-items:center; justify-content:space-between; gap:var(--s3); margin-top:var(--s4); }
+.af-each{ font-size:13px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.af-foot .btn{ margin:0; min-width:160px; }
+@media (max-width:520px){
+  .af-main{ flex-direction:column; }
+  .af-amt{ flex-basis:auto; }
+  .af-foot{ flex-direction:column-reverse; align-items:stretch; gap:8px; }
+  .af-foot .btn{ width:100%; }
+  .af-each{ text-align:center; }
+}
+:root[data-theme="purple"] .af-amt, :root[data-theme="purple"] .af-desc,
+:root[data-theme="purple"] .af-pill{ border-color:rgba(109,63,191,.20); }
+:root[data-theme="purple"] .af-amt:focus-within, :root[data-theme="purple"] .af-desc:focus{
+  border-color:#6D3FBF; box-shadow:0 0 0 3px rgba(160,120,240,.28); }
+
 /* ---- Balances: you first, then most owed back down to most owing ---------- */
 .ballist{ padding:4px 0; overflow:hidden; }
 .balrow{ gap:12px; }
@@ -2342,79 +2395,139 @@ function sectionAdd(main, gid){
   const sig=gid+"|"+ppl.join("|")+"|"+(ME||"")+"|"+(isAdmin()?"admin":"");
   if(FORM && FORM.sig===sig){ main.appendChild(FORM.node); FORM.refresh(); return; }
 
-  const card=el("div","card pad addform");
-  card.innerHTML=
-    '<h2 class="ah"><span class="ms" aria-hidden="true">receipt_long</span>Add an expense</h2>'+
-    '<p class="asub">Who paid, how much, and who it was for.</p>'+
-    '<div class="field"><label for="afDesc">Description</label>'+
-    '<input id="afDesc" type="text" autocomplete="off"></div>'+
-    '<div class="arow">'+
-      '<div class="field" style="flex:1 1 150px"><label for="afAmt">Amount (CAD)</label>'+
-      '<input id="afAmt" type="number" inputmode="decimal" step="0.01" min="0"></div>'+
-      '<div class="field" style="flex:1 1 150px"><label for="afPayer">Paid by</label>'+
-      '<select id="afPayer"></select></div>'+
-    '</div>'+
-    '<p class="asub" style="margin:4px 0 10px">Split between <span id="afCount"></span></p>'+
-    '<div class="chips" id="afSplit"></div>'+
-    '<div class="btnrow" style="margin-top:18px">'+
-      '<button class="btn p" id="afAdd">Add expense</button>'+
-      '<button class="btn s" id="afAll">Select everyone</button>'+
-    '</div>'+
-    '<button class="linkbtn" id="afMore">More options: category, date, uneven split</button>';
-  main.appendChild(card);
-
+  /* Amount first, then what it was for, then one line saying who paid and who
+     it is split between. The usual case - I paid, split with everyone - needs
+     two fields and one tap. Changing either choice opens a small panel under
+     that line, and only then. */
+  const allowed = payersAllowed(gid, ppl);   // only whoever paid adds it; the admin may add for anyone
+  let payer = allowed.indexOf(ME)>-1 ? ME : (allowed[0] || "");
   const sel={}; ppl.forEach(n=> sel[n]=true );
+  let open = null;                            // "payer" | "split" | null
 
-  function count(){
+  const card=el("div","card addform qa2");
+  card.innerHTML=
+    '<div class="af-head"><h2 class="ah">Add an expense</h2>'+
+      '<button class="af-more" id="afMore" type="button">More options</button></div>'+
+    '<div class="af-main">'+
+      '<label class="af-amt"><span class="af-cur" aria-hidden="true">$</span>'+
+        '<input id="afAmt" type="number" inputmode="decimal" step="0.01" min="0" '+
+        'placeholder="0.00" aria-label="Amount in CAD"></label>'+
+      '<input id="afDesc" class="af-desc" type="text" autocomplete="off" '+
+        'placeholder="What was it for?" aria-label="What was it for?">'+
+    '</div>'+
+    '<div class="af-sum" id="afSum"></div>'+
+    '<div class="af-panel" id="afPanel" hidden></div>'+
+    '<div class="af-foot"><span class="af-each" id="afEach"></span>'+
+      '<button class="btn p" id="afAdd" type="button">Add expense</button></div>';
+  main.appendChild(card);
+  const q=(id)=> card.querySelector("#"+id);
+
+  const nameOf=(n)=> n===ME ? "you" : n;
+  function splitLabel(){
     const k=ppl.filter(n=>sel[n]).length;
-    card.querySelector("#afCount").textContent = ppl.length ? "("+k+" of "+ppl.length+")" : "";
-  }
-  function drawChips(){
-    const host=card.querySelector("#afSplit"); host.innerHTML="";
-    ppl.forEach(n=>{
-      const c=el("button","chip"); c.type="button";
-      c.innerHTML='<span class="dot" style="background:'+colorOf(n,gid)+'"></span>'+esc(n);
-      c.setAttribute("aria-pressed", sel[n]?"true":"false");
-      c.addEventListener("click", ()=>{ sel[n]=!sel[n]; c.setAttribute("aria-pressed", sel[n]?"true":"false"); count(); });
-      host.appendChild(c);
-    });
-    count();
+    if(!k) return "nobody yet";
+    if(k===ppl.length) return ppl.length>1 ? "everyone" : nameOf(ppl[0]);
+    if(k===1){ const only=ppl.filter(n=>sel[n])[0]; return "just "+nameOf(only); }
+    return k+" of "+ppl.length;
   }
 
-  const payer=card.querySelector("#afPayer");
-  // Only whoever paid adds it; the administrator may add for anyone.
-  const allowed = payersAllowed(gid, ppl);
-  payer.innerHTML = allowed.length
-    ? allowed.map(n=>'<option value="'+esc(n)+'"'+(n===ME?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")
-    : '<option value="">'+(ppl.length ? "Say which name is yours first" : "Add people first")+'</option>';
-  payer.disabled = allowed.length<=1;
-  drawChips();
-  card.querySelector("#afAll").addEventListener("click", ()=>{ ppl.forEach(n=> sel[n]=true ); drawChips(); });
-  card.querySelector("#afMore").addEventListener("click", ()=> sheetExpense(null) );
-  card.querySelector("#afAdd").addEventListener("click", ()=>{
-    const d=card.querySelector("#afDesc").value.trim();
-    const a=Math.round((Number(card.querySelector("#afAmt").value)||0)*100)/100;
+  function draw(){
+    // The line of choices.
+    const sum=q("afSum"); sum.innerHTML="";
+    if(!allowed.length){
+      const b=el("button","af-pill"); b.type="button";
+      b.innerHTML=(ppl.length ? "Say which name is <b>yours</b>" : "Add <b>people</b> first");
+      b.addEventListener("click", ()=> ppl.length ? sheetClaim(gid) : sheetMembers() );
+      sum.appendChild(b);
+    } else if(allowed.length===1){
+      sum.appendChild(el("span","af-pill", "Paid by <b>"+esc(nameOf(payer))+"</b>"));
+    } else {
+      const b=el("button","af-pill"); b.type="button";
+      b.innerHTML='Paid by <b>'+esc(nameOf(payer))+'</b><span class="ms" aria-hidden="true">expand_more</span>';
+      b.setAttribute("aria-expanded", open==="payer" ? "true" : "false");
+      b.addEventListener("click", ()=>{ open = open==="payer" ? null : "payer"; draw(); });
+      sum.appendChild(b);
+    }
+    if(ppl.length){
+      const b=el("button","af-pill"); b.type="button";
+      b.innerHTML='Split between <b>'+esc(splitLabel())+'</b><span class="ms" aria-hidden="true">expand_more</span>';
+      b.setAttribute("aria-expanded", open==="split" ? "true" : "false");
+      b.addEventListener("click", ()=>{ open = open==="split" ? null : "split"; draw(); });
+      sum.appendChild(b);
+    }
+
+    // The panel for whichever choice is open.
+    const panel=q("afPanel"); panel.innerHTML=""; panel.hidden = !open;
+    if(open==="payer"){
+      panel.appendChild(el("p","af-hint","Who paid?"));
+      const chips=el("div","chips");
+      allowed.forEach(n=>{
+        const c=el("button","chip"); c.type="button";
+        c.innerHTML='<span class="dot" style="background:'+colorOf(n,gid)+'"></span>'+esc(n)+(n===ME?" (you)":"");
+        c.setAttribute("aria-pressed", n===payer ? "true" : "false");
+        c.addEventListener("click", ()=>{ payer=n; open=null; draw(); });
+        chips.appendChild(c);
+      });
+      panel.appendChild(chips);
+    } else if(open==="split"){
+      const all = ppl.every(n=>sel[n]);
+      const hint=el("p","af-hint");
+      hint.innerHTML='Who was it for? <button class="af-link" type="button">'+(all ? "Clear" : "Everyone")+'</button>';
+      hint.querySelector("button").addEventListener("click", ()=>{ ppl.forEach(n=> sel[n]=!all ); draw(); });
+      panel.appendChild(hint);
+      const chips=el("div","chips");
+      ppl.forEach(n=>{
+        const c=el("button","chip"); c.type="button";
+        c.innerHTML='<span class="dot" style="background:'+colorOf(n,gid)+'"></span>'+esc(n)+(n===ME?" (you)":"");
+        c.setAttribute("aria-pressed", sel[n] ? "true" : "false");
+        c.addEventListener("click", ()=>{ sel[n]=!sel[n]; draw(); });
+        chips.appendChild(c);
+      });
+      panel.appendChild(chips);
+    }
+    each();
+  }
+
+  // What each person's share comes to, as the amount is typed.
+  function each(){
+    const a=Number(q("afAmt").value)||0, k=ppl.filter(n=>sel[n]).length;
+    q("afEach").textContent = a>0 && k ? money(Math.round(a/k*100)/100)+" each · "+k+(k===1?" person":" people") : "";
+  }
+
+  function add(){
+    const d=q("afDesc").value.trim();
+    const a=Math.round((Number(q("afAmt").value)||0)*100)/100;
     const between=ppl.filter(n=>sel[n]);
     if(!ppl.length) return toast("Add people to the group first");
-    if(!payer.value || allowed.indexOf(payer.value)<0){
+    if(!payer || allowed.indexOf(payer)<0){
       toast("Say which name in this group is yours first");
       return sheetClaim(gid);
     }
-    if(!d) return toast("Give it a description");
-    if(!(a>0)) return toast("Enter an amount");
-    if(!between.length) return toast("Pick at least one person to split between");
-    push("trips/"+gid+"/expenses", {desc:d, amount:a, payer:payer.value, mode:"equal",
+    if(!(a>0)){ q("afAmt").focus(); return toast("Enter an amount"); }
+    if(!d){ q("afDesc").focus(); return toast("Say what it was for"); }
+    if(!between.length){ open="split"; draw(); return toast("Pick at least one person to split between"); }
+    q("afAdd").disabled=true;
+    push("trips/"+gid+"/expenses", {desc:d, amount:a, payer:payer, mode:"equal",
       between:between, vals:{}, cat:"general", note:"", at:Date.now(),
       by:ME||USER.name, byUid:USER.uid})
       .then(()=>{
         notify("expense.add", gid, {desc:d, amount:a});
-        card.querySelector("#afDesc").value=""; card.querySelector("#afAmt").value="";
-        ppl.forEach(n=> sel[n]=true ); drawChips();
+        q("afDesc").value=""; q("afAmt").value="";
+        ppl.forEach(n=> sel[n]=true ); open=null; draw();
         toast("Expense added");
-      });
-  });
+      })
+      .finally(()=>{ q("afAdd").disabled=false; });
+  }
 
-  FORM={sig:sig, node:card, refresh:count};
+  q("afAmt").addEventListener("input", each);
+  [q("afAmt"), q("afDesc")].forEach(i=> i.addEventListener("keydown", e=>{
+    if(e.key==="Enter"){ e.preventDefault(); add(); }
+  }));
+  q("afAdd").addEventListener("click", add);
+  q("afMore").addEventListener("click", ()=> sheetExpense(null) );
+  draw();
+
+  FORM={sig:sig, node:card, refresh:draw};
 }
 
 /* ---------- expenses, with the filters the tracker had ---------- */
