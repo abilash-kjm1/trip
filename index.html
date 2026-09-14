@@ -2129,6 +2129,20 @@ function upd(path, obj){
   if(!remote) return Promise.resolve();
   return remote.update(ref(path), obj).catch(e=>toast("Could not save: "+e.message));
 }
+/* The same write, but a refusal stays a refusal. upd() above reports an error
+   and then carries on as if it had worked - fine for background writes, wrong
+   for a form that goes on to say "saved": the screen showed details the
+   database had turned down, and a refresh took them away. */
+function updStrict(path, obj){
+  if(!remote) return Promise.reject(new Error("Not signed in yet"));
+  return remote.update(ref(path), obj);
+}
+function writeError(e){
+  const why=String((e && (e.code || e.message)) || "");
+  return /permission/i.test(why)
+    ? "The database refused this. Publish the updated rules in Firebase, then try again."
+    : "Could not save: "+((e && e.message) || "try again");
+}
 
 /* ---------------- the activity outbox ----------------
    The browser holds no mail key and can send nothing. It leaves a note here
@@ -3192,16 +3206,16 @@ function viewInterac(main){
     if(!name) return toast("Enter the name on your Interac account");
     if(!etxEmailOk(handle) && !etxPhoneOk(handle)) return toast("Enter a valid email, or a 10-digit phone number");
     const rec={name, handle: etxEmailOk(handle) ? handle.toLowerCase() : etxPhone(handle), at:Date.now()};
-    upd("directory/"+USER.uid, {pay:rec}).then(()=>{
+    updStrict("directory/"+USER.uid, {pay:rec}).then(()=>{
       DIRECTORY[USER.uid]=Object.assign({}, DIRECTORY[USER.uid]||{}, {pay:rec});
       toast("Interac details saved"); render();
-    });
+    }, e=> toast(writeError(e)) );
   });
   if($("ixClear")) $("ixClear").addEventListener("click", ()=>{
-    upd("directory/"+USER.uid, {pay:null}).then(()=>{
+    updStrict("directory/"+USER.uid, {pay:null}).then(()=>{
       if(DIRECTORY[USER.uid]) delete DIRECTORY[USER.uid].pay;
       toast("Interac details removed"); render();
-    });
+    }, e=> toast(writeError(e)) );
   });
 
   // The bank app the Pay screen offers to open.
@@ -3294,19 +3308,19 @@ function sheetEtxFor(uid, name){
       (cur ? '<button class="btn s wide" id="axDel" type="button" style="margin-top:10px">Remove their details</button>' : '');
     $("axName").value = (cur&&cur.name) || tidyName(raw.name||"") || name;
     $("axHandle").value = (cur&&cur.handle) || String(raw.handle||"");
-    const failed = ()=> toast("Could not save - publish the updated database rules first");
+    const failed = (e)=> toast(writeError(e));
     $("axSave").addEventListener("click", ()=>{
       const rec=etxRecord($("axName").value, $("axHandle").value);
       if(typeof rec==="string") return toast(rec);
       rec.by=USER.uid;
       $("axSave").disabled=true;
-      Promise.resolve(upd("directory/"+uid, {pay:rec})).then(()=>{
+      updStrict("directory/"+uid, {pay:rec}).then(()=>{
         DIRECTORY[uid]=Object.assign({}, DIRECTORY[uid]||{}, {pay:rec});
         closeSheet(); toast(name+"'s Interac details saved"); render();
-      }, ()=>{ $("axSave").disabled=false; failed(); });
+      }, (e)=>{ $("axSave").disabled=false; failed(e); });
     });
     if($("axDel")) $("axDel").addEventListener("click", ()=>{
-      Promise.resolve(upd("directory/"+uid, {pay:null})).then(()=>{
+      updStrict("directory/"+uid, {pay:null}).then(()=>{
         if(DIRECTORY[uid]) delete DIRECTORY[uid].pay;
         closeSheet(); toast(name+"'s Interac details removed"); render();
       }, failed);
