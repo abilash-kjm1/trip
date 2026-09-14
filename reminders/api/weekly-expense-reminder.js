@@ -122,31 +122,82 @@ export default async function handler(req, res) {
       }
     }
 
-    // Keep each group's membership index in step with its people records.
-    // The rules read trips/{gid}/uids to decide who may open a group, because
-    // a rule cannot scan a list of people looking for a uid. Every group that
-    // existed before that index did has none, and its members would be shut
-    // out of their own ledger, so fill it in from what the people records
-    // already say.
-    if (!dry) {
+    // Keep groups, invited seats and everybody's pointers to groups in step.
+    //
+    // Membership: the rules read trips/{gid}/uids to decide who may open a
+    // group, because a rule cannot scan a list of people for an account.
+    //
+    // Invited seats: somebody invited by email has a seat with their address
+    // on it and no account. Under the membership rules they cannot read the
+    // group to claim that seat themselves - they are not on the list - so an
+    // email invitation could never complete. Once they have signed in and been
+    // approved, their seat is linked here and the group put on their list.
+    //
+    // Stale pointers: leaving or deleting a group left entries behind in
+    // people's lists and in the invites index, and the app put the group back
+    // from them every time it loaded. Pointers to groups that no longer exist
+    // are removed.
+    //
+    // A dry run reports what it would do and changes nothing.
+    {
       const trips = await readPath("trips");
+      const invites = await readPath("invites");
+      const byEmail = {};
+      Object.keys(users).forEach((uid) => {
+        const e = String(((users[uid] || {}).profile || {}).email || "").trim().toLowerCase();
+        if (e && (access[uid] || {}).status === "approved") byEmail[e] = uid;
+      });
+      const report = { linked: [], membership: 0, stale: [] };
+      const writes = {};
+
       for (const gid of Object.keys(trips)) {
         const g = trips[gid] || {};
+        const gname = (g.meta && g.meta.name) || gid;
         const people = g.people || {};
         const want = {};
         Object.keys(people).forEach((k) => {
           const uid = people[k] && people[k].uid;
           if (typeof uid === "string" && uid) want[uid] = true;
         });
+        Object.keys(people).forEach((k) => {
+          const p = people[k] || {};
+          const mail = String(p.invite || "").trim().toLowerCase();
+          const uid = mail && !p.uid ? byEmail[mail] : null;
+          if (!uid || want[uid]) return;          // nobody to link, or already seated
+          want[uid] = true;
+          writes["trips/" + gid + "/people/" + k + "/uid"] = uid;
+          writes["trips/" + gid + "/people/" + k + "/email"] = mail;
+          writes["users/" + uid + "/groups/" + gid] = { name: gname, at: Date.now() };
+          report.linked.push(gname + ": " + (p.n || mail) + " <- " + mail);
+        });
         const have = g.uids || {};
-        const patch = {};
-        Object.keys(want).forEach((u) => { if (!have[u]) patch[u] = true; });
-        // Somebody whose account was unlinked keeps no place on the list.
-        Object.keys(have).forEach((u) => { if (!want[u]) patch[u] = null; });
-        if (Object.keys(patch).length) {
-          await database().ref("trips/" + gid + "/uids").update(patch);
-          console.log("[members] " + gid + ": " + Object.keys(patch).length + " change(s)");
-        }
+        Object.keys(want).forEach((u) => { if (!have[u]) { writes["trips/" + gid + "/uids/" + u] = true; report.membership++; } });
+        Object.keys(have).forEach((u) => { if (!want[u]) { writes["trips/" + gid + "/uids/" + u] = null; report.membership++; } });
+      }
+
+      Object.keys(users).forEach((uid) => {
+        const who = (((users[uid] || {}).profile) || {}).email || uid;
+        Object.keys(((users[uid] || {}).groups) || {}).forEach((gid) => {
+          if (trips[gid]) return;
+          writes["users/" + uid + "/groups/" + gid] = null;
+          const nm = ((users[uid].groups[gid] || {}).name) || gid;
+          report.stale.push(who + " still lists deleted group \"" + nm + "\"");
+        });
+      });
+      Object.keys(invites).forEach((key) => {
+        Object.keys(invites[key] || {}).forEach((gid) => {
+          if (trips[gid]) return;
+          writes["invites/" + key + "/" + gid] = null;
+          const nm = ((invites[key][gid] || {}).name) || gid;
+          report.stale.push("invite for " + key.replace(/,/g, ".") + " to deleted group \"" + nm + "\"");
+        });
+      });
+
+      if (dry) {
+        log.housekeeping = report;
+      } else if (Object.keys(writes).length) {
+        await database().ref().update(writes);
+        console.log("[housekeeping] " + Object.keys(writes).length + " write(s) " + JSON.stringify(report));
       }
     }
 
