@@ -1589,7 +1589,7 @@ function everyoneIn(gid){
 }
 
 /* ---------------- who may change what ----------------
-   Anyone in a group can add. Only whoever added a line may change or remove
+   Only whoever paid may record it. Only whoever added a line may change or remove
    it - except the administrator, who may touch anything. Older rows predate
    uid stamping, so they fall back to matching the recorded name. */
 function addedByMe(rec){
@@ -1598,6 +1598,18 @@ function addedByMe(rec){
   return !!ME && rec.by===ME;
 }
 const canEdit = (rec) => isAdmin() || addedByMe(rec);
+
+/* Who may be named as the payer when recording something. Money goes into the
+   ledger under the name of whoever paid, so only they may put it there - if
+   Kelvin paid, Kelvin records it. The administrator may record for anyone.
+   Everybody else gets their own name only, and nobody at all until they have
+   said which name in the group is theirs. Used by every place that asks who
+   paid, so they cannot drift apart. */
+function payersAllowed(gid, ppl){
+  if(isAdmin()) return ppl.slice();
+  const me = meIn(gid);
+  return me && ppl.indexOf(me) > -1 ? [me] : [];
+}
 function ownerOf(rec){
   if(!rec) return "someone else";
   return rec.by || "someone else";
@@ -2193,7 +2205,9 @@ function sectionClaim(main, gid){
 let FORM=null;
 function sectionAdd(main, gid){
   const ppl=names(gid);
-  const sig=gid+"|"+ppl.join("|");
+  // The form is kept between redraws; who may be picked as the payer changes
+  // when somebody claims their name, so that belongs in what identifies it.
+  const sig=gid+"|"+ppl.join("|")+"|"+(ME||"")+"|"+(isAdmin()?"admin":"");
   if(FORM && FORM.sig===sig){ main.appendChild(FORM.node); FORM.refresh(); return; }
 
   const card=el("div","card pad addform");
@@ -2236,9 +2250,12 @@ function sectionAdd(main, gid){
   }
 
   const payer=card.querySelector("#afPayer");
-  payer.innerHTML = ppl.length
-    ? ppl.map(n=>'<option value="'+esc(n)+'"'+(n===ME?' selected':'')+'>'+esc(n)+'</option>').join("")
-    : '<option value="">Add people first</option>';
+  // Only whoever paid adds it; the administrator may add for anyone.
+  const allowed = payersAllowed(gid, ppl);
+  payer.innerHTML = allowed.length
+    ? allowed.map(n=>'<option value="'+esc(n)+'"'+(n===ME?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")
+    : '<option value="">'+(ppl.length ? "Say which name is yours first" : "Add people first")+'</option>';
+  payer.disabled = allowed.length<=1;
   drawChips();
   card.querySelector("#afAll").addEventListener("click", ()=>{ ppl.forEach(n=> sel[n]=true ); drawChips(); });
   card.querySelector("#afMore").addEventListener("click", ()=> sheetExpense(null) );
@@ -2247,6 +2264,10 @@ function sectionAdd(main, gid){
     const a=Math.round((Number(card.querySelector("#afAmt").value)||0)*100)/100;
     const between=ppl.filter(n=>sel[n]);
     if(!ppl.length) return toast("Add people to the group first");
+    if(!payer.value || allowed.indexOf(payer.value)<0){
+      toast("Say which name in this group is yours first");
+      return sheetClaim(gid);
+    }
     if(!d) return toast("Give it a description");
     if(!(a>0)) return toast("Enter an amount");
     if(!between.length) return toast("Pick at least one person to split between");
@@ -3268,7 +3289,18 @@ function sheetExpense(existing){
   if(!between.length) between=ppl.slice();
   let vals = Object.assign({}, (existing&&existing.vals)||{});
   let cat  = existing ? (existing.cat||"general") : "general";
-  const payerDefault = existing ? existing.payer : (ME && ppl.indexOf(ME)>-1 ? ME : ppl[0]);
+  // Only whoever paid may record it. Editing keeps the payer the row already
+  // has: changing who paid is for the administrator alone.
+  const payerChoices = existing
+    ? (isAdmin() ? ppl.concat(existing.payer && ppl.indexOf(existing.payer)<0 ? [existing.payer] : [])
+                 : [existing.payer])
+    : payersAllowed(gid, ppl);
+  if(!payerChoices.length){
+    toast("Say which name in this group is yours first");
+    return sheetClaim(gid);
+  }
+  const payerDefault = existing ? existing.payer : (payerChoices.indexOf(ME)>-1 ? ME : payerChoices[0]);
+  const payerLocked = payerChoices.length===1;
 
   const mayEdit = !existing || canEdit(existing);
   openSheet(existing?(mayEdit?"Edit expense":"Expense"):"Add an expense", (b)=>{
@@ -3278,9 +3310,11 @@ function sheetExpense(existing){
       '<div class="field"><label for="exAmt">Amount</label><div class="amtbig"><span class="cur">$</span>'+
       '<input id="exAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" value="'+
         (existing?esc(plain(Number(existing.amount)||0)):"")+'"></div></div>'+
-      '<div class="field"><label for="exPayer">Paid by</label><select id="exPayer">'+
-        ppl.map(n=>'<option value="'+esc(n)+'"'+(n===payerDefault?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
-      '</select></div>'+
+      '<div class="field"><label for="exPayer">Paid by</label><select id="exPayer"'+(payerLocked?' disabled':'')+'>'+
+        payerChoices.map(n=>'<option value="'+esc(n)+'"'+(n===payerDefault?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
+      '</select>'+
+      (payerLocked && !existing ? '<div class="help">You can only add what you paid. If someone else paid, they add it.</div>' : '')+
+      '</div>'+
       '<div class="field"><label>Category</label><div class="chips" id="exCats"></div></div>'+
       '<div class="field"><label>How to split</label><div class="seg" id="exMode">'+
         '<button type="button" data-m="equal">Equally</button>'+
@@ -3436,6 +3470,7 @@ function sheetExpense(existing){
         if(mode==="percent" && Math.abs(tot-100)>0.011) return toast("The percentages must add up to 100");
         if(mode==="shares"  && tot<=0)                  return toast("Give someone at least one share");
       }
+      if(payerChoices.indexOf($("exPayer").value)<0) return toast("You can only add what you paid");
       const rec={
         desc: desc, amount: amt, payer: $("exPayer").value, mode: mode,
         between: eff, vals: v, cat: cat, note: $("exNote").value.trim(),
@@ -3461,17 +3496,30 @@ function sheetSettle(from, to, amt, existing){
   const ppl=names(gid).slice();
   if(existing){ [existing.from, existing.to].forEach(n=>{ if(n && ppl.indexOf(n)<0) ppl.push(n); }); }
   if(ppl.length<2){ toast("You need at least two people"); return; }
-  from = from || (ME && ppl.indexOf(ME)>-1 ? ME : ppl[0]);
-  to   = to   || ppl.filter(n=>n!==from)[0] || ppl[0];
+  // Only whoever paid may record a payment. Editing keeps the payer the row
+  // already has. The administrator may record for anyone.
+  const fromChoices = existing ? (isAdmin() ? ppl : [existing.from]) : payersAllowed(gid, ppl);
+  if(!fromChoices.length){ toast("Say which name in this group is yours first"); return sheetClaim(gid); }
+  if(!existing && from && fromChoices.indexOf(from)<0){
+    toast("Only "+from+" can record a payment they made");
+    return;
+  }
+  from = from || (fromChoices.indexOf(ME)>-1 ? ME : fromChoices[0]);
+  const fromLocked = fromChoices.length===1;
+  // With who paid fixed, they cannot also be the one who received it.
+  const toChoices = fromLocked ? ppl.filter(n=>n!==from) : ppl;
+  if(!to || toChoices.indexOf(to)<0) to = toChoices.filter(n=>n!==from)[0] || toChoices[0];
   const mayEdit = !existing || canEdit(existing);
   openSheet(existing?(mayEdit?"Edit payment":"Payment"):"Record a payment", (b)=>{
     b.innerHTML=
       '<p class="lead">Use this when cash or a transfer has actually changed hands.</p>'+
-      '<div class="field"><label for="stFrom">Who paid</label><select id="stFrom">'+
-        ppl.map(n=>'<option value="'+esc(n)+'"'+(n===from?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
-      '</select></div>'+
+      '<div class="field"><label for="stFrom">Who paid</label><select id="stFrom"'+(fromLocked?' disabled':'')+'>'+
+        fromChoices.map(n=>'<option value="'+esc(n)+'"'+(n===from?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
+      '</select>'+
+      (fromLocked && !existing ? '<div class="help">You can only record a payment you made. If someone paid you, they record it.</div>' : '')+
+      '</div>'+
       '<div class="field"><label for="stTo">Who received it</label><select id="stTo">'+
-        ppl.map(n=>'<option value="'+esc(n)+'"'+(n===to?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
+        toChoices.map(n=>'<option value="'+esc(n)+'"'+(n===to?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
       '</select></div>'+
       '<div class="field"><label for="stAmt">Amount</label><div class="amtbig"><span class="cur">$</span>'+
       '<input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" value="'+(amt?esc(plain(amt)):"")+'"></div>'+
@@ -3523,6 +3571,7 @@ function sheetSettle(from, to, amt, existing){
       const a=Math.round((Number($("stAmt").value)||0)*100)/100;
       if(f===t) return toast("Pick two different people");
       if(!(a>0)) return toast("Enter an amount");
+      if(fromChoices.indexOf(f)<0) return toast("You can only record a payment you made");
       const rec={from:f, to:t, amount:a, note:$("stNote").value.trim(),
                  at:tsFromDate($("stDate").value, existing?existing.at:null),
                  by: existing ? (existing.by||ME||USER.name) : (ME||USER.name),
@@ -4510,16 +4559,25 @@ function sheetQuickAdd(){
         return;
       }
       const ppl = qaPeople(gid);
-      const me = meIn(gid) || ppl[0] || null;
+      const me = meIn(gid);
+      // Only whoever paid adds it; the administrator may add for anyone.
+      const payers = payersAllowed(gid, ppl);
+      const firstPayer = payers.indexOf(me)>-1 ? me : (payers[0] || null);
       // A different group has different people, so the choices start over.
       if(pickedFor!==gid){
         picked={}; ppl.forEach(n=>picked[n]=true);
-        payer = me; pickedFor = gid; personOpen = false;
+        payer = firstPayer; pickedFor = gid; personOpen = false;
       }
-      if(payer && ppl.indexOf(payer)<0) payer = me;
+      if(payers.indexOf(payer)<0) payer = firstPayer;
 
       host.innerHTML =
-        '<div class="field"><label>Paid by</label><div class="chips" id="qaPayer"></div></div>'+
+        '<div class="field"><label>Paid by</label><div class="chips" id="qaPayer"></div>'+
+          (payers.length===1 && !isAdmin()
+            ? '<div class="help">You can only add what you paid. If someone else paid, they add it.</div>' : '')+
+          (!payers.length
+            ? '<div class="help">Say which name in this group is yours first. '+
+              '<button class="linkbtn" id="qaClaim" type="button">Choose my name</button></div>' : '')+
+        '</div>'+
         '<div class="field"><label>Split equally between</label><div class="chips" id="qaSplit"></div>'+
           '<div class="qa-person" id="qaNewPerson" hidden>'+
             '<div id="qaPickWrap"><p class="qa-sub">Already in Settle — tap to add</p>'+
@@ -4529,12 +4587,13 @@ function sheetQuickAdd(){
               '<button class="btn p" id="qaPersonGo" type="button">Add</button></div></div>'+
           '<p class="qa-each" id="qaEach"></p></div>';
 
-      ppl.forEach(n=>{
+      payers.forEach(n=>{
         const c=el("button","chip"); c.type="button"; c.textContent = n===me ? n+" (you)" : n;
         c.setAttribute("aria-pressed", n===payer ? "true" : "false");
         c.addEventListener("click", ()=>{ payer=n; drawWho(); });
         $("qaPayer").appendChild(c);
       });
+      if($("qaClaim")) $("qaClaim").addEventListener("click", ()=> sheetClaim(gid) );
 
       ppl.forEach(n=>{
         const c=el("button","chip"); c.type="button"; c.textContent = n===me ? n+" (you)" : n;
@@ -4636,7 +4695,7 @@ function sheetQuickAdd(){
       const ppl=qaPeople(gid);
       const between=ppl.filter(n=>picked[n]);
       if(!between.length) return toast("Pick who it is split between");
-      if(!payer || ppl.indexOf(payer)<0) return toast("Pick who paid");
+      if(!payer || payersAllowed(gid, ppl).indexOf(payer)<0) return toast("You can only add what you paid");
       const rec={ desc:desc, amount:amt, payer:payer, mode:"equal", between:between, vals:{},
                   cat:"general", note:"", at:Date.now(),
                   by:(meIn(gid)||USER.name), byUid:USER.uid };
