@@ -1068,6 +1068,7 @@ button, input, select, textarea{ font-family:var(--f); }
   text-overflow:ellipsis; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .etx .etx-copy{ background:rgba(255,255,255,.75); }
 .etx-open{ margin-top:12px; }
+a.etx-open{ display:flex; align-items:center; justify-content:center; text-decoration:none; }
 .etx-pick{ display:block; margin:12px 0 0; border:0; background:transparent; padding:4px 0; font:inherit;
   font-size:13.5px; font-weight:600; color:var(--apricot-dk); cursor:pointer; }
 .etx-then{ margin:10px 0 0; font-size:12px; color:var(--ink-3); text-align:center; }
@@ -1898,12 +1899,18 @@ function inGroupAlready(gid, p, exceptKey){
    read them and only that person can change them. Checked on the way out as
    well as on the way in: whatever is in the database, only a plausible name
    and a real-looking address or phone number is ever shown. */
+/* iPhone: CIBC publishes its online-banking sign-in page as a universal link
+   for its app, so tapping it opens the app when it is installed and the
+   sign-in page when it is not. The others publish no such link for the app's
+   front door, so their App Store page opens instead, where Open is one tap. */
 const ETX_BANKS = [
-  {id:"cibc",       name:"CIBC",       pkg:"com.cibc.android.mobi",   web:"https://www.cibc.com/en/personal-banking.html"},
-  {id:"rbc",        name:"RBC",        pkg:"com.rbc.mobile.android",  web:"https://www.rbcroyalbank.com/"},
-  {id:"td",         name:"TD",         pkg:"com.td",                  web:"https://www.td.com/ca/en/personal-banking"},
-  {id:"scotiabank", name:"Scotiabank", pkg:"com.scotiabank.banking",  web:"https://www.scotiabank.com/ca/en/personal.html"},
-  {id:"bmo",        name:"BMO",        pkg:"com.bmo.mobile",          web:"https://www.bmo.com/en-ca/main/personal/"}
+  {id:"cibc",       name:"CIBC",       pkg:"com.cibc.android.mobi",   appstore:"351448953",
+   ios:"https://www.cibconline.cibc.com/ebm-resources/online-banking/client/index.html",
+   web:"https://www.cibc.com/en/personal-banking.html"},
+  {id:"rbc",        name:"RBC",        pkg:"com.rbc.mobile.android",  appstore:"407597290", web:"https://www.rbcroyalbank.com/"},
+  {id:"td",         name:"TD",         pkg:"com.td",                  appstore:"358790776", web:"https://www.td.com/ca/en/personal-banking"},
+  {id:"scotiabank", name:"Scotiabank", pkg:"com.scotiabank.banking",  appstore:"341151570", web:"https://www.scotiabank.com/ca/en/personal.html"},
+  {id:"bmo",        name:"BMO",        pkg:"com.bmo.mobile",          appstore:"429080319", web:"https://www.bmo.com/en-ca/main/personal/"}
 ];
 const etxEmailOk = (s)=> /^[^\s@<>"']{1,64}@[^\s@<>"']{1,190}\.[a-z]{2,24}$/i.test(String(s||""));
 const etxPhone   = (s)=> { const d=String(s||"").replace(/[^\d]/g,""); return d.length===11 && d[0]==="1" ? d.slice(1) : d; };
@@ -1919,18 +1926,23 @@ function etxClean(p){
 }
 function etxFor(uid){ return uid && DIRECTORY && DIRECTORY[uid] ? etxClean(DIRECTORY[uid].pay) : null; }
 function myBank(){ const id=(PREFS&&PREFS.bank)||""; return ETX_BANKS.find(b=>b.id===id) || null; }
-/* Open a bank's app. On Android, Chrome is asked for the app by its store id
-   and, if it cannot hand over, shows its store page - where Open is one more
-   tap. Everywhere else the bank's own site opens. No personal detail ever
-   goes into these addresses. */
-function etxOpenBank(bank){
-  if(!bank) return;
-  if(/Android/i.test(navigator.userAgent||"")){
+/* Where "Open <bank>" goes, per phone. It is a real link the person taps -
+   iOS only hands a web link to an app when it is tapped, not when a script
+   navigates. Android asks Chrome for the app by its store id and falls back
+   to the store page. iPhone uses the bank's universal link if it has one,
+   otherwise its App Store page. A computer gets the bank's site. No personal
+   detail ever goes into these addresses. */
+const etxIsIOS = ()=> /iPhone|iPad|iPod/i.test(navigator.userAgent||"") ||
+  (/Macintosh/i.test(navigator.userAgent||"") && (navigator.maxTouchPoints||0) > 1);
+function etxBankLink(bank){
+  if(!bank) return null;
+  const ua=navigator.userAgent||"";
+  if(/Android/i.test(ua)){
     const store="https://play.google.com/store/apps/details?id="+bank.pkg;
-    location.href="intent://#Intent;package="+bank.pkg+";S.browser_fallback_url="+encodeURIComponent(store)+";end";
-  } else {
-    window.open(bank.web, "_blank", "noopener");
+    return "intent://#Intent;package="+bank.pkg+";S.browser_fallback_url="+encodeURIComponent(store)+";end";
   }
+  if(etxIsIOS()) return bank.ios || ("https://apps.apple.com/ca/app/id"+bank.appstore);
+  return bank.web;
 }
 function etxCopy(text, label){
   const done=()=> toast((label||"Copied")+" copied");
@@ -3188,8 +3200,9 @@ function viewInterac(main){
   // The bank app the Pay screen offers to open.
   main.appendChild(el("div","sechead","Your bank app"));
   const bc=el("div","card pad etxbank");
-  bc.innerHTML='<p class="etx-sub">Pay opens this app after copying the details. Banks cannot be told who to pay, '+
-    'so you paste the email and amount in.</p><div class="chips" id="ixBanks"></div>';
+  bc.innerHTML='<p class="etx-sub">Pay copies the email and opens this app. Banks cannot be told who to pay, '+
+    'so you paste the email and amount in. On iPhone, CIBC opens straight away; the others open their App Store '+
+    'page, where Open is one more tap.</p><div class="chips" id="ixBanks"></div>';
   main.appendChild(bc);
   const cur=(PREFS&&PREFS.bank)||"";
   ETX_BANKS.concat([{id:"", name:"None"}]).forEach(b=>{
@@ -3943,7 +3956,7 @@ function drawEtx(host, gid, from, to, amount, existing){
       '<button class="etx-copy" type="button" data-c="h"><span class="ms" aria-hidden="true">content_copy</span>Copy</button></div>'+
     '<div class="etx-line"><span class="k">Amount</span><span class="v">'+(amt ? "$"+amt : "&mdash;")+'</span>'+
       (amt ? '<button class="etx-copy" type="button" data-c="a"><span class="ms" aria-hidden="true">content_copy</span>Copy</button>' : '')+'</div>'+
-    (bank ? '<button class="btn dark wide etx-open" type="button">Open '+esc(bank.name)+'</button>'
+    (bank ? '<a class="btn dark wide etx-open" target="_blank" rel="noopener" href="'+esc(etxBankLink(bank))+'">Open '+esc(bank.name)+'</a>'
           : '<button class="etx-pick" type="button">Choose your bank app</button>')+
     '<p class="etx-then">Send it in your bank app, then come back and record the payment below.</p>';
   host.appendChild(box);
@@ -3951,7 +3964,9 @@ function drawEtx(host, gid, from, to, amount, existing){
   if(hc) hc.addEventListener("click", ()=> etxCopy(/@/.test(d.handle) ? d.handle : d.handle.replace(/[^\d]/g,""), /@/.test(d.handle) ? "Email" : "Phone") );
   if(ac) ac.addEventListener("click", ()=> etxCopy(amt, "Amount") );
   const ob=box.querySelector(".etx-open");
-  if(ob) ob.addEventListener("click", ()=>{ etxCopy(/@/.test(d.handle) ? d.handle : d.handle.replace(/[^\d]/g,""), /@/.test(d.handle) ? "Email" : "Phone"); setTimeout(()=> etxOpenBank(bank), 350); });
+  // The tap follows the link itself, so the app can take it; the address is
+  // copied on the way, ready to paste into the bank's e-Transfer screen.
+  if(ob) ob.addEventListener("click", ()=>{ etxCopy(/@/.test(d.handle) ? d.handle : d.handle.replace(/[^\d]/g,""), /@/.test(d.handle) ? "Email" : "Phone"); });
   const pk=box.querySelector(".etx-pick");
   if(pk) pk.addEventListener("click", ()=>{ closeSheet(); CURRENT=null; TAB="interac"; window.scrollTo(0,0); render(); });
 }
