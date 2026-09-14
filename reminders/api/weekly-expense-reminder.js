@@ -171,6 +171,19 @@ export default async function handler(req, res) {
       log.directory = Object.keys(directory).length + " listed: " +
         (Object.keys(directory).map((u) => (directory[u] || {}).name).filter(Boolean).join(", ")
          || "nobody yet");
+      // Which rules are live. Everything else here reads with admin rights,
+      // which pass straight through the rules, so nothing else can tell
+      // whether a paste into the console actually took effect.
+      try {
+        const live = await database().getRules();
+        log.rules = /child\('uids'\)/.test(live)
+          ? "membership required - only people in a group can open it"
+          : /root\.child\('access'\)/.test(live)
+            ? "approval gate, but any approved account can open any group"
+            : "no approval gate on groups";
+      } catch (err) {
+        log.rules = "could not read: " + ((err && err.message) || String(err)).slice(0, 200);
+      }
       log.heartbeat = {
         lastRun: last ? new Date(last).toISOString() : "never",
         agoMins: last ? Math.round((at.getTime() - last) / 60000) : null,
