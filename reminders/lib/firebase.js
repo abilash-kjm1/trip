@@ -47,6 +47,20 @@ export async function readPath(path) {
   return (v && typeof v === "object") ? v : {};
 }
 
+/** Mark one outbox note as pushed, unless somebody already has. True only for
+    the one caller that got it - so /api/notify and the scheduler, running at
+    the same moment, never both send the same notification. */
+export async function claimNote(key) {
+  const token = "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const r = await database().ref("mail/queue/" + key).transaction((cur) => {
+    if (cur === null) return null;          // not cached yet, or already cleared
+    if (cur.pushed) return;                 // somebody else has it: abort
+    return { ...cur, pushed: token };
+  });
+  const v = r.snapshot && r.snapshot.val();
+  return !!(r.committed && v && v.pushed === token);
+}
+
 /** Delete one path. Used to clear notes the mailer has already acted on. */
 export async function removePath(path) {
   await database().ref(path).remove();

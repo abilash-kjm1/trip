@@ -87,6 +87,22 @@ export function answerMessage({ to, amount, ok, group, url, tag }) {
         url, tag, sticky: true };
 }
 
+/** Somebody added, changed or deleted an expense the reader is in. */
+export function expenseMessage({ kind, actor, desc, amount, group, share, paidByYou, url, tag }) {
+  const verb = kind === "expense.add" ? "added" : kind === "expense.edit" ? "changed" : "deleted";
+  const where = clip(group, 40);
+  let body;
+  if (kind === "expense.del") body = "Removed from " + where + ". Your balance has been updated.";
+  else if (paidByYou) body = "You paid · " + where;
+  else if (share != null && share > 0.004) body = "Your share " + money(share) + " · " + where;
+  else body = where;
+  return {
+    title: clip(actor, 30) + " " + verb + " " + clip(desc || "an expense", 40) +
+           (amount ? " · " + money(amount) : ""),
+    body, url, tag
+  };
+}
+
 /** A reminder to pay somebody back. */
 export function nudgeMessage({ from, amount, group, url, tag }) {
   return {

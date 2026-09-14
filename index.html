@@ -2965,7 +2965,33 @@ function notify(kind, gid, what){
   // Which payment it is about, so a phone can be asked about exactly that one.
   const r = what && what.ref;
   if(typeof r === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(r)) rec.ref = r;
-  try { remote.push(ref("mail/queue"), rec).catch(()=>{}); } catch(e){}
+  try {
+    const saved = remote.push(ref("mail/queue"), rec);
+    Promise.resolve(saved).catch(()=>{});
+    if(PUSH_NOW_KINDS[kind]) pushNow(saved);
+  } catch(e){}
+}
+
+/* Phone notifications straight away. Once the note is saved, the server is
+   asked to look at this account's own notes now rather than on its next pass.
+   It is only a nudge: the server checks who is asking, reads the notes itself
+   and decides who hears, and if this call never lands the pass sends them
+   anyway. Several saves in a moment make one call. */
+const PUSH_NOW_URL = "https://trip-xi-flax.vercel.app/api/notify";
+const PUSH_NOW_KINDS = {"payment.add":1, "payment.ask":1, "payment.got":1,
+                        "expense.add":1, "expense.edit":1, "expense.del":1};
+let pushNowT = null;
+const pushNowWait = [];
+function pushNow(saved){
+  pushNowWait.push(Promise.resolve(saved).catch(()=>{}));
+  clearTimeout(pushNowT);
+  pushNowT = setTimeout(()=>{
+    const waits = pushNowWait.splice(0);
+    Promise.all(waits)
+      .then(()=> (fb && fb.auth && fb.auth.currentUser) ? fb.auth.currentUser.getIdToken() : null)
+      .then(tok=> tok ? fetch(PUSH_NOW_URL, {method:"POST", headers:{Authorization:"Bearer "+tok}}) : null)
+      .catch(()=>{});
+  }, 600);
 }
 
 /* ---------------- linking an account to a name ---------------- */
@@ -3615,11 +3641,12 @@ function sectionAdd(main, gid){
     if(!d){ q("afDesc").focus(); return toast("Say what it was for"); }
     if(!between.length){ open="split"; draw(); return toast("Pick at least one person to split between"); }
     q("afAdd").disabled=true;
-    push("trips/"+gid+"/expenses", {desc:d, amount:a, payer:payer, mode:"equal",
+    const key="e"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    set("trips/"+gid+"/expenses/"+key, {desc:d, amount:a, payer:payer, mode:"equal",
       between:between, vals:{}, cat:"general", note:"", at:Date.now(),
       by:ME||USER.name, byUid:USER.uid})
       .then(()=>{
-        notify("expense.add", gid, {desc:d, amount:a});
+        notify("expense.add", gid, {desc:d, amount:a, ref:key});
         q("afDesc").value=""; q("afAmt").value="";
         ppl.forEach(n=> sel[n]=true ); open=null; draw();
         toast("Expense added");
@@ -5155,7 +5182,7 @@ function sheetExpense(existing){
     if(existing) $("exDel").addEventListener("click", ()=>{
       if(!confirm('Delete "'+existing.desc+'"? This removes it for everyone.')) return;
       del("trips/"+gid+"/expenses/"+existing.k);
-      notify("expense.del", gid, existing);
+      notify("expense.del", gid, Object.assign({}, existing, {ref: existing.k}));
       closeSheet(); toast("Expense deleted");
     });
 
@@ -5271,9 +5298,10 @@ function sheetExpense(existing){
         by: existing ? (existing.by||ME||USER.name) : (ME||USER.name),
         byUid: existing ? (existing.byUid||USER.uid) : USER.uid
       };
-      if(existing) set("trips/"+gid+"/expenses/"+existing.k, rec);
-      else push("trips/"+gid+"/expenses", rec);
-      notify(existing?"expense.edit":"expense.add", gid, rec);
+      // Keyed here, so the note can say which expense the phones should hear about.
+      const key = existing ? existing.k : "e"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+      set("trips/"+gid+"/expenses/"+key, rec);
+      notify(existing?"expense.edit":"expense.add", gid, Object.assign({ref:key}, rec));
       closeSheet(); toast(existing?"Expense updated":"Expense added");
     }
   });
@@ -6102,7 +6130,7 @@ function sheetNotifications(){
     const tzNow = (typeof PREFS.tz === "string" && PREFS.tz) || guessTz();
     const choices = TZ_CHOICES.indexOf(tzNow)>-1 ? TZ_CHOICES : [tzNow].concat(TZ_CHOICES);
     b.innerHTML =
-      '<p class="lead">Emails go to '+esc(USER.email)+'.</p>'+
+      '<p class="lead">Emails go to '+esc(USER.email)+'. With phone notifications on, these switches cover your phone too.</p>'+
       '<div class="card" id="prefList"></div>'+
       '<div class="sechead">Your timezone</div>'+
       '<div class="field"><label for="prTz">Send at 5pm where you are</label>'+
@@ -6899,8 +6927,9 @@ function sheetQuickAdd(){
                   by:(meIn(gid)||USER.name), byUid:USER.uid };
       const where=gid;
       $("qaSave").disabled=true;
-      push("trips/"+where+"/expenses", rec).then(()=>{
-        notify("expense.add", where, rec);
+      const key="e"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+      set("trips/"+where+"/expenses/"+key, rec).then(()=>{
+        notify("expense.add", where, Object.assign({ref:key}, rec));
         QA_LAST=where;
         closeSheet();
         toast("Added to "+groupName(where));

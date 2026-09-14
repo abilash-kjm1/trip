@@ -1,7 +1,7 @@
 /* Phone notifications: which subscriptions are believed, who gets pushed,
    and what a tampered note can and cannot do. */
 import { cleanSubscription, subscriptionsOf, askMessage, answerMessage } from "../lib/push.js";
-import { runActivity } from "../lib/activity.js";
+import { runActivity, notesFor } from "../lib/activity.js";
 
 let bad = 0;
 const is = (a, e, w) => {
@@ -63,8 +63,9 @@ function fakeDb(queue) {
     set: async () => {}
   };
 }
-async function run(queue, { fail, noPush, dry } = {}) {
+async function run(queue, { fail, noPush, dry, claim } = {}) {
   const db = fakeDb(queue), pushed = [], sent = [];
+  if (claim) db.claim = claim;
   const log = await runActivity({
     users, at: new Date(NOW), dry: !!dry, appUrl: "https://app.test/trip/", db,
     send: async (m) => { sent.push(m); },
@@ -149,6 +150,53 @@ r = await run({ n1: note("payment.add", "p1") });
 is(r.log.pushSkipped.length === 1 && r.log.pushSkipped[0].includes("not turned on"), true,
    "somebody who never turned them on says so");
 users.u2.push = kelvinsPhones;
+
+console.log("\nexpenses reach the people in them");
+group.expenses = {
+  e1: { desc: "Dinner", amount: 90, payer: "Abilash", mode: "equal",
+        between: ["Abilash", "Kelvin", "Kavya"], byUid: "u1", at: NOW - 9000 }
+};
+const exp = (kind, ref, actorUid = "u1", extra = {}) => ({
+  kind, gid: "montreal", actorUid, actor: "Someone", desc: "Dinner", amount: 90, at: NOW - 4000, ref, ...extra
+});
+r = await run({ n1: exp("expense.add", "e1") });
+is([r.pushed.map((x) => x.to), r.pushed[0] && r.pushed[0].msg.title, r.pushed[0] && r.pushed[0].msg.body],
+   [KEL, "Abilash added Dinner · $90.00", "Your share $30.00 · Montreal"],
+   "Kelvin hears, with his own share, named from the group rather than the note");
+r = await run({ n1: exp("expense.edit", "e1", "u2") });
+is([r.pushed.map((x) => x.to), r.pushed[0] && r.pushed[0].msg.title, r.pushed[0] && r.pushed[0].msg.body],
+   [["https://web.push.apple.com/abi"], "Kelvin changed Dinner · $90.00", "You paid · Montreal"],
+   "a change tells the others in it, never the one who made it");
+is(r.pushed[0] && r.pushed[0].msg.tag, "exp-montreal-e1", "and replaces the earlier notification about it");
+r = await run({ n1: exp("expense.del", "gone", "u1", { desc: "Taxi", amount: 12 }) });
+is([r.pushed.length, r.pushed[0] && r.pushed[0].msg.title], [2, "Abilash deleted Taxi · $12.00"],
+   "a deletion tells the group");
+r = await run({ n1: exp("expense.del", "e1") });
+is([r.pushed.length, r.log.pushSkipped[0]], [0, "expense.del e1: that expense has not been deleted"],
+   "a deletion that did not happen tells nobody");
+r = await run({ n1: exp("expense.add", "e1", "u2") });
+is(r.pushed.length, 0, "an expense somebody else added cannot be announced by another");
+users.u2.prefs = { payments: false, newExpense: false };
+r = await run({ n1: exp("expense.add", "e1") });
+is(r.pushed.length, 0, "the New expenses switch covers the phone too");
+users.u2.prefs = { payments: false };
+
+console.log("\nsent once, whoever gets there first");
+r = await run({ n1: note("payment.add", "p1") }, { claim: async () => false });
+is([r.pushed.length, !!(r.log.pushSkipped[0] && r.log.pushSkipped[0].includes("already sent"))], [0, true],
+   "a note the instant notifier already sent is not sent again");
+r = await run({ n1: note("payment.add", "p1", "u1", { pushed: "c123" }) });
+is([r.pushed.length, r.log.pushSkipped.length, r.removed], [0, 0, ["mail/queue/n1"]],
+   "an already-pushed note is still cleared, quietly");
+const outbox = {
+  a: note("payment.add", "p1"),
+  b: note("payment.add", "p1", "u2"),
+  c: note("payment.add", "p1", "u1", { pushed: "x" }),
+  d: { ...exp("expense.add", "e1"), at: NOW - 9000 },
+  e: { kind: "nudge", gid: "montreal", actorUid: "u1", at: NOW - 1000, desc: "Kelvin" }
+};
+is(notesFor(outbox, "u1", NOW).map((x) => x.key), ["d", "a"],
+   "the instant notifier only takes the caller's own unsent notes, oldest first");
 
 console.log(bad ? "\n" + bad + " FAILED" : "\nall good");
 process.exit(bad ? 1 : 0);

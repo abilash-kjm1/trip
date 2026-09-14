@@ -10,10 +10,10 @@
    here, from the group's own membership, so a tampered-with note can reach
    nobody its author could not already reach.
    --------------------------------------------------------------------------- */
-import { money } from "./ledger.js";
+import { money, sharesOf, cents } from "./ledger.js";
 import { activityEmail, accessRequestEmail, groupInviteEmail, nudgeEmail } from "./template.js";
 import { makeToken, normaliseAccess } from "./access.js";
-import { deliver, subscriptionsOf, askMessage, answerMessage, nudgeMessage } from "./push.js";
+import { deliver, subscriptionsOf, askMessage, answerMessage, nudgeMessage, expenseMessage } from "./push.js";
 
 /* Asking to join is not activity in a group - there is no group yet - so it
    travels through the same queue but down its own path, to the administrator
@@ -26,6 +26,9 @@ export const NUDGE_KIND = "nudge";
 export const GOT_KIND = "payment.got";
 // The payer asks again after being told it had not arrived. Push only too.
 export const ASK_KIND = "payment.ask";
+// What reaches a phone. Everything else is email only.
+export const PUSH_KINDS = { "payment.add": 1, "payment.ask": 1, "payment.got": 1,
+                            "expense.add": 1, "expense.edit": 1, "expense.del": 1 };
 export const MAX_JOINS = 20;             // per run; a ceiling on invitation spam
 export const MAX_INVITES = 20;
 export const MAX_NUDGES = 20;
@@ -89,8 +92,20 @@ export function normaliseEntry(key, raw, now) {
     key, kind, gid, actorUid, at, amount,
     actor: str(raw.actor, 80) || "Someone",
     desc:  str(raw.desc, 120),
-    ref:   /^[A-Za-z0-9_-]+$/.test(ref) ? ref : null
+    ref:   /^[A-Za-z0-9_-]+$/.test(ref) ? ref : null,
+    // Already sent to phones - by /api/notify, usually. Emailed and cleared
+    // as normal; just not pushed again.
+    pushed: raw.pushed != null && raw.pushed !== false
   };
+}
+
+/** The notes one account wrote that no phone has heard about yet, oldest
+    first. What /api/notify works through: only the caller's own. */
+export function notesFor(raw, uid, now, max = 20) {
+  return Object.keys(raw || {}).map((k) => normaliseEntry(k, raw[k], now))
+    .filter((e) => e && e.actorUid === uid && !e.pushed && PUSH_KINDS[e.kind])
+    .sort((a, b) => a.at - b.at)
+    .slice(0, max);
 }
 
 /** Everyone in the group with an account, except whoever did the thing. */
@@ -339,72 +354,11 @@ export async function runActivity({ users, at, dry, appUrl, db, send, push,
     }
   }
 
-  // ---- phone notifications: did the money arrive? -----------------------
-  // A new payment asks the person it went to; their answer tells whoever
-  // recorded it. Both are checked against the payment record itself: the note
-  // only says which payment to look at. So nobody can be told a payment was
-  // made, or answered, that the database does not show.
-  // Every payment that does not reach a phone says why, in the response and
-  // the logs - "nothing arrived" has too many causes to guess between.
-  log.pushSkipped = [];
-  const skip = (e, why) => {
-    if (log.pushSkipped.length < 30) log.pushSkipped.push(e.kind + " " + (e.ref || "-") + ": " + why);
-    console.log("[push] skipped " + e.kind + " " + (e.ref || "-") + " - " + why);
-  };
-  const about = (x) => x.kind === "payment.add" || x.kind === ASK_KIND || x.kind === GOT_KIND;
-  if (!push && !dry) {
-    batch.filter(about).forEach((e) =>
-      skip(e, "phone notifications are not configured on the server (VAPID keys missing or unusable)"));
-  } else {
-    for (const e of batch.filter(about)) {
-      try {
-        if (!e.ref) { skip(e, "the note names no payment - it came from an old copy of the app"); continue; }
-        if (groups[e.gid] === undefined) groups[e.gid] = await db.read("trips/" + e.gid);
-        const g = groups[e.gid];
-        if (!g || !isMember(g, e.actorUid)) { skip(e, "whoever wrote it is not in that group"); continue; }
-        const p = (g.payments || {})[e.ref];
-        if (!p || typeof p !== "object") { skip(e, "that payment no longer exists"); continue; }
-        if (p.netted) { skip(e, "netted across groups - no money moved"); continue; }
-        const seat = Object.values(g.people || {}).find((s) =>
-          s && s.n === p.to && typeof s.uid === "string" && s.uid);
-        if (!seat) { skip(e, "\"" + p.to + "\" has no Settle account linked in this group"); continue; }
-        const gname = (g.meta && g.meta.name) || e.gid;
-        const amount = Number(p.amount) || 0;
-
-        if (e.kind !== GOT_KIND) {
-          // Recorded by this author, still waiting, and not to themselves.
-          if (p.byUid !== e.actorUid) { skip(e, "the payment was recorded by somebody else"); continue; }
-          if (p.ask !== true) { skip(e, "the payment is not asking - it was saved by an old copy of the app"); continue; }
-          if (p.got) { skip(e, "already answered in the app"); continue; }
-          if (seat.uid === e.actorUid) { skip(e, "paid to themselves"); continue; }
-          if (!subscriptionsOf(users[seat.uid]).length) {
-            skip(e, p.to + " has not turned on phone notifications on any device"); continue;
-          }
-          console.log("[push] " + (dry ? "DRY " : "") + "asking " + seat.uid + " about " + e.ref);
-          await deliver({ uid: seat.uid, users, dry, push, db, log,
-            message: askMessage({ from: p.from, amount, group: gname, url: openAt(e.gid),
-                                  tag: "arrive-" + e.gid + "-" + e.ref }) });
-        } else {
-          // Answered by the person it went to, and told to whoever recorded it.
-          const got = p.got;
-          if (!got || typeof got !== "object") { skip(e, "the payment has no answer recorded"); continue; }
-          if (got.uid !== e.actorUid || seat.uid !== e.actorUid) { skip(e, "answered by somebody it did not go to"); continue; }
-          if (typeof p.byUid !== "string" || !p.byUid || p.byUid === e.actorUid) { skip(e, "nobody else to tell"); continue; }
-          if (!subscriptionsOf(users[p.byUid]).length) {
-            skip(e, "whoever recorded it has not turned on phone notifications"); continue;
-          }
-          console.log("[push] " + (dry ? "DRY " : "") + "telling " + p.byUid + " the answer to " + e.ref);
-          await deliver({ uid: p.byUid, users, dry, push, db, log,
-            message: answerMessage({ to: p.to, amount, ok: got.ok === true, group: gname,
-                                     url: openAt(e.gid), tag: "answer-" + e.gid + "-" + e.ref }) });
-        }
-      } catch (err) {
-        log.pushFailed++;
-        log.errors.push({ gid: e.gid, error: ("push: " + ((err && err.message) || String(err))).slice(0, 300) });
-        console.error("[push] could not notify for", e.gid, err);
-      }
-    }
-  }
+  // ---- phone notifications ----------------------------------------------
+  // Usually sent already, the moment it happened, by /api/notify. This pass
+  // catches whatever that missed - an old copy of the app, a dropped
+  // connection - and claims each note first, so nothing goes out twice.
+  await runPush({ entries: batch.filter((e) => !e.pushed), users, dry, push, db, log, appUrl, groups });
 
   // Cleared whether or not the mail got through. These notes describe
   // something that has already happened and is visible in the app; keeping
@@ -414,4 +368,140 @@ export async function runActivity({ users, at, dry, appUrl, db, send, push,
     for (const e of batch) await db.remove("mail/queue/" + e.key);
   }
   return log;
+}
+
+/**
+ * Phone notifications for a set of outbox notes. Shared by the scheduler's
+ * pass and /api/notify, which runs it the moment somebody saves.
+ *
+ * Every note is checked against the database: it only says which payment or
+ * expense to look at. So nobody can be told about a payment, an answer or an
+ * expense that the group's own records do not show - and only people in that
+ * group are ever told. Each one that reaches nobody says why, in the log.
+ *
+ * `db.claim(entry)`, when given, marks a note as pushed and says whether this
+ * caller got it; it is asked just before sending.
+ */
+export async function runPush({ entries, users, dry, push, db, log, appUrl, groups = {} }) {
+  if (!log.pushSkipped) log.pushSkipped = [];
+  const openAt = (gid) => String(appUrl || "").replace(/#.*$/, "") + "#g=" + encodeURIComponent(gid);
+  const skip = (e, why) => {
+    if (log.pushSkipped.length < 30) log.pushSkipped.push(e.kind + " " + (e.ref || "-") + ": " + why);
+    console.log("[push] skipped " + e.kind + " " + (e.ref || "-") + " - " + why);
+  };
+  const claim = async (e) => (dry || !db || !db.claim) ? true : db.claim(e);
+  const nameOf = (g, uid) => {
+    const s = Object.values(g.people || {}).find((p) => p && p.uid === uid);
+    return s ? String(s.n || "") : "";
+  };
+  const todo = (entries || []).filter((x) => PUSH_KINDS[x.kind]);
+
+  if (!push && !dry) {
+    todo.forEach((e) => skip(e, "phone notifications are not configured on the server (VAPID keys missing or unusable)"));
+    return log;
+  }
+
+  for (const e of todo) {
+    try {
+      if (!e.ref && e.kind !== "expense.del") {
+        skip(e, "the note names no record - it came from an old copy of the app"); continue;
+      }
+      if (groups[e.gid] === undefined) groups[e.gid] = await db.read("trips/" + e.gid);
+      const g = groups[e.gid];
+      if (!g || !isMember(g, e.actorUid)) { skip(e, "whoever wrote it is not in that group"); continue; }
+      const gname = (g.meta && g.meta.name) || e.gid;
+
+      if (e.kind.startsWith("expense.")) { await expense(e, g, gname); continue; }
+
+      // ---- a payment, and whether it arrived ----
+      const p = (g.payments || {})[e.ref];
+      if (!p || typeof p !== "object") { skip(e, "that payment no longer exists"); continue; }
+      if (p.netted) { skip(e, "netted across groups - no money moved"); continue; }
+      const seat = Object.values(g.people || {}).find((s) =>
+        s && s.n === p.to && typeof s.uid === "string" && s.uid);
+      if (!seat) { skip(e, "\"" + p.to + "\" has no Settle account linked in this group"); continue; }
+      const amount = Number(p.amount) || 0;
+
+      if (e.kind !== GOT_KIND) {
+        // Recorded by this author, still waiting, and not to themselves.
+        if (p.byUid !== e.actorUid) { skip(e, "the payment was recorded by somebody else"); continue; }
+        if (p.ask !== true) { skip(e, "the payment is not asking - it was saved by an old copy of the app"); continue; }
+        if (p.got) { skip(e, "already answered in the app"); continue; }
+        if (seat.uid === e.actorUid) { skip(e, "paid to themselves"); continue; }
+        if (!subscriptionsOf(users[seat.uid]).length) {
+          skip(e, p.to + " has not turned on phone notifications on any device"); continue;
+        }
+        if (!(await claim(e))) { skip(e, "already sent"); continue; }
+        console.log("[push] " + (dry ? "DRY " : "") + "asking " + seat.uid + " about " + e.ref);
+        await deliver({ uid: seat.uid, users, dry, push, db, log,
+          message: askMessage({ from: p.from, amount, group: gname, url: openAt(e.gid),
+                                tag: "arrive-" + e.gid + "-" + e.ref }) });
+      } else {
+        // Answered by the person it went to, and told to whoever recorded it.
+        const got = p.got;
+        if (!got || typeof got !== "object") { skip(e, "the payment has no answer recorded"); continue; }
+        if (got.uid !== e.actorUid || seat.uid !== e.actorUid) { skip(e, "answered by somebody it did not go to"); continue; }
+        if (typeof p.byUid !== "string" || !p.byUid || p.byUid === e.actorUid) { skip(e, "nobody else to tell"); continue; }
+        if (!subscriptionsOf(users[p.byUid]).length) {
+          skip(e, "whoever recorded it has not turned on phone notifications"); continue;
+        }
+        if (!(await claim(e))) { skip(e, "already sent"); continue; }
+        console.log("[push] " + (dry ? "DRY " : "") + "telling " + p.byUid + " the answer to " + e.ref);
+        await deliver({ uid: p.byUid, users, dry, push, db, log,
+          message: answerMessage({ to: p.to, amount, ok: got.ok === true, group: gname,
+                                   url: openAt(e.gid), tag: "answer-" + e.gid + "-" + e.ref }) });
+      }
+    } catch (err) {
+      log.pushFailed++;
+      log.errors.push({ gid: e.gid, error: ("push: " + ((err && err.message) || String(err))).slice(0, 300) });
+      console.error("[push] could not notify for", e.gid, err);
+    }
+  }
+  return log;
+
+  /* An expense added or changed tells the people in it - whoever paid and
+     whoever it is split between - with their own share. A deletion cannot be
+     looked up any more, so it tells everybody in the group, and only once the
+     expense really is gone. Never the person who did it, and never somebody
+     who switched that kind off on the Account screen. */
+  async function expense(e, g, gname) {
+    const seats = Object.values(g.people || {}).filter((s) => s && typeof s.uid === "string" && s.uid);
+    const actor = nameOf(g, e.actorUid) || e.actor;
+    let exp = null, involved;
+    if (e.kind === "expense.del") {
+      if (e.ref && (g.expenses || {})[e.ref]) { skip(e, "that expense has not been deleted"); return; }
+      involved = seats;
+    } else {
+      exp = (g.expenses || {})[e.ref];
+      if (!exp || typeof exp !== "object") { skip(e, "that expense no longer exists"); return; }
+      if (e.kind === "expense.add" && exp.byUid && exp.byUid !== e.actorUid) {
+        skip(e, "the expense was added by somebody else"); return;
+      }
+      const names = new Set([exp.payer, ...Object.keys(sharesOf(exp))]);
+      involved = seats.filter((s) => names.has(s.n));
+    }
+    const uids = [...new Set(involved.map((s) => s.uid))].filter((u) => u !== e.actorUid);
+    if (!uids.length) { skip(e, "nobody else in it has an account"); return; }
+    const wanting = uids.filter((u) => wants((users[u] || {}).prefs, e.kind));
+    const reachable = wanting.filter((u) => subscriptionsOf(users[u]).length);
+    if (!reachable.length) {
+      skip(e, wanting.length ? "nobody in it has phone notifications on" : "everybody in it has switched these off");
+      return;
+    }
+    if (!(await claim(e))) { skip(e, "already sent"); return; }
+    const shares = exp ? sharesOf(exp) : {};
+    for (const u of reachable) {
+      const me = nameOf(g, u);
+      await deliver({ uid: u, users, dry, push, db, log,
+        message: expenseMessage({
+          kind: e.kind, actor, group: gname,
+          desc: exp ? exp.desc : e.desc,
+          amount: exp ? Number(exp.amount) : e.amount,
+          share: exp ? cents(shares[me] || 0) : null,
+          paidByYou: !!exp && exp.payer === me,
+          url: openAt(e.gid), tag: "exp-" + e.gid + "-" + (e.ref || e.key)
+        }) });
+    }
+    console.log("[push] " + (dry ? "DRY " : "") + e.kind + " " + (e.ref || "-") + " told " + reachable.length + " account(s)");
+  }
 }

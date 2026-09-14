@@ -7,42 +7,13 @@
    Protected by CRON_SECRET: Vercel Cron sends it as a bearer token, and
    without it the endpoint answers 401. Nobody can use this to fan out mail.
    =========================================================================== */
-import { readPath, removePath, database } from "../lib/firebase.js";
+import { readPath, removePath, database, claimNote } from "../lib/firebase.js";
 import { sendEmail, provider } from "../lib/email.js";
 import { reminderEmail } from "../lib/template.js";
 import { groupSummary, cents } from "../lib/ledger.js";
 import { normalise, isDue, isValidTz, describe } from "../lib/schedule.js";
 import { runActivity } from "../lib/activity.js";
-import webpush from "web-push";
-
-/* Phone notifications are signed with a key pair made once for this app. The
-   public half is in the app; the private half lives only here. Without both,
-   nothing is pushed and everything else carries on as before. */
-function pushSender() {
-  const pub = process.env.VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
-  if (!pub || !priv) return null;
-  try {
-    webpush.setVapidDetails(process.env.VAPID_SUBJECT ||
-      ("mailto:" + (process.env.ADMIN_EMAIL || "abilashkjm01@gmail.com")), pub, priv);
-  } catch (err) {
-    console.error("[push] the VAPID keys are not usable:", (err && err.message) || err);
-    return null;
-  }
-  return (sub, payload, opts) => webpush.sendNotification(sub, payload, opts);
-}
-// For the dry run: not just "set", but whether the keys actually work. The
-// start of the public key is not secret - it is in the app - and lets it be
-// compared with the key the app is using.
-function vapidReport() {
-  const pub = process.env.VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
-  if (!pub || !priv) return "NOT SET - missing " + [!pub && "VAPID_PUBLIC_KEY", !priv && "VAPID_PRIVATE_KEY"].filter(Boolean).join(" and ");
-  try {
-    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:abilashkjm01@gmail.com", pub, priv);
-  } catch (err) {
-    return "set but NOT USABLE - " + ((err && err.message) || err);
-  }
-  return "ready - public key starts " + pub.slice(0, 10);
-}
+import { pushSender, vapidReport } from "../lib/sender.js";
 
 const DEFAULT_TZ = process.env.DEFAULT_TZ || "America/Toronto";
 const APP_URL = process.env.APP_URL || "https://abilash-kjm1.github.io/trip/";
@@ -333,7 +304,10 @@ export default async function handler(req, res) {
       log.activity = await runActivity({
         users, at, dry, appUrl: APP_URL,
         db: { read: readPath, remove: removePath,
-              set: (path, v) => database().ref(path).set(v) },
+              set: (path, v) => database().ref(path).set(v),
+              // Most notes were already pushed by /api/notify the moment they
+              // were written; claiming each first means none goes out twice.
+              claim: dry ? undefined : (e) => claimNote(e.key) },
         send: sendEmail,
         push: pushSender(),
         adminEmail: process.env.ADMIN_EMAIL || "",

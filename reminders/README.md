@@ -183,6 +183,18 @@ service reports as gone is deleted. Without both VAPID keys nothing is pushed
 and email carries on as before. On iPhone, notifications need Settle added to
 the Home Screen (iOS 16.4+).
 
+Expenses reach phones too: added or changed tells the people in it, with
+their own share; deleted tells the group. The New expenses and Expense changes
+switches on the Account screen cover the phone as well as email.
+
+**Straight away.** The app calls `POST /api/notify` the moment it saves one of
+these. It checks the Firebase ID token and that the account is approved, then
+runs only the caller's own outbox notes through the same checks, claiming each
+first so the scheduler never sends it again. At most 120 notifications per
+account per ten minutes. It never sends email. The scheduler's pass remains
+the backup. `APP_ORIGINS` (optional, comma-separated) lists the sites allowed
+to call it; it defaults to `https://abilash-kjm1.github.io`.
+
 Generate a secret with:
 
 ```bash
