@@ -147,7 +147,7 @@ export default async function handler(req, res) {
         const e = String(((users[uid] || {}).profile || {}).email || "").trim().toLowerCase();
         if (e && (access[uid] || {}).status === "approved") byEmail[e] = uid;
       });
-      const report = { linked: [], membership: 0, stale: [] };
+      const report = { linked: [], membership: 0, stale: [], pointed: [] };
       const writes = {};
 
       for (const gid of Object.keys(trips)) {
@@ -169,6 +169,18 @@ export default async function handler(req, res) {
           writes["trips/" + gid + "/people/" + k + "/email"] = mail;
           writes["users/" + uid + "/groups/" + gid] = { name: gname, at: Date.now() };
           report.linked.push(gname + ": " + (p.n || mail) + " <- " + mail);
+        });
+        // Everybody seated in a group on their account has it on their own
+        // list. Adding somebody puts it there at once through an invitation;
+        // this is the backstop for when that did not land, so being added
+        // always shows up within one pass. Leaving a group takes the account
+        // off its seat, so this never brings back a group somebody left.
+        Object.keys(want).forEach((u) => {
+          if (!users[u]) return;
+          if ((((users[u] || {}).groups) || {})[gid]) return;
+          if (writes["users/" + u + "/groups/" + gid]) return;
+          writes["users/" + u + "/groups/" + gid] = { name: gname, at: Date.now() };
+          report.pointed.push(gname + ": " + ((((users[u] || {}).profile) || {}).email || u));
         });
         const have = g.uids || {};
         Object.keys(want).forEach((u) => { if (!have[u]) { writes["trips/" + gid + "/uids/" + u] = true; report.membership++; } });
@@ -196,13 +208,14 @@ export default async function handler(req, res) {
       // Groups that still exist but that somebody is not in and has no seat
       // waiting for - a renamed group they were once invited to, say. The
       // rules stop them opening it, so it shows as a group with nobody in it.
-      // Reported only: the app takes these off that person's own list the next
-      // time they open it, which is theirs to change, not the scheduler's.
+      // The list entry is theirs to change and the app takes it off when it
+      // cannot open the group. An invitation with no seat behind it is cleared
+      // here, or their app would ask for a group it cannot open on every load.
       report.notMember = [];
       Object.keys(users).forEach((uid) => {
         const email = String((((users[uid] || {}).profile) || {}).email || "").trim().toLowerCase();
         const seen = {};
-        const consider = (gid, from, label) => {
+        const consider = (gid, from, label, key) => {
           const g = trips[gid];
           if (!g || seen[gid + from]) return;
           seen[gid + from] = true;
@@ -215,13 +228,14 @@ export default async function handler(req, res) {
           const now = (g.meta && g.meta.name) || gid;
           report.notMember.push(email + " - " + from + " \"" + label + "\"" +
                                 (label !== now ? " (now called \"" + now + "\")" : "") + " - not a member");
+          if (key) writes["invites/" + key + "/" + gid] = null;
         };
         Object.keys(((users[uid] || {}).groups) || {}).forEach((gid) =>
           consider(gid, "list shows", ((users[uid].groups[gid] || {}).name) || gid));
         Object.keys(invites).forEach((key) => {
           if (key.replace(/,/g, ".") !== email) return;
           Object.keys(invites[key] || {}).forEach((gid) =>
-            consider(gid, "invite to", ((invites[key][gid] || {}).name) || gid));
+            consider(gid, "invite to", ((invites[key][gid] || {}).name) || gid, key));
         });
       });
 

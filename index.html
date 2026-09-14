@@ -4923,9 +4923,15 @@ function sheetGroupMenu(){
       ["Rename group","","edit", sheetGroupRename],
       ["Invite people","Share the link or code","person_add", sheetShare],
       ["Print / save as PDF","A full statement of this group","print", doPrint],
-      ["Leave group","Remove it from your list. Everyone else keeps it.","logout", function(){
-          if(!confirm("Remove “"+groupName(gid)+"” from your groups? Everyone else keeps it.")) return;
-          forgetGroup(gid); closeGroup();
+      ["Leave group","Your name and balances stay in it for everyone else.","logout", function(){
+          if(!confirm("Leave “"+groupName(gid)+"”? Your name and what you owe stay in the group, and someone can add you back.")) return;
+          // Off the seat as well as off the list. Still seated on this account,
+          // the group would be put straight back on the list on the next pass.
+          const mine = USER && membersOf(gid).find(x=>x.uid===USER.uid);
+          const off = mine
+            ? upd("trips/"+gid+"/people/"+mine.k, {invite:null}).then(()=> unlinkPerson(gid, mine.k) ).catch(()=>{})
+            : Promise.resolve();
+          off.then(()=>{ forgetGroup(gid); closeGroup(); });
       }]
     ];
     if(!meIn(gid)) items.unshift(["Tell them which one is you","Claim your name in this group","how_to_reg",
@@ -5348,7 +5354,16 @@ function watchGroup(gid){
     // the group returns to their list on its own.
     const why = String((err && (err.code || err.message)) || "");
     if(/permission/i.test(why)){
-      forgetGroup(gid); if(CURRENT===gid) closeGroup();
+      // Not readable - not yet, or not any more. Off the list for now, but the
+      // invitation that brought it stays: the moment they are given a seat,
+      // straight away or by the scheduler within one pass, the group comes back
+      // on its own. Deleting the invitation here is how somebody added a
+      // moment too early never saw the group at all.
+      JOINED = JOINED.filter(x=>x.id!==gid); lsSet(LS.grp, JOINED);
+      if(subs[gid]){ subs[gid](); delete subs[gid]; }
+      delete DATA[gid];
+      if(USER) del("users/"+USER.uid+"/groups/"+gid);
+      if(CURRENT===gid) closeGroup();
       render(); return;
     }
     setSync("bad","Cannot read this group — "+(err&&err.message?err.message:"check the database rules"));
