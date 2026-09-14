@@ -193,6 +193,38 @@ export default async function handler(req, res) {
         });
       });
 
+      // Groups that still exist but that somebody is not in and has no seat
+      // waiting for - a renamed group they were once invited to, say. The
+      // rules stop them opening it, so it shows as a group with nobody in it.
+      // Reported only: the app takes these off that person's own list the next
+      // time they open it, which is theirs to change, not the scheduler's.
+      report.notMember = [];
+      Object.keys(users).forEach((uid) => {
+        const email = String((((users[uid] || {}).profile) || {}).email || "").trim().toLowerCase();
+        const seen = {};
+        const consider = (gid, from, label) => {
+          const g = trips[gid];
+          if (!g || seen[gid + from]) return;
+          seen[gid + from] = true;
+          if ((g.uids || {})[uid]) return;
+          const seated = Object.keys(g.people || {}).some((k) => {
+            const p = g.people[k] || {};
+            return p.uid === uid || (email && String(p.invite || "").trim().toLowerCase() === email);
+          });
+          if (seated) return;
+          const now = (g.meta && g.meta.name) || gid;
+          report.notMember.push(email + " - " + from + " \"" + label + "\"" +
+                                (label !== now ? " (now called \"" + now + "\")" : "") + " - not a member");
+        };
+        Object.keys(((users[uid] || {}).groups) || {}).forEach((gid) =>
+          consider(gid, "list shows", ((users[uid].groups[gid] || {}).name) || gid));
+        Object.keys(invites).forEach((key) => {
+          if (key.replace(/,/g, ".") !== email) return;
+          Object.keys(invites[key] || {}).forEach((gid) =>
+            consider(gid, "invite to", ((invites[key][gid] || {}).name) || gid));
+        });
+      });
+
       if (dry) {
         log.housekeeping = report;
       } else if (Object.keys(writes).length) {
