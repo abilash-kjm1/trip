@@ -1108,10 +1108,16 @@ button, input, select, textarea{ font-family:var(--f); }
 
 .hc-foot{ position:relative; display:flex; align-items:center; justify-content:space-between;
   gap:var(--s4); margin-top:var(--s5); padding-top:var(--s3); border-top:1px solid var(--hero-line); }
-.hero .hc-foot .net{ text-align:right; font-size:18px; font-weight:700; letter-spacing:-.01em;
-  font-variant-numeric:tabular-nums; }
-.hero .hc-foot .net small{ display:block; margin:0 0 1px; font-size:10px; font-weight:700;
-  letter-spacing:.08em; text-transform:uppercase; color:var(--hero-soft); }
+/* Overall balance: a soft pill on one line - label, then the signed figure. */
+.hero .hc-foot .net{ display:inline-flex; align-items:baseline; gap:8px; margin-left:auto;
+  padding:6px 13px 6px 12px; border-radius:999px; background:rgba(255,255,255,.5);
+  text-align:left; font-size:13px; letter-spacing:0; white-space:nowrap; }
+.hero .hc-foot .net small{ display:inline; margin:0; font-size:12.5px; font-weight:500;
+  letter-spacing:0; text-transform:none; color:var(--hero-soft); }
+.hero .hc-foot .net b{ font-size:15px; font-weight:700; letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums; color:var(--hero-ink); }
+.hero .hc-foot .net.pos b{ color:var(--hero-get); }
+.hero .hc-foot .net.neg b{ color:var(--hero-owe); }
 
 /* Slim bars rather than dots. The tappable area is taller than the bar. */
 .hc-segs{ display:flex; align-items:center; gap:6px; min-height:24px; }
@@ -1130,7 +1136,7 @@ button, input, select, textarea{ font-family:var(--f); }
 @media (min-width:1000px){
   .hero.carousel{ padding:var(--s6) var(--s6) var(--s5); }
   .hero.carousel h2.hc-amt{ font-size:64px; }
-  .hero.carousel .hc-foot .net{ font-size:20px; }
+  .hero.carousel .hc-foot .net b{ font-size:16px; }
 }
 @media (prefers-reduced-motion: reduce){ .hc-track, .hc-slide, .hc-seg{ transition:none; } }
 
@@ -3093,8 +3099,12 @@ function viewHome(main){
   const foot = el("div","hc-foot");
   const segs = el("div","hc-segs");
   foot.appendChild(segs);
+  // One quiet line: the words, then the figure with its sign and colour, so it
+  // reads "you are up" or "you are down" at a glance.
+  const tone = net > 0.004 ? "pos" : net < -0.004 ? "neg" : "zero";
+  const figure = tone==="pos" ? "+"+money(net) : tone==="neg" ? "\u2212"+money(-net) : money(0);
   foot.insertAdjacentHTML("beforeend",
-    '<span class="net"><small>Overall balance</small>'+money(net)+'</span>');
+    '<span class="net '+tone+'"><small>Overall balance</small><b>'+figure+'</b></span>');
   hero.appendChild(foot);
   main.appendChild(hero);
 
