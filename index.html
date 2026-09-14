@@ -1924,6 +1924,14 @@ function etxClean(p){
   else if(etxPhoneOk(raw)){ const d=etxPhone(raw); handle="("+d.slice(0,3)+") "+d.slice(3,6)+"-"+d.slice(6); }
   return name && handle ? {name, handle} : null;
 }
+// What gets saved, or why it cannot be. Used for my own details and for the
+// administrator filling in somebody else's, so the two cannot drift apart.
+function etxRecord(name, handle){
+  const n=tidyName(name).slice(0,60), h=String(handle||"").trim();
+  if(!n) return "Enter the name on the Interac account";
+  if(!etxEmailOk(h) && !etxPhoneOk(h)) return "Enter a valid email, or a 10-digit phone number";
+  return {name:n, handle: etxEmailOk(h) ? h.toLowerCase() : etxPhone(h), at:Date.now()};
+}
 function etxFor(uid){ return uid && DIRECTORY && DIRECTORY[uid] ? etxClean(DIRECTORY[uid].pay) : null; }
 function myBank(){ const id=(PREFS&&PREFS.bank)||""; return ETX_BANKS.find(b=>b.id===id) || null; }
 /* Where "Open <bank>" goes, per phone. It is a real link the person taps -
@@ -3223,8 +3231,16 @@ function viewInterac(main){
     seen[m.uid]=true;
     people.push({uid:m.uid, name:(DIRECTORY[m.uid]&&DIRECTORY[m.uid].name)||m.name, color:m.color, photo:m.photo});
   }));
+  // The administrator looks after everybody's details, so sees everybody in
+  // Settle, not only the people in their own groups.
+  if(isAdmin()) Object.keys(DIRECTORY||{}).forEach(u=>{
+    const e=DIRECTORY[u]||{};
+    if(u===USER.uid || seen[u] || !e.name) return;
+    seen[u]=true;
+    people.push({uid:u, name:e.name, color:null, photo:e.photo||null});
+  });
   people.sort((a,c)=> String(a.name).localeCompare(String(c.name)));
-  main.appendChild(el("div","sechead","People in your groups"));
+  main.appendChild(el("div","sechead", isAdmin() ? "Everyone in Settle" : "People in your groups"));
   if(!people.length){
     main.appendChild(el("p","fine","Nobody else with a Settle account is in your groups yet."));
     return;
@@ -3247,9 +3263,56 @@ function viewInterac(main){
         : etxCopy(d.handle.replace(/[^\d]/g,""), "Phone") );
       r.appendChild(b);
     }
+    if(isAdmin()){
+      const e=el("button","etx-copy"); e.type="button";
+      e.innerHTML='<span class="ms" aria-hidden="true">'+(d?"edit":"add")+'</span>'+(d?"Edit":"Add");
+      e.setAttribute("aria-label",(d?"Edit ":"Add ")+p.name+"'s Interac details");
+      e.addEventListener("click", ()=> sheetEtxFor(p.uid, p.name) );
+      r.appendChild(e);
+    }
     list.appendChild(r);
   });
   main.appendChild(list);
+}
+
+/* The administrator filling in somebody else's Interac details. The database
+   rules let the administrator write only this part of another person's
+   entry, and check its shape; the person can still change it themselves. */
+function sheetEtxFor(uid, name){
+  if(!isAdmin() || !uid) return;
+  const raw=(DIRECTORY[uid]&&DIRECTORY[uid].pay)||{};
+  const cur=etxClean(raw);
+  openSheet("Interac for "+name, (b)=>{
+    b.innerHTML=
+      '<p class="lead">As the administrator you can fill these in for '+esc(name)+
+        '. They can still change them in their own Interac tab.</p>'+
+      '<div class="field"><label for="axName">Name on their Interac account</label>'+
+        '<input id="axName" type="text" maxlength="60" autocomplete="off"></div>'+
+      '<div class="field"><label for="axHandle">Their Interac email or phone</label>'+
+        '<input id="axHandle" type="text" inputmode="email" autocapitalize="off" autocorrect="off" maxlength="120" '+
+        'autocomplete="off" placeholder="name@gmail.com or (416) 555-0123"></div>'+
+      '<button class="btn p wide" id="axSave" type="button">Save details</button>'+
+      (cur ? '<button class="btn s wide" id="axDel" type="button" style="margin-top:10px">Remove their details</button>' : '');
+    $("axName").value = (cur&&cur.name) || tidyName(raw.name||"") || name;
+    $("axHandle").value = (cur&&cur.handle) || String(raw.handle||"");
+    const failed = ()=> toast("Could not save - publish the updated database rules first");
+    $("axSave").addEventListener("click", ()=>{
+      const rec=etxRecord($("axName").value, $("axHandle").value);
+      if(typeof rec==="string") return toast(rec);
+      rec.by=USER.uid;
+      $("axSave").disabled=true;
+      Promise.resolve(upd("directory/"+uid, {pay:rec})).then(()=>{
+        DIRECTORY[uid]=Object.assign({}, DIRECTORY[uid]||{}, {pay:rec});
+        closeSheet(); toast(name+"'s Interac details saved"); render();
+      }, ()=>{ $("axSave").disabled=false; failed(); });
+    });
+    if($("axDel")) $("axDel").addEventListener("click", ()=>{
+      Promise.resolve(upd("directory/"+uid, {pay:null})).then(()=>{
+        if(DIRECTORY[uid]) delete DIRECTORY[uid].pay;
+        closeSheet(); toast(name+"'s Interac details removed"); render();
+      }, failed);
+    });
+  });
 }
 
 function viewAccount(main){

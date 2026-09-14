@@ -10,6 +10,10 @@
 // A group's name stays readable to anyone approved, so somebody following a
 // link is told what they are asking to be added to rather than nothing at all.
 //
+// Interac details live at directory/{uid}/pay. The person can write their own;
+// the administrator can write that part - and only that part - of anyone's
+// entry. Its shape is checked for both: a name and an email or phone.
+//
 // Only the administrator can delete a group. Members can still change what is
 // inside it, but a write that would leave the group without its details -
 // deleting it outright, or wiping it - is refused for anyone else.
@@ -37,7 +41,11 @@
       ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
       "$uid": {
         ".write": "auth != null && auth.uid == $uid",
-        ".validate": "newData.hasChildren(['name']) && newData.child('name').isString()"
+        ".validate": "newData.hasChildren(['name']) && newData.child('name').isString()",
+        "pay": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
+          ".validate": "newData.hasChildren(['name','handle']) && newData.child('name').isString() && newData.child('name').val().length <= 60 && newData.child('handle').isString() && newData.child('handle').val().length <= 120"
+        }
       }
     },
     "config": {
