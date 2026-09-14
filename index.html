@@ -1038,6 +1038,45 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
+/* ---- Interac: my details, my bank, everybody's details, and the Pay box -- */
+.etx-head{ display:flex; gap:12px; align-items:flex-start; margin:0 0 var(--s4); }
+.etx-head > .ms{ flex:0 0 auto; width:40px; height:40px; border-radius:12px; display:flex; align-items:center;
+  justify-content:center; font-size:22px; background:var(--apricot-lt); color:var(--apricot-dk); }
+.etx-head h2{ margin:0; font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink); text-align:left; }
+.etx-head p{ margin:2px 0 0; font-size:13px; color:var(--ink-3); }
+.etx-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+.etx-sub{ margin:0 0 12px; font-size:13px; color:var(--ink-3); }
+.etxbank .chips{ margin:0; }
+.etxlist{ padding:4px 0; overflow:hidden; }
+.etx-person{ position:relative; display:flex; align-items:center; gap:12px; padding:12px var(--s4); }
+.etx-person + .etx-person::before{ content:""; position:absolute; top:0; left:68px; right:var(--s4); height:1px; background:var(--line-2); }
+.etx-b{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.etx-n{ font-size:15px; font-weight:600; color:var(--ink); }
+.etx-h{ margin-top:2px; font-size:13px; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.etx-h.none{ color:var(--ink-3); }
+.etx-copy{ flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; border:0; border-radius:999px;
+  padding:6px 11px; background:var(--fill-1); color:var(--ink); font:inherit; font-size:12.5px; font-weight:600;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.etx-copy .ms{ font-size:15px; }
+.etx{ margin:0 0 var(--s4); padding:var(--s4); border-radius:16px; background:var(--apricot-lt);
+  border:1px solid rgba(180,112,62,.2); }
+.etx-title{ display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:14px; font-weight:700; color:var(--ink); }
+.etx-title .ms{ font-size:20px; color:var(--apricot-dk); }
+.etx-line{ display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid rgba(180,112,62,.16); }
+.etx-line .k{ flex:0 0 64px; font-size:12.5px; color:var(--ink-3); }
+.etx-line .v{ flex:1; min-width:0; font-size:15px; font-weight:600; color:var(--ink); overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.etx .etx-copy{ background:rgba(255,255,255,.75); }
+.etx-open{ margin-top:12px; }
+.etx-pick{ display:block; margin:12px 0 0; border:0; background:transparent; padding:4px 0; font:inherit;
+  font-size:13.5px; font-weight:600; color:var(--apricot-dk); cursor:pointer; }
+.etx-then{ margin:10px 0 0; font-size:12px; color:var(--ink-3); text-align:center; }
+.etx-missing{ display:flex; align-items:center; gap:6px; margin:0 0 var(--s3); padding:10px 12px; border-radius:12px;
+  background:var(--fill-1); font-size:13px; color:var(--ink-2); }
+.etx-missing .ms{ font-size:18px; color:var(--ink-3); }
+:root[data-theme="purple"] .etx{ border-color:rgba(109,63,191,.18); }
+:root[data-theme="purple"] .etx-line{ border-top-color:rgba(109,63,191,.14); }
+
 /* ---- A group's top card: what was spent, and where you stand ------------ */
 .gtop{ background:var(--ink); color:var(--cream); border-radius:var(--r3); padding:var(--s5);
   margin:0 0 var(--s4); box-shadow:var(--shadow); }
@@ -1576,6 +1615,7 @@ span.af-pill{ cursor:default; padding-right:12px; }
   <button data-tab="home"><span class="ms" aria-hidden="true">explore</span>Today</button>
   <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
   <button data-tab="groups"><span class="ms" aria-hidden="true">group</span>Groups</button>
+  <button data-tab="interac"><span class="ms" aria-hidden="true">send_money</span>Interac</button>
   <div class="foot">
     <button data-tab="account"><span class="ms" aria-hidden="true">account_circle</span>Account</button>
   </div>
@@ -1606,7 +1646,7 @@ span.af-pill{ cursor:default; padding-right:12px; }
   <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
   <button class="add" id="navAdd" aria-label="Add an expense"><span class="ms" aria-hidden="true">add</span></button>
   <button data-tab="groups"><span class="ms" aria-hidden="true">group</span>Groups</button>
-  <button data-tab="account"><span class="ms" aria-hidden="true">account_circle</span>Account</button>
+  <button data-tab="interac"><span class="ms" aria-hidden="true">send_money</span>Interac</button>
 </nav>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -1697,7 +1737,7 @@ let DIRECTORY= {};                          // directory/* - everybody in Settle
 let ME       = null;                        // my person-name inside CURRENT group
 let JOINED   = lsGet(LS.grp, []);           // [{id,name}]
 let CURRENT  = null;                        // active group id
-let TAB      = "home";                      // home | groups | activity | account
+let TAB      = "home";                      // home | groups | activity | interac | account
 let DATA     = {};                          // gid -> {meta, people, expenses, payments}
 let remote   = null;                        // firebase handles
 const subs   = {};                          // gid -> unsubscribe
@@ -1853,6 +1893,57 @@ function inGroupAlready(gid, p, exceptKey){
    up for them. An address is proof. A whole name counts only when exactly one
    account has it: two people can share a name, and guessing wrong would hand
    one of them a stranger's group. Returns the directory entry, or null. */
+/* ---------------- Interac e-Transfer details ----------------
+   Kept on a person's own directory entry, so only approved Settle users can
+   read them and only that person can change them. Checked on the way out as
+   well as on the way in: whatever is in the database, only a plausible name
+   and a real-looking address or phone number is ever shown. */
+const ETX_BANKS = [
+  {id:"cibc",       name:"CIBC",       pkg:"com.cibc.android.mobi",   web:"https://www.cibc.com/en/personal-banking.html"},
+  {id:"rbc",        name:"RBC",        pkg:"com.rbc.mobile.android",  web:"https://www.rbcroyalbank.com/"},
+  {id:"td",         name:"TD",         pkg:"com.td",                  web:"https://www.td.com/ca/en/personal-banking"},
+  {id:"scotiabank", name:"Scotiabank", pkg:"com.scotiabank.banking",  web:"https://www.scotiabank.com/ca/en/personal.html"},
+  {id:"bmo",        name:"BMO",        pkg:"com.bmo.mobile",          web:"https://www.bmo.com/en-ca/main/personal/"}
+];
+const etxEmailOk = (s)=> /^[^\s@<>"']{1,64}@[^\s@<>"']{1,190}\.[a-z]{2,24}$/i.test(String(s||""));
+const etxPhone   = (s)=> { const d=String(s||"").replace(/[^\d]/g,""); return d.length===11 && d[0]==="1" ? d.slice(1) : d; };
+const etxPhoneOk = (s)=> /^\d{10}$/.test(etxPhone(s)) && !/[a-z@]/i.test(String(s||""));
+function etxClean(p){
+  if(!p || typeof p!=="object") return null;
+  const name=tidyName(p.name).slice(0,60);
+  const raw=String(p.handle||"").trim();
+  let handle=null;
+  if(etxEmailOk(raw)) handle=raw.toLowerCase();
+  else if(etxPhoneOk(raw)){ const d=etxPhone(raw); handle="("+d.slice(0,3)+") "+d.slice(3,6)+"-"+d.slice(6); }
+  return name && handle ? {name, handle} : null;
+}
+function etxFor(uid){ return uid && DIRECTORY && DIRECTORY[uid] ? etxClean(DIRECTORY[uid].pay) : null; }
+function myBank(){ const id=(PREFS&&PREFS.bank)||""; return ETX_BANKS.find(b=>b.id===id) || null; }
+/* Open a bank's app. On Android, Chrome is asked for the app by its store id
+   and, if it cannot hand over, shows its store page - where Open is one more
+   tap. Everywhere else the bank's own site opens. No personal detail ever
+   goes into these addresses. */
+function etxOpenBank(bank){
+  if(!bank) return;
+  if(/Android/i.test(navigator.userAgent||"")){
+    const store="https://play.google.com/store/apps/details?id="+bank.pkg;
+    location.href="intent://#Intent;package="+bank.pkg+";S.browser_fallback_url="+encodeURIComponent(store)+";end";
+  } else {
+    window.open(bank.web, "_blank", "noopener");
+  }
+}
+function etxCopy(text, label){
+  const done=()=> toast((label||"Copied")+" copied");
+  const fallback=()=>{
+    const t=document.createElement("textarea"); t.value=text; t.setAttribute("readonly","");
+    t.style.cssText="position:fixed;left:-9999px;top:0"; document.body.appendChild(t);
+    t.select(); try{ document.execCommand("copy"); done(); }catch(e){ toast("Could not copy"); }
+    document.body.removeChild(t);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+  else fallback();
+}
+
 function settleAccountFor(name, email){
   const people = Object.keys(DIRECTORY||{}).map(u=> Object.assign({uid:u}, DIRECTORY[u]||{}));
   const mail = normMail(email);
@@ -2246,6 +2337,7 @@ function render(){
   else if(TAB==="groups")   viewGroups(main);
   else if(TAB==="activity") viewActivity(main);
   else if(TAB==="account")  viewAccount(main);
+  else if(TAB==="interac")  viewInterac(main);
   if(y) window.scrollTo(0, Math.min(y, document.body.scrollHeight));
   if(typeof syncBar==="function") syncBar();
 
@@ -3052,6 +3144,101 @@ function viewActivity(main){
 }
 
 /* ---------- account ---------- */
+/* ---------- Interac ----------
+   My e-Transfer details, the bank app to open, and the details of everybody
+   I share a group with - so paying somebody back never starts with asking
+   them for their address. */
+function viewInterac(main){
+  setTitle(main, "Interac");
+  const mine = etxFor(USER.uid) || {name:"", handle:""};
+  const raw = (DIRECTORY[USER.uid] && DIRECTORY[USER.uid].pay) || {};
+
+  const me=el("div","card pad etxme");
+  me.innerHTML=
+    '<div class="etx-head"><span class="ms" aria-hidden="true">send_money</span>'+
+      '<div><h2>Your e-Transfer details</h2><p>People in your groups see these when they pay you back.</p></div></div>'+
+    '<div class="field"><label for="ixName">Name on your Interac account</label>'+
+      '<input id="ixName" type="text" autocomplete="name" maxlength="60" placeholder="'+esc(USER.name||"")+'"></div>'+
+    '<div class="field"><label for="ixHandle">Interac email or phone</label>'+
+      '<input id="ixHandle" type="text" inputmode="email" autocapitalize="off" autocorrect="off" maxlength="120" '+
+      'placeholder="name@gmail.com or (416) 555-0123"></div>'+
+    '<div class="etx-actions"><button class="btn p" id="ixSave" type="button">Save details</button>'+
+      (mine.handle ? '<button class="btn s" id="ixClear" type="button">Remove</button>' : '')+'</div>';
+  main.appendChild(me);
+  $("ixName").value = mine.name || tidyName(raw.name||"") || "";
+  $("ixHandle").value = mine.handle || String(raw.handle||"");
+  $("ixSave").addEventListener("click", ()=>{
+    const name=tidyName($("ixName").value).slice(0,60);
+    const handle=String($("ixHandle").value||"").trim();
+    if(!name) return toast("Enter the name on your Interac account");
+    if(!etxEmailOk(handle) && !etxPhoneOk(handle)) return toast("Enter a valid email, or a 10-digit phone number");
+    const rec={name, handle: etxEmailOk(handle) ? handle.toLowerCase() : etxPhone(handle), at:Date.now()};
+    upd("directory/"+USER.uid, {pay:rec}).then(()=>{
+      DIRECTORY[USER.uid]=Object.assign({}, DIRECTORY[USER.uid]||{}, {pay:rec});
+      toast("Interac details saved"); render();
+    });
+  });
+  if($("ixClear")) $("ixClear").addEventListener("click", ()=>{
+    upd("directory/"+USER.uid, {pay:null}).then(()=>{
+      if(DIRECTORY[USER.uid]) delete DIRECTORY[USER.uid].pay;
+      toast("Interac details removed"); render();
+    });
+  });
+
+  // The bank app the Pay screen offers to open.
+  main.appendChild(el("div","sechead","Your bank app"));
+  const bc=el("div","card pad etxbank");
+  bc.innerHTML='<p class="etx-sub">Pay opens this app after copying the details. Banks cannot be told who to pay, '+
+    'so you paste the email and amount in.</p><div class="chips" id="ixBanks"></div>';
+  main.appendChild(bc);
+  const cur=(PREFS&&PREFS.bank)||"";
+  ETX_BANKS.concat([{id:"", name:"None"}]).forEach(b=>{
+    const c=el("button","chip"); c.type="button"; c.textContent=b.name;
+    c.setAttribute("aria-pressed", b.id===cur ? "true" : "false");
+    c.addEventListener("click", ()=>{
+      PREFS=PREFS||{}; PREFS.bank=b.id;
+      set("users/"+USER.uid+"/prefs/bank", b.id||null);
+      render();
+    });
+    $("ixBanks").appendChild(c);
+  });
+
+  // Everybody I share a group with, once each.
+  const seen={}, people=[];
+  JOINED.forEach(g=> membersOf(g.id).forEach(m=>{
+    if(!m.uid || m.uid===USER.uid || seen[m.uid]) return;
+    seen[m.uid]=true;
+    people.push({uid:m.uid, name:(DIRECTORY[m.uid]&&DIRECTORY[m.uid].name)||m.name, color:m.color, photo:m.photo});
+  }));
+  people.sort((a,c)=> String(a.name).localeCompare(String(c.name)));
+  main.appendChild(el("div","sechead","People in your groups"));
+  if(!people.length){
+    main.appendChild(el("p","fine","Nobody else with a Settle account is in your groups yet."));
+    return;
+  }
+  const list=el("div","card etxlist");
+  people.forEach(p=>{
+    const d=etxFor(p.uid);
+    const r=el("div","etx-person");
+    r.innerHTML=avatarHTML("", p.name, p.color, p.photo)+
+      '<span class="etx-b"><span class="etx-n">'+esc(p.name)+'</span>'+
+        (d ? '<span class="etx-h">'+esc(d.handle)+(d.name!==p.name ? ' &middot; '+esc(d.name) : '')+'</span>'
+           : '<span class="etx-h none">No Interac details yet</span>')+'</span>';
+    if(d){
+      const b=el("button","etx-copy"); b.type="button";
+      b.innerHTML='<span class="ms" aria-hidden="true">content_copy</span>Copy';
+      b.setAttribute("aria-label","Copy "+p.name+"'s Interac address");
+      // An address is copied exactly as saved; a phone number as digits only.
+      b.addEventListener("click", ()=> /@/.test(d.handle)
+        ? etxCopy(d.handle, "Email")
+        : etxCopy(d.handle.replace(/[^\d]/g,""), "Phone") );
+      r.appendChild(b);
+    }
+    list.appendChild(r);
+  });
+  main.appendChild(list);
+}
+
 function viewAccount(main){
   setTitle(main, "Account");
   const c=el("div","card");
@@ -3735,6 +3922,39 @@ function sheetClaim(gid){
       .then(()=>{ rememberGroup(gid, groupName(gid)); closeSheet(); toast("You are "+name+" in this group"); });
   }
 }
+function drawEtx(host, gid, from, to, amount, existing){
+  if(!host) return;
+  host.innerHTML="";
+  if(existing || !USER || from!==meIn(gid)) return;
+  const seat=membersOf(gid).find(m=>m.name===to);
+  const d=seat && etxFor(seat.uid);
+  if(!d){
+    host.appendChild(el("p","etx-missing",
+      '<span class="ms" aria-hidden="true">info</span>'+esc(to)+' has not added Interac details yet.'));
+    return;
+  }
+  const bank=myBank();
+  const box=el("div","etx");
+  const amt = amount>0 ? (Math.round(amount*100)/100).toFixed(2) : "";
+  box.innerHTML=
+    '<div class="etx-title"><span class="ms" aria-hidden="true">send_money</span>Send by Interac e-Transfer</div>'+
+    '<div class="etx-line"><span class="k">To</span><span class="v">'+esc(d.name)+'</span></div>'+
+    '<div class="etx-line"><span class="k">'+(/@/.test(d.handle)?"Email":"Phone")+'</span><span class="v">'+esc(d.handle)+'</span>'+
+      '<button class="etx-copy" type="button" data-c="h"><span class="ms" aria-hidden="true">content_copy</span>Copy</button></div>'+
+    '<div class="etx-line"><span class="k">Amount</span><span class="v">'+(amt ? "$"+amt : "&mdash;")+'</span>'+
+      (amt ? '<button class="etx-copy" type="button" data-c="a"><span class="ms" aria-hidden="true">content_copy</span>Copy</button>' : '')+'</div>'+
+    (bank ? '<button class="btn dark wide etx-open" type="button">Open '+esc(bank.name)+'</button>'
+          : '<button class="etx-pick" type="button">Choose your bank app</button>')+
+    '<p class="etx-then">Send it in your bank app, then come back and record the payment below.</p>';
+  host.appendChild(box);
+  const hc=box.querySelector('[data-c="h"]'), ac=box.querySelector('[data-c="a"]');
+  if(hc) hc.addEventListener("click", ()=> etxCopy(/@/.test(d.handle) ? d.handle : d.handle.replace(/[^\d]/g,""), /@/.test(d.handle) ? "Email" : "Phone") );
+  if(ac) ac.addEventListener("click", ()=> etxCopy(amt, "Amount") );
+  const ob=box.querySelector(".etx-open");
+  if(ob) ob.addEventListener("click", ()=>{ etxCopy(/@/.test(d.handle) ? d.handle : d.handle.replace(/[^\d]/g,""), /@/.test(d.handle) ? "Email" : "Phone"); setTimeout(()=> etxOpenBank(bank), 350); });
+  const pk=box.querySelector(".etx-pick");
+  if(pk) pk.addEventListener("click", ()=>{ closeSheet(); CURRENT=null; TAB="interac"; window.scrollTo(0,0); render(); });
+}
 function freeColour(gid){
   const used={}; membersOf(gid).forEach(m=>{ used[m.color.toLowerCase()]=1; });
   for(let i=0;i<PALETTE.length;i++){ if(!used[PALETTE[i].toLowerCase()]) return PALETTE[i]; }
@@ -3975,6 +4195,7 @@ function sheetSettle(from, to, amt, existing){
   const mayEdit = !existing || canEdit(existing);
   openSheet(existing?(mayEdit?"Edit payment":"Payment"):"Record a payment", (b)=>{
     b.innerHTML=
+      '<div id="stEtx"></div>'+
       '<p class="lead">Use this when cash or a transfer has actually changed hands.</p>'+
       '<div class="field"><label for="stFrom">Who paid</label><select id="stFrom"'+(fromLocked?' disabled':'')+'>'+
         fromChoices.map(n=>'<option value="'+esc(n)+'"'+(n===from?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
@@ -4005,6 +4226,12 @@ function sheetSettle(from, to, amt, existing){
     // what is outstanding between them rather than leaving a stale figure.
     let touched = false;
     $("stAmt").addEventListener("input", ()=>{ touched = true; });
+    // Paying somebody who saved their Interac details: show them, with the
+    // amount, ready to copy - and the bank app one tap away.
+    const etx=()=> drawEtx($("stEtx"), gid, $("stFrom").value, $("stTo").value, Number($("stAmt").value)||0, existing);
+    ["stFrom","stTo"].forEach(id=> $(id).addEventListener("change", ()=> setTimeout(etx,0)) );
+    $("stAmt").addEventListener("input", etx);
+    setTimeout(etx,0);
     function suggest(force){
       const s2=suggestSettle(gid, $("stFrom").value, $("stTo").value);
       $("stWhy").textContent = s2.why;
@@ -5596,7 +5823,9 @@ function onSignedIn(u){
   // My entry in the directory, so other people can add me to a group by
   // picking my name instead of typing it and hoping they spell it the same.
   // Name and picture only beyond the address - never preferences or balances.
-  set("directory/"+USER.uid, {name:USER.name, email:(USER.email||"").toLowerCase(),
+  // Updated, not replaced: the entry also carries Interac details the person
+  // saved, and replacing it on every sign-in would throw them away.
+  upd("directory/"+USER.uid, {name:USER.name, email:(USER.email||"").toLowerCase(),
                               photo:USER.photo||null, at:Date.now()});
 
   // Everybody else's. Readable only once you have been approved, so it is a
