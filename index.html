@@ -1088,6 +1088,38 @@ button, input, select, textarea{ font-family:var(--f); }
 .pf-help{ margin:0 0 12px; text-align:center; font-size:12px; color:var(--ink-3); }
 .pf-save{ display:flex; align-items:center; justify-content:center; gap:8px; min-height:52px; font-size:15.5px; }
 .pf-save .ms{ font-size:20px; }
+/* Slide to record: the handle has to travel most of the way. */
+.pf-slide{ position:relative; height:58px; margin-top:4px; border-radius:999px; overflow:hidden; isolation:isolate;
+  background:var(--ink); color:var(--cream); -webkit-user-select:none; user-select:none; touch-action:pan-y; }
+.pf-slide-fill{ position:absolute; left:0; top:0; bottom:0; width:58px; z-index:0; border-radius:999px;
+  background:linear-gradient(90deg, rgba(238,181,134,.25), rgba(238,181,134,.85)); }
+.pf-slide-text{ position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; overflow:hidden;
+  padding:0 62px; font-size:15px; font-weight:600; letter-spacing:.01em; white-space:nowrap; text-overflow:ellipsis;
+  color:rgba(252,250,245,.92); opacity:calc(1 - var(--p, 0) * 1.5); pointer-events:none; font-variant-numeric:tabular-nums; }
+.pf-slide-text::after{ content:""; position:absolute; inset:0; transform:translateX(-100%);
+  background:linear-gradient(100deg, transparent 35%, rgba(255,255,255,.22) 50%, transparent 65%);
+  animation:pfShimmer 2.6s ease-in-out infinite; }
+@keyframes pfShimmer{ 60%, 100%{ transform:translateX(100%); } }
+.pf-slide-knob{ position:absolute; left:4px; top:4px; z-index:2; width:50px; height:50px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; background:var(--apricot); color:#3A2414; cursor:grab;
+  box-shadow:0 0 0 3px rgba(238,181,134,.25), 0 6px 16px -6px rgba(0,0,0,.55); touch-action:none;
+  -webkit-tap-highlight-color:transparent; }
+.pf-slide-knob .ms{ font-size:24px; transition:transform .2s; }
+.pf-slide.dragging .pf-slide-knob{ cursor:grabbing; }
+.pf-slide.done .pf-slide-knob .ms{ transform:scale(1.15); }
+.pf-slide.anim .pf-slide-knob{ transition:transform .32s cubic-bezier(.22,.61,.36,1); }
+.pf-slide.anim .pf-slide-fill{ transition:width .32s cubic-bezier(.22,.61,.36,1); }
+.pf-slide-knob:focus{ outline:none; }
+.pf-slide-knob:focus-visible{ outline:3px solid var(--apricot); outline-offset:3px; }
+.pf-slide-hint{ margin:8px 0 0; text-align:center; font-size:12px; color:var(--ink-3); }
+@media (prefers-reduced-motion:reduce){
+  .pf-slide-text::after{ display:none; animation:none; }
+  .pf-slide.anim .pf-slide-knob, .pf-slide.anim .pf-slide-fill{ transition:none; }
+}
+:root[data-theme="purple"] .pf-slide-knob{ background:#C9B3F2; color:#2A1F3D;
+  box-shadow:0 0 0 3px rgba(186,146,255,.25), 0 6px 16px -6px rgba(0,0,0,.55); }
+:root[data-theme="purple"] .pf-slide-fill{ background:linear-gradient(90deg, rgba(186,146,255,.2), rgba(201,179,242,.85)); }
+:root[data-theme="purple"] .pf-slide-knob:focus-visible{ outline-color:#C9B3F2; }
 .pf-del{ display:block; width:100%; margin:10px 0 0; padding:10px; border:0; background:transparent; font:inherit;
   font-size:13.5px; font-weight:600; color:var(--bad); cursor:pointer; }
 @media (prefers-reduced-motion:reduce){ .pf-arrow .ms{ animation:none; } }
@@ -4635,6 +4667,58 @@ function sheetExpense(existing){
 }
 
 /* ---------- record a payment ---------- */
+/* Slide to confirm. A tap cannot record a payment by accident: the handle has
+   to be dragged most of the way across. Let go early and it springs back.
+   onDone returns true when it went through; anything else springs it back so
+   the person can fix what the toast says and slide again. Arrow keys and End
+   move it for anyone using a keyboard. */
+function slideToConfirm(track, onDone){
+  const knob=track.querySelector(".pf-slide-knob"), fill=track.querySelector(".pf-slide-fill");
+  const icon=knob.querySelector(".ms");
+  let startX=0, x=0, max=0, dragging=false, done=false;
+  const measure=()=>{ max=Math.max(0, track.clientWidth - knob.offsetWidth - 8); };
+  const put=(v, animate)=>{
+    x=Math.max(0, Math.min(max, v));
+    track.classList.toggle("anim", !!animate);
+    knob.style.transform="translateX("+x+"px)";
+    fill.style.width=(x + knob.offsetWidth + 8)+"px";
+    const p = max ? x/max : 0;
+    track.style.setProperty("--p", p.toFixed(3));
+    track.setAttribute("aria-valuenow", String(Math.round(p*100)));
+  };
+  const reset=()=>{ done=false; track.classList.remove("done"); icon.textContent="arrow_forward"; measure(); put(0, true); };
+  const finish=()=>{
+    if(done) return;
+    if(max && x >= max*0.9){
+      done=true; put(max, true); track.classList.add("done"); icon.textContent="check";
+      try{ if(navigator.vibrate) navigator.vibrate(15); }catch(e){}
+      setTimeout(()=>{ if(onDone()!==true) reset(); }, 200);
+    } else {
+      put(0, true);
+    }
+  };
+  knob.addEventListener("pointerdown", e=>{
+    if(done) return;
+    measure(); dragging=true; startX=e.clientX - x;
+    try{ knob.setPointerCapture(e.pointerId); }catch(err){}
+    track.classList.add("dragging"); track.classList.remove("anim");
+    e.preventDefault();
+  });
+  knob.addEventListener("pointermove", e=>{ if(dragging) put(e.clientX - startX); });
+  const up=()=>{ if(!dragging) return; dragging=false; track.classList.remove("dragging"); finish(); };
+  knob.addEventListener("pointerup", up);
+  knob.addEventListener("pointercancel", up);
+  knob.addEventListener("keydown", e=>{
+    if(done) return;
+    measure();
+    if(e.key==="ArrowRight"){ e.preventDefault(); put(x + max*0.34, true); if(x >= max*0.9) finish(); }
+    else if(e.key==="ArrowLeft"){ e.preventDefault(); put(x - max*0.34, true); }
+    else if(e.key==="End"){ e.preventDefault(); put(max, true); finish(); }
+  });
+  window.addEventListener("resize", ()=>{ if(!done){ measure(); put(0); } });
+  return {reset};
+}
+
 function sheetSettle(from, to, amt, existing){
   const gid=CURRENT;
   // A payment can name someone who is no longer on the members list, so the
@@ -4692,9 +4776,20 @@ function sheetSettle(from, to, amt, existing){
       '</div>'+
       (fromLocked && !existing && mayEdit ? '<p class="pf-help">You can only record a payment you made. If someone paid you, they record it.</p>' : '')+
       (mayEdit
-        ? '<button class="btn p wide pf-save" id="stSave"><span class="ms" aria-hidden="true">check</span>'+
-            '<span id="stSaveLbl">'+(existing?"Save changes":"Record payment")+'</span></button>'+
-          (existing?'<button class="pf-del" id="stDel" type="button">Delete this payment</button>':'')
+        ? (existing
+            ? '<button class="btn p wide pf-save" id="stSave"><span class="ms" aria-hidden="true">check</span>'+
+                '<span id="stSaveLbl">Save changes</span></button>'+
+              '<button class="pf-del" id="stDel" type="button">Delete this payment</button>'
+            // Recording is a slide, not a tap, so a stray touch cannot do it.
+            : '<button id="stSave" type="button" hidden>Record payment</button>'+
+              '<div class="pf-slide" id="stSlide" role="slider" aria-label="Slide to record the payment" '+
+                'aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">'+
+                '<span class="pf-slide-fill" aria-hidden="true"></span>'+
+                '<span class="pf-slide-text" id="stSaveLbl">Slide to record</span>'+
+                '<span class="pf-slide-knob" tabindex="0" role="button" aria-label="Drag right to record, or press End">'+
+                  '<span class="ms" aria-hidden="true">arrow_forward</span></span>'+
+              '</div>'+
+              '<p class="pf-slide-hint">Slide all the way across to record it.</p>')
         : '<p class="locked"><span class="ms" aria-hidden="true">lock</span>'+
           'Only '+esc(ownerOf(existing))+' can change this, because they recorded it.</p>')+
       (existing?'<p class="fine">Recorded by '+esc(existing.by||existing.from)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
@@ -4709,7 +4804,7 @@ function sheetSettle(from, to, amt, existing){
       if(!$("stSaveLbl")) return;
       const a=Math.round((Number($("stAmt").value)||0)*100)/100, t=$("stTo").value;
       $("stSaveLbl").textContent = existing ? "Save changes"
-        : a>0 ? "Record "+money(a)+" to "+(t===ME ? "you" : t) : "Record payment";
+        : a>0 ? "Slide to record "+money(a) : "Slide to record";
     };
     refresh();
     if(!mayEdit){
@@ -4760,7 +4855,7 @@ function sheetSettle(from, to, amt, existing){
     });
     suggest(!amt && !existing);
 
-    $("stSave").addEventListener("click", ()=>{
+    const save=()=>{
       const f=$("stFrom").value, t=$("stTo").value;
       const a=Math.round((Number($("stAmt").value)||0)*100)/100;
       if(f===t) return toast("Pick two different people");
@@ -4776,7 +4871,10 @@ function sheetSettle(from, to, amt, existing){
       notify(existing?"payment.edit":"payment.add", gid,
              {desc: f+" paid "+t, amount: a});
       closeSheet(); toast(existing?"Payment updated":"Payment recorded");
-    });
+      return true;
+    };
+    $("stSave").addEventListener("click", save);
+    if($("stSlide")) slideToConfirm($("stSlide"), save);
     if(existing) $("stDel").addEventListener("click", ()=>{
       if(!confirm("Delete this "+money(existing.amount)+" payment from "+existing.from+
                   " to "+existing.to+"? Everyone's balance will move.")) return;
