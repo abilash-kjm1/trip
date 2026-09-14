@@ -1115,6 +1115,104 @@ button, input, select, textarea{ font-family:var(--f); }
 :root[data-theme="purple"] .gx-plus{ background:#C9B3F2; color:#2A1F3D;
   box-shadow:0 0 0 3px rgba(186,146,255,.22), 0 0 20px 3px rgba(186,146,255,.55); }
 
+/* ---- Interac page: your card, bank tiles, three steps, people ------------ */
+.ix-hero{ perspective:900px; margin:0 0 var(--s4); }
+.ix-card{ position:relative; overflow:hidden; isolation:isolate; display:flex; flex-direction:column;
+  width:100%; max-width:420px; aspect-ratio:1.586; margin:0 auto; padding:20px 22px; border-radius:22px; color:#FCFAF5;
+  background:radial-gradient(120% 90% at var(--gx, 22%) 0%, rgba(238,181,134,.36), transparent 56%),
+             linear-gradient(135deg, #2F332D 0%, #40463C 55%, #22251F 100%);
+  box-shadow:0 26px 44px -26px rgba(47,51,45,.75), inset 0 1px 0 rgba(255,255,255,.12);
+  transform:rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition:transform .25s ease-out; }
+.ix-card::before{ content:""; position:absolute; right:-70px; bottom:-90px; z-index:-1; width:250px; height:250px;
+  border-radius:50%; border:1px solid rgba(252,250,245,.10);
+  box-shadow:0 0 0 30px rgba(252,250,245,.03), 0 0 0 60px rgba(252,250,245,.022); }
+.ix-card::after{ content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; transform:translateX(-130%);
+  background:linear-gradient(100deg, transparent 30%, rgba(255,255,255,.2) 48%, transparent 66%); }
+.ix-hero.enter .ix-card{ animation:ixIn .75s cubic-bezier(.22,.61,.36,1) backwards; }
+.ix-hero.enter .ix-card::after{ animation:ixShine 1.6s cubic-bezier(.4,0,.2,1) .45s backwards; }
+@keyframes ixIn{ from{ opacity:0; transform:translateY(20px) rotateX(14deg); } }
+@keyframes ixShine{ from{ transform:translateX(-130%); } to{ transform:translateX(130%); } }
+.ix-card-top{ display:flex; align-items:center; justify-content:space-between; }
+.ix-brand{ font-size:11.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:rgba(252,250,245,.74); }
+.ix-card-top .ms{ font-size:24px; color:rgba(252,250,245,.74); }
+.ix-chipset{ display:flex; align-items:center; gap:12px; margin-top:14px; }
+.ix-chipgold{ position:relative; width:42px; height:32px; border-radius:7px;
+  background:linear-gradient(135deg, #F3D29A, #C9964F 55%, #EBC27E); box-shadow:inset 0 0 0 1px rgba(0,0,0,.18); }
+.ix-chipgold::after{ content:""; position:absolute; inset:8px 6px; border:1px solid rgba(60,40,10,.35); border-radius:3px; }
+.ix-bankname{ font-size:13px; font-weight:800; letter-spacing:.08em; color:var(--apricot); }
+.ix-handle{ margin-top:auto; font-size:clamp(17px, 4.8vw, 22px); font-weight:600; letter-spacing:.02em;
+  font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ix-handle.ph{ color:rgba(252,250,245,.38); }
+.ix-holder{ margin-top:6px; font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase;
+  color:rgba(252,250,245,.72); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ix-card.blank .ix-holder{ text-transform:none; letter-spacing:0; font-weight:500; white-space:normal; }
+.ix-card-acts{ display:flex; justify-content:center; gap:8px; max-width:420px; margin:12px auto 0; }
+.ix-act{ display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; border:1px solid var(--line);
+  background:var(--surface); color:var(--ink); font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:transform .15s; }
+.ix-act .ms{ font-size:17px; }
+.ix-act:active{ transform:scale(.96); }
+.ix-act:focus:not(:focus-visible){ outline:none; }
+.ix-form{ max-width:420px; margin:0 auto var(--s4); animation:gxRise .35s cubic-bezier(.22,.61,.36,1) backwards; }
+.ix-note{ display:flex; align-items:center; gap:6px; margin:-4px 0 14px; font-size:12px; color:var(--ink-3); }
+.ix-note .ms{ font-size:16px; }
+
+.ix-banks{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+@media (min-width:600px){ .ix-banks{ grid-template-columns:repeat(6, minmax(0, 1fr)); } }
+.ix-bank{ position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; margin:0; padding:14px 6px 12px;
+  border-radius:16px; border:1px solid var(--line); background:var(--surface); font:inherit; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:transform .2s, border-color .2s, box-shadow .2s; }
+.ix-mono{ width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+  background:var(--bk); color:#fff; font-size:12.5px; font-weight:800; letter-spacing:.02em;
+  box-shadow:0 10px 18px -12px var(--bk); }
+.ix-mono .ms{ font-size:20px; }
+.ix-bank-n{ font-size:12.5px; font-weight:600; color:var(--ink-2); }
+.ix-bank.on{ border-color:var(--bk); box-shadow:0 0 0 2px color-mix(in srgb, var(--bk) 32%, transparent); }
+.ix-bank.on .ix-bank-n{ color:var(--ink); }
+.ix-tick{ position:absolute; top:6px; right:6px; font-size:18px; color:var(--bk); }
+@media (hover:hover){ .ix-bank:hover{ transform:translateY(-2px); } }
+.ix-bank:active{ transform:scale(.96); }
+.ix-bank:focus:not(:focus-visible){ outline:none; }
+.ix-sub{ margin:10px 4px 0; font-size:12.5px; line-height:1.45; color:var(--ink-3); }
+
+.ix-how{ display:flex; align-items:flex-start; gap:4px; margin:var(--s5) 0 var(--s2); padding:16px 10px 14px;
+  border-radius:18px; background:color-mix(in srgb, var(--apricot) 13%, transparent); }
+.ix-step{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px; text-align:center; }
+.ix-step-ic{ position:relative; width:42px; height:42px; margin-bottom:5px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; background:var(--surface); color:var(--apricot-dk); box-shadow:0 8px 16px -12px rgba(0,0,0,.4); }
+.ix-step-ic .ms{ font-size:20px; }
+.ix-step-ic i{ position:absolute; top:-3px; right:-3px; width:18px; height:18px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; background:var(--ink); color:var(--cream); font-style:normal; font-size:10px; font-weight:700; }
+.ix-step b{ font-size:13px; font-weight:700; color:var(--ink); }
+.ix-step small{ font-size:11.5px; line-height:1.3; color:var(--ink-3); }
+.ix-step-line{ flex:0 0 16px; height:2px; margin-top:21px; opacity:.55;
+  background:repeating-linear-gradient(90deg, var(--apricot-dk) 0 4px, transparent 4px 8px); }
+
+.ix-peoplehead{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.ix-count{ font-size:12px; font-weight:600; letter-spacing:0; text-transform:none; color:var(--ink-3); }
+.ix-search{ display:flex; align-items:center; gap:8px; min-height:44px; margin:0 0 6px; padding:0 14px; border-radius:14px;
+  background:var(--surface); border:1px solid var(--line); cursor:text; }
+.ix-search .ms{ font-size:19px; color:var(--ink-3); }
+.ix-search input{ flex:1; min-width:0; min-height:0; margin:0; padding:0; border:0; background:transparent; box-shadow:none;
+  font:inherit; font-size:15px; color:var(--ink); outline:none; -webkit-appearance:none; appearance:none; }
+.ix-group-lab{ margin:14px 6px 8px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); }
+.ix-section[hidden], .ix-person[hidden]{ display:none; }
+.ix-person.off > :first-child{ opacity:.55; filter:grayscale(.35); }
+.ix-person.off .etx-n{ color:var(--ink-2); }
+.etx-copy.done{ background:color-mix(in srgb, var(--good) 16%, transparent); color:var(--good); }
+.ix-list.enter .ix-person{ animation:gxRise .5s cubic-bezier(.22,.61,.36,1) backwards; animation-delay:calc(var(--i, 0) * 45ms); }
+@media (prefers-reduced-motion:reduce){
+  .ix-hero.enter .ix-card, .ix-hero.enter .ix-card::after, .ix-list.enter .ix-person, .ix-form{ animation:none; }
+  .ix-card{ transition:none; transform:none; }
+}
+:root[data-theme="purple"] .ix-card{
+  background:radial-gradient(120% 90% at var(--gx, 22%) 0%, rgba(186,146,255,.40), transparent 56%),
+             linear-gradient(135deg, #2A1F3D 0%, #3D2C5C 55%, #1E1630 100%); }
+:root[data-theme="purple"] .ix-bankname{ color:#C9B3F2; }
+:root[data-theme="purple"] .ix-how{ background:rgba(186,146,255,.14); }
+:root[data-theme="purple"] .ix-step-ic{ color:#6D3FBF; }
+:root[data-theme="purple"] .ix-step-line{ background:repeating-linear-gradient(90deg, #6D3FBF 0 4px, transparent 4px 8px); }
+
 /* ---- Interac: my details, my bank, everybody's details, and the Pay box -- */
 .etx-head{ display:flex; gap:12px; align-items:flex-start; margin:0 0 var(--s4); }
 .etx-head > .ms{ flex:0 0 auto; width:40px; height:40px; border-radius:12px; display:flex; align-items:center;
@@ -3296,66 +3394,123 @@ function viewActivity(main){
 
 /* ---------- account ---------- */
 /* ---------- Interac ----------
-   My e-Transfer details, the bank app to open, and the details of everybody
-   I share a group with - so paying somebody back never starts with asking
-   them for their address. */
+   Your details shown as a card you could hand somebody, the bank app Pay
+   opens, how paying works in three steps, and everybody else - those ready
+   to be paid first, those not set up yet after. The card and the rows come
+   in once per visit, not on every redraw the database causes. */
+let IX_EDIT = false, IX_SEEN = false;
+const ETX_TINT = {cibc:"#B5123A", rbc:"#005DAA", td:"#1A8B3C", scotiabank:"#D8141C", bmo:"#0079C1"};
+const ETX_MONO = {cibc:"CIBC", rbc:"RBC", td:"TD", scotiabank:"S", bmo:"BMO"};
 function viewInterac(main){
   setTitle(main, "Interac");
-  const mine = etxFor(USER.uid) || {name:"", handle:""};
+  const enter = !IX_SEEN; IX_SEEN = true;
+  const mine = etxFor(USER.uid);
   const raw = (DIRECTORY[USER.uid] && DIRECTORY[USER.uid].pay) || {};
+  const bank = myBank();
+  const editing = IX_EDIT || !mine;
 
-  const me=el("div","card pad etxme");
-  me.innerHTML=
-    '<div class="etx-head"><span class="ms" aria-hidden="true">send_money</span>'+
-      '<div><h2>Your e-Transfer details</h2><p>People in your groups see these when they pay you back.</p></div></div>'+
-    '<div class="field"><label for="ixName">Name on your Interac account</label>'+
-      '<input id="ixName" type="text" autocomplete="name" maxlength="60" placeholder="'+esc(USER.name||"")+'"></div>'+
-    '<div class="field"><label for="ixHandle">Interac email or phone</label>'+
-      '<input id="ixHandle" type="text" inputmode="email" autocapitalize="off" autocorrect="off" maxlength="120" '+
-      'placeholder="name@gmail.com or (416) 555-0123"></div>'+
-    '<div class="etx-actions"><button class="btn p" id="ixSave" type="button">Save details</button>'+
-      (mine.handle ? '<button class="btn s" id="ixClear" type="button">Remove</button>' : '')+'</div>';
-  main.appendChild(me);
-  $("ixName").value = mine.name || tidyName(raw.name||"") || "";
-  $("ixHandle").value = mine.handle || String(raw.handle||"");
-  $("ixSave").addEventListener("click", ()=>{
-    const name=tidyName($("ixName").value).slice(0,60);
-    const handle=String($("ixHandle").value||"").trim();
-    if(!name) return toast("Enter the name on your Interac account");
-    if(!etxEmailOk(handle) && !etxPhoneOk(handle)) return toast("Enter a valid email, or a 10-digit phone number");
-    const rec={name, handle: etxEmailOk(handle) ? handle.toLowerCase() : etxPhone(handle), at:Date.now()};
-    updStrict("directory/"+USER.uid, {pay:rec}).then(()=>{
-      DIRECTORY[USER.uid]=Object.assign({}, DIRECTORY[USER.uid]||{}, {pay:rec});
-      toast("Interac details saved"); render();
-    }, e=> toast(writeError(e)) );
+  // ---- your card ----
+  const hero=el("div","ix-hero"+(enter?" enter":""));
+  const card=el("div","ix-card"+(mine?"":" blank"));
+  card.innerHTML=
+    '<div class="ix-card-top"><span class="ix-brand">Interac e-Transfer</span>'+
+      '<span class="ms" aria-hidden="true">contactless</span></div>'+
+    '<div class="ix-chipset"><span class="ix-chipgold" aria-hidden="true"></span>'+
+      (bank ? '<span class="ix-bankname">'+esc(bank.name)+'</span>' : '')+'</div>'+
+    (mine
+      ? '<div class="ix-handle">'+esc(mine.handle)+'</div><div class="ix-holder">'+esc(mine.name)+'</div>'
+      : '<div class="ix-handle ph">your@email.com</div>'+
+        '<div class="ix-holder">Add your details so people can pay you back</div>');
+  hero.appendChild(card);
+  if(mine){
+    const acts=el("div","ix-card-acts");
+    acts.innerHTML=
+      '<button class="ix-act" id="ixCopyMine" type="button"><span class="ms" aria-hidden="true">content_copy</span>Copy my details</button>'+
+      '<button class="ix-act" id="ixEditBtn" type="button"><span class="ms" aria-hidden="true">'+(IX_EDIT?"close":"edit")+'</span>'+
+        (IX_EDIT?"Close":"Edit")+'</button>';
+    hero.appendChild(acts);
+  }
+  main.appendChild(hero);
+  // The card leans toward the pointer, and its glow follows.
+  card.addEventListener("pointermove", e=>{
+    const r=card.getBoundingClientRect();
+    const x=(e.clientX-r.left)/r.width-.5, y=(e.clientY-r.top)/r.height-.5;
+    card.style.setProperty("--ry", (x*10).toFixed(2)+"deg");
+    card.style.setProperty("--rx", (-y*8).toFixed(2)+"deg");
+    card.style.setProperty("--gx", Math.round((x+.5)*100)+"%");
   });
-  if($("ixClear")) $("ixClear").addEventListener("click", ()=>{
-    updStrict("directory/"+USER.uid, {pay:null}).then(()=>{
-      if(DIRECTORY[USER.uid]) delete DIRECTORY[USER.uid].pay;
-      toast("Interac details removed"); render();
-    }, e=> toast(writeError(e)) );
-  });
+  card.addEventListener("pointerleave", ()=>{ card.style.setProperty("--rx","0deg"); card.style.setProperty("--ry","0deg"); });
+  if($("ixCopyMine")) $("ixCopyMine").addEventListener("click", ()=> etxCopy(mine.name+"\n"+mine.handle, "Your details") );
+  if($("ixEditBtn")) $("ixEditBtn").addEventListener("click", ()=>{ IX_EDIT=!IX_EDIT; render(); });
 
-  // The bank app the Pay screen offers to open.
+  // ---- the form, only while editing or before anything is saved ----
+  if(editing){
+    const f=el("div","card pad ix-form");
+    f.innerHTML=
+      '<div class="field"><label for="ixName">Name on your Interac account</label>'+
+        '<input id="ixName" type="text" autocomplete="name" maxlength="60" placeholder="'+esc(USER.name||"")+'"></div>'+
+      '<div class="field"><label for="ixHandle">Interac email or phone</label>'+
+        '<input id="ixHandle" type="text" inputmode="email" autocapitalize="off" autocorrect="off" maxlength="120" '+
+        'placeholder="name@gmail.com or (416) 555-0123"></div>'+
+      '<p class="ix-note"><span class="ms" aria-hidden="true">lock</span>Only people approved into Settle can see these.</p>'+
+      '<div class="etx-actions"><button class="btn p" id="ixSave" type="button">'+(mine?"Save changes":"Save details")+'</button>'+
+        (mine ? '<button class="btn s" id="ixClear" type="button">Remove</button>' : '')+'</div>';
+    main.appendChild(f);
+    $("ixName").value = (mine&&mine.name) || tidyName(raw.name||"") || "";
+    $("ixHandle").value = (mine&&mine.handle) || String(raw.handle||"");
+    $("ixSave").addEventListener("click", ()=>{
+      const rec=etxRecord($("ixName").value, $("ixHandle").value);
+      if(typeof rec==="string") return toast(rec.replace("the Interac account","your Interac account"));
+      $("ixSave").disabled=true;
+      updStrict("directory/"+USER.uid, {pay:rec}).then(()=>{
+        DIRECTORY[USER.uid]=Object.assign({}, DIRECTORY[USER.uid]||{}, {pay:rec});
+        IX_EDIT=false; IX_SEEN=false;           // let the card sweep in with the new details
+        toast("Interac details saved"); render();
+      }, e=>{ $("ixSave").disabled=false; toast(writeError(e)); });
+    });
+    if($("ixClear")) $("ixClear").addEventListener("click", ()=>{
+      updStrict("directory/"+USER.uid, {pay:null}).then(()=>{
+        if(DIRECTORY[USER.uid]) delete DIRECTORY[USER.uid].pay;
+        IX_EDIT=false; toast("Interac details removed"); render();
+      }, e=> toast(writeError(e)) );
+    });
+  }
+
+  // ---- your bank app ----
   main.appendChild(el("div","sechead","Your bank app"));
-  const bc=el("div","card pad etxbank");
-  bc.innerHTML='<p class="etx-sub">Pay copies the email and opens this app. Banks cannot be told who to pay, '+
-    'so you paste the email and amount in. On iPhone the bank’s App Store page opens - tap Open there.</p>'+
-    '<div class="chips" id="ixBanks"></div>';
-  main.appendChild(bc);
+  const banks=el("div","ix-banks"); banks.id="ixBanks";
   const cur=(PREFS&&PREFS.bank)||"";
   ETX_BANKS.concat([{id:"", name:"None"}]).forEach(b=>{
-    const c=el("button","chip"); c.type="button"; c.textContent=b.name;
-    c.setAttribute("aria-pressed", b.id===cur ? "true" : "false");
-    c.addEventListener("click", ()=>{
+    const on = b.id===cur;
+    const t=el("button","ix-bank"+(on?" on":"")); t.type="button";
+    t.style.setProperty("--bk", ETX_TINT[b.id] || "var(--ink-3)");
+    t.setAttribute("aria-pressed", on ? "true" : "false");
+    t.innerHTML=
+      '<span class="ix-mono">'+(b.id ? esc(ETX_MONO[b.id]||b.name) : '<span class="ms" aria-hidden="true">block</span>')+'</span>'+
+      '<span class="ix-bank-n">'+esc(b.name)+'</span>'+
+      (on ? '<span class="ix-tick ms" aria-hidden="true">check_circle</span>' : '');
+    t.addEventListener("click", ()=>{
       PREFS=PREFS||{}; PREFS.bank=b.id;
       set("users/"+USER.uid+"/prefs/bank", b.id||null);
       render();
     });
-    $("ixBanks").appendChild(c);
+    banks.appendChild(t);
   });
+  main.appendChild(banks);
+  main.appendChild(el("p","ix-sub",
+    "Pay copies the email and opens this app. Banks cannot be told who to pay, so you paste the email and "+
+    "amount in. On iPhone the bank’s App Store page opens - tap Open there."));
 
-  // Everybody I share a group with, once each.
+  // ---- how paying works ----
+  const how=el("div","ix-how");
+  how.innerHTML=[["payments","Tap Pay","on anything you owe"],
+                 ["content_copy","Copy & open","your bank app"],
+                 ["task_alt","Record it","back in Settle"]].map((st,i)=>
+    '<div class="ix-step"><span class="ix-step-ic"><span class="ms" aria-hidden="true">'+st[0]+'</span><i>'+(i+1)+'</i></span>'+
+      '<b>'+st[1]+'</b><small>'+st[2]+'</small></div>').join('<span class="ix-step-line" aria-hidden="true"></span>');
+  main.appendChild(how);
+
+  // ---- everybody else ----
   const seen={}, people=[];
   JOINED.forEach(g=> membersOf(g.id).forEach(m=>{
     if(!m.uid || m.uid===USER.uid || seen[m.uid]) return;
@@ -3371,15 +3526,30 @@ function viewInterac(main){
     people.push({uid:u, name:e.name, color:null, photo:e.photo||null});
   });
   people.sort((a,c)=> String(a.name).localeCompare(String(c.name)));
-  main.appendChild(el("div","sechead", isAdmin() ? "Everyone in Settle" : "People in your groups"));
+  const ready=people.filter(p=> etxFor(p.uid)), pending=people.filter(p=> !etxFor(p.uid));
+
+  const head=el("div","sechead ix-peoplehead");
+  head.innerHTML='<span>'+(isAdmin() ? "Everyone in Settle" : "People in your groups")+'</span>'+
+    (people.length ? '<span class="ix-count">'+ready.length+' of '+people.length+' ready</span>' : '');
+  main.appendChild(head);
   if(!people.length){
     main.appendChild(el("p","fine","Nobody else with a Settle account is in your groups yet."));
     return;
   }
-  const list=el("div","card etxlist");
-  people.forEach(p=>{
-    const d=etxFor(p.uid);
-    const r=el("div","etx-person");
+
+  const wrap=el("div","ix-list"+(enter?" enter":""));
+  let find=null;
+  if(people.length>6){
+    find=el("label","ix-search");
+    find.innerHTML='<span class="ms" aria-hidden="true">search</span>'+
+      '<input id="ixFind" type="search" placeholder="Find someone" aria-label="Find someone" autocomplete="off">';
+    wrap.appendChild(find);
+  }
+  let n=0;
+  const row=(p, d)=>{
+    const r=el("div","etx-person ix-person"+(d?"":" off"));
+    r.style.setProperty("--i", n++);
+    r.dataset.q=(p.name+" "+(d ? d.handle+" "+d.name : "")).toLowerCase();
     r.innerHTML=avatarHTML("", p.name, p.color, p.photo)+
       '<span class="etx-b"><span class="etx-n">'+esc(p.name)+'</span>'+
         (d ? '<span class="etx-h">'+esc(d.handle)+(d.name!==p.name ? ' &middot; '+esc(d.name) : '')+'</span>'
@@ -3387,11 +3557,13 @@ function viewInterac(main){
     if(d){
       const b=el("button","etx-copy"); b.type="button";
       b.innerHTML='<span class="ms" aria-hidden="true">content_copy</span>Copy';
-      b.setAttribute("aria-label","Copy "+p.name+"'s Interac address");
+      b.setAttribute("aria-label","Copy "+p.name+"'s Interac "+(/@/.test(d.handle)?"email":"phone"));
       // An address is copied exactly as saved; a phone number as digits only.
-      b.addEventListener("click", ()=> /@/.test(d.handle)
-        ? etxCopy(d.handle, "Email")
-        : etxCopy(d.handle.replace(/[^\d]/g,""), "Phone") );
+      b.addEventListener("click", ()=>{
+        if(/@/.test(d.handle)) etxCopy(d.handle, "Email"); else etxCopy(d.handle.replace(/[^\d]/g,""), "Phone");
+        b.classList.add("done"); b.querySelector(".ms").textContent="check";
+        setTimeout(()=>{ b.classList.remove("done"); b.querySelector(".ms").textContent="content_copy"; }, 1400);
+      });
       r.appendChild(b);
     }
     if(isAdmin()){
@@ -3401,9 +3573,35 @@ function viewInterac(main){
       e.addEventListener("click", ()=> sheetEtxFor(p.uid, p.name) );
       r.appendChild(e);
     }
-    list.appendChild(r);
-  });
-  main.appendChild(list);
+    return r;
+  };
+  const section=(label, list, cls)=>{
+    if(!list.length) return null;
+    const box=el("div","ix-section");
+    box.appendChild(el("div","ix-group-lab", label));
+    const c=el("div","card etxlist "+cls);
+    list.forEach(p=> c.appendChild(row(p, etxFor(p.uid))) );
+    box.appendChild(c);
+    wrap.appendChild(box);
+    return box;
+  };
+  section("Ready to pay", ready, "ix-ready");
+  section("Not set up yet", pending, "ix-pending");
+  main.appendChild(wrap);
+
+  if(find){
+    const input=find.querySelector("input");
+    input.addEventListener("input", ()=>{
+      const q=input.value.trim().toLowerCase();
+      [].forEach.call(wrap.querySelectorAll(".ix-section"), sec=>{
+        let shown=0;
+        [].forEach.call(sec.querySelectorAll(".ix-person"), r=>{
+          const hit=!q || r.dataset.q.indexOf(q)>-1; r.hidden=!hit; if(hit) shown++;
+        });
+        sec.hidden = !shown;
+      });
+    });
+  }
 }
 
 /* The administrator filling in somebody else's Interac details. The database
