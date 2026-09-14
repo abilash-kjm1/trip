@@ -13,6 +13,23 @@ import { reminderEmail } from "../lib/template.js";
 import { groupSummary, cents } from "../lib/ledger.js";
 import { normalise, isDue, isValidTz, describe } from "../lib/schedule.js";
 import { runActivity } from "../lib/activity.js";
+import webpush from "web-push";
+
+/* Phone notifications are signed with a key pair made once for this app. The
+   public half is in the app; the private half lives only here. Without both,
+   nothing is pushed and everything else carries on as before. */
+function pushSender() {
+  const pub = process.env.VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
+  if (!pub || !priv) return null;
+  try {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT ||
+      ("mailto:" + (process.env.ADMIN_EMAIL || "abilashkjm01@gmail.com")), pub, priv);
+  } catch (err) {
+    console.error("[push] the VAPID keys are not usable:", (err && err.message) || err);
+    return null;
+  }
+  return (sub, payload, opts) => webpush.sendNotification(sub, payload, opts);
+}
 
 const DEFAULT_TZ = process.env.DEFAULT_TZ || "America/Toronto";
 const APP_URL = process.env.APP_URL || "https://abilash-kjm1.github.io/trip/";
@@ -60,6 +77,8 @@ export default async function handler(req, res) {
     BREVO_API_KEY: process.env.BREVO_API_KEY ? "set" : "not set",
     RESEND_API_KEY: process.env.RESEND_API_KEY ? "set" : "not set",
     REMINDER_FROM: process.env.REMINDER_FROM || "NOT SET - the sender falls back",
+    VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY ? "set" : "NOT SET - no phone notifications",
+    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY ? "set" : "NOT SET - no phone notifications",
     APP_URL: process.env.APP_URL || "not set - using the default"
   } : undefined;
 
@@ -304,6 +323,7 @@ export default async function handler(req, res) {
         db: { read: readPath, remove: removePath,
               set: (path, v) => database().ref(path).set(v) },
         send: sendEmail,
+        push: pushSender(),
         adminEmail: process.env.ADMIN_EMAIL || "",
         secret,
         // Where this deployment actually answers, so the approve link points

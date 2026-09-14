@@ -13,6 +13,7 @@
 import { money } from "./ledger.js";
 import { activityEmail, accessRequestEmail, groupInviteEmail, nudgeEmail } from "./template.js";
 import { makeToken, normaliseAccess } from "./access.js";
+import { deliver, askMessage, answerMessage, nudgeMessage } from "./push.js";
 
 /* Asking to join is not activity in a group - there is no group yet - so it
    travels through the same queue but down its own path, to the administrator
@@ -20,6 +21,11 @@ import { makeToken, normaliseAccess } from "./access.js";
 export const JOIN_KIND = "access.request";
 export const INVITE_KIND = "group.invite";
 export const NUDGE_KIND = "nudge";
+// Somebody answered whether a payment reached them. Never emailed: it only
+// tells the payer's phone, and only what the payment record itself says.
+export const GOT_KIND = "payment.got";
+// The payer asks again after being told it had not arrived. Push only too.
+export const ASK_KIND = "payment.ask";
 export const MAX_JOINS = 20;             // per run; a ceiling on invitation spam
 export const MAX_INVITES = 20;
 export const MAX_NUDGES = 20;
@@ -53,7 +59,8 @@ export function normaliseEntry(key, raw, now) {
   if (!raw || typeof raw !== "object") return null;
 
   const kind = str(raw.kind, 40);
-  if (!KINDS[kind] && kind !== JOIN_KIND && kind !== INVITE_KIND && kind !== NUDGE_KIND) return null;
+  if (!KINDS[kind] && kind !== JOIN_KIND && kind !== INVITE_KIND && kind !== NUDGE_KIND &&
+      kind !== GOT_KIND && kind !== ASK_KIND) return null;
 
   // A group id is a database key. Anything that could climb out of the path
   // is not one. A request to join names no group.
@@ -74,10 +81,15 @@ export function normaliseEntry(key, raw, now) {
   let amount = Number(raw.amount);
   if (!Number.isFinite(amount) || amount <= 0 || amount > 1e9) amount = null;
 
+  // Which payment a note is about: a database key, nothing more. Only ever
+  // used to look the payment up - whatever the note claims, the record decides.
+  const ref = str(raw.ref, 64);
+
   return {
     key, kind, gid, actorUid, at, amount,
     actor: str(raw.actor, 80) || "Someone",
-    desc:  str(raw.desc, 120)
+    desc:  str(raw.desc, 120),
+    ref:   /^[A-Za-z0-9_-]+$/.test(ref) ? ref : null
   };
 }
 
@@ -139,10 +151,13 @@ export function lineFor(e) {
  * @param {object}   p.db      { read(path), remove(path) }
  * @param {function} p.send    ({to, subject, html, text}) => Promise
  */
-export async function runActivity({ users, at, dry, appUrl, db, send,
+export async function runActivity({ users, at, dry, appUrl, db, send, push,
                                     adminEmail, secret, apiBase }) {
   const now = at.getTime();
-  const log = { queued: 0, dropped: 0, sent: 0, failed: 0, joins: 0, invites: 0, nudges: 0, errors: [] };
+  const log = { queued: 0, dropped: 0, sent: 0, failed: 0, joins: 0, invites: 0, nudges: 0,
+                pushed: 0, pushGone: 0, pushFailed: 0, errors: [] };
+  // Where a notification opens: the app, at the group it is about.
+  const openAt = (gid) => String(appUrl || "").replace(/#.*$/, "") + "#g=" + encodeURIComponent(gid);
 
   const raw = await db.read("mail/queue");
   const keys = Object.keys(raw || {});
@@ -255,6 +270,10 @@ export async function runActivity({ users, at, dry, appUrl, db, send,
         await db.set("trips/" + e.gid + "/nudges/" + seat.uid, now);
       }
       log.nudges++;
+      await deliver({ uid: seat.uid, users, dry, push, db, log,
+        message: nudgeMessage({ from: e.actor, amount: e.amount,
+                                group: (g.meta && g.meta.name) || e.gid,
+                                url: openAt(e.gid), tag: "nudge-" + e.gid }) });
       console.log("[nudge] " + (dry ? "DRY " : "") + e.actor + " nudged " + to);
     } catch (err) {
       log.failed++;
@@ -265,7 +284,8 @@ export async function runActivity({ users, at, dry, appUrl, db, send,
 
   // ---- notices about a group --------------------------------------------
   const notes = batch.filter((e) => e.kind !== JOIN_KIND && e.kind !== INVITE_KIND
-                                 && e.kind !== NUDGE_KIND);
+                                 && e.kind !== NUDGE_KIND && e.kind !== GOT_KIND
+                                 && e.kind !== ASK_KIND);
 
   // A group is read once however many notes mention it.
   const groups = {};
@@ -316,6 +336,49 @@ export async function runActivity({ users, at, dry, appUrl, db, send,
       log.failed++;
       log.errors.push({ uid: bundle.uid, error: ((err && err.message) || String(err)).slice(0, 600) });
       console.error("[activity] failed for", bundle.uid, err);
+    }
+  }
+
+  // ---- phone notifications: did the money arrive? -----------------------
+  // A new payment asks the person it went to; their answer tells whoever
+  // recorded it. Both are checked against the payment record itself: the note
+  // only says which payment to look at. So nobody can be told a payment was
+  // made, or answered, that the database does not show.
+  if (push || dry) {
+    const about = (x) => x.kind === "payment.add" || x.kind === ASK_KIND || x.kind === GOT_KIND;
+    for (const e of batch.filter((x) => about(x) && x.ref)) {
+      try {
+        if (groups[e.gid] === undefined) groups[e.gid] = await db.read("trips/" + e.gid);
+        const g = groups[e.gid];
+        if (!g || !isMember(g, e.actorUid)) continue;
+        const p = (g.payments || {})[e.ref];
+        if (!p || typeof p !== "object" || p.netted) continue;
+        const seat = Object.values(g.people || {}).find((s) =>
+          s && s.n === p.to && typeof s.uid === "string" && s.uid);
+        if (!seat) continue;
+        const gname = (g.meta && g.meta.name) || e.gid;
+        const amount = Number(p.amount) || 0;
+
+        if (e.kind !== GOT_KIND) {
+          // Recorded by this author, still waiting, and not to themselves.
+          if (p.byUid !== e.actorUid || p.ask !== true || p.got || seat.uid === e.actorUid) continue;
+          await deliver({ uid: seat.uid, users, dry, push, db, log,
+            message: askMessage({ from: p.from, amount, group: gname, url: openAt(e.gid),
+                                  tag: "arrive-" + e.gid + "-" + e.ref }) });
+        } else {
+          // Answered by the person it went to, and told to whoever recorded it.
+          const got = p.got;
+          if (!got || typeof got !== "object" || got.uid !== e.actorUid || seat.uid !== e.actorUid) continue;
+          if (typeof p.byUid !== "string" || !p.byUid || p.byUid === e.actorUid) continue;
+          await deliver({ uid: p.byUid, users, dry, push, db, log,
+            message: answerMessage({ to: p.to, amount, ok: got.ok === true, group: gname,
+                                     url: openAt(e.gid), tag: "answer-" + e.gid + "-" + e.ref }) });
+        }
+      } catch (err) {
+        log.pushFailed++;
+        log.errors.push({ gid: e.gid, error: ("push: " + ((err && err.message) || String(err))).slice(0, 300) });
+        console.error("[push] could not notify for", e.gid, err);
+      }
     }
   }
 

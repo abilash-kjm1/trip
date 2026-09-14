@@ -161,6 +161,27 @@ them are ever read by the browser.
 | `APP_URL` | no | Link target in the email. Defaults to the GitHub Pages URL. |
 | `ADMIN_EMAIL` | for joining | Where requests to join are sent, and the name recorded against a decision. Without it nobody can be let in by email. |
 | `API_BASE_URL` | no | Where this deployment answers, e.g. `https://trip-xi-flax.vercel.app`. Worked out from the request when it is not set; only needed behind a proxy that rewrites the host. |
+| `VAPID_PUBLIC_KEY` | for phone notifications | The public half of the Web Push key pair. The same value is in the app (`pushnotify.js`). |
+| `VAPID_PRIVATE_KEY` | for phone notifications | The private half. Only ever here - it signs every notification. |
+| `VAPID_SUBJECT` | no | A `mailto:` address push services can contact. Defaults to the admin address. |
+
+### Phone notifications
+
+Somebody who turns them on in the app leaves a subscription at
+`users/{uid}/push/{id}`. On each pass the scheduler pushes:
+
+* **"Did $45.50 arrive?"** to the person a new payment went to (and again when
+  the payer asks again);
+* **"Kelvin got your $45.50"** or **"can't see your $45.50"** to whoever
+  recorded it, once they answer;
+* a reminder, when somebody is nudged.
+
+Every one is checked against the payment record, not the note: the note only
+says which payment to look at. Subscriptions are only believed if they point
+at a real push service (Google, Apple, Mozilla, Microsoft), and one the
+service reports as gone is deleted. Without both VAPID keys nothing is pushed
+and email carries on as before. On iPhone, notifications need Settle added to
+the Home Screen (iOS 16.4+).
 
 Generate a secret with:
 

@@ -3,3 +3,6 @@ node_modules/
 .env
 .env.local
 test/preview.html
+
+# VAPID keys for phone notifications - the private one goes to Vercel only
+.vapid.local.txt

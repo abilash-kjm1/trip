@@ -1,5 +1,5 @@
 /* Settle - offline service worker */
-const VERSION = 'settle-v75';
+const VERSION = 'settle-v76';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 
@@ -102,4 +102,41 @@ self.addEventListener('fetch', (e) => {
 
 self.addEventListener('message', (e) => {
   if (e.data === 'skipWaiting') self.skipWaiting();
+});
+
+// A notification from the Settle server. Every push shows something - iPhone
+// and Chrome both require it - and a newer one about the same payment
+// replaces the older rather than stacking up.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
+  const title = String(d.title || 'Settle').slice(0, 90);
+  const opts = {
+    body: String(d.body || 'Something changed in one of your groups.').slice(0, 220),
+    icon: './icon-192.png',
+    data: { url: typeof d.url === 'string' ? d.url : './' },
+    requireInteraction: !!d.sticky
+  };
+  if (d.tag) { opts.tag = String(d.tag).slice(0, 120); opts.renotify = true; }
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+
+// Tapping it opens Settle at the group it is about - bringing an open copy to
+// the front if there is one, where the question is already waiting.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  let target;
+  try { target = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope); }
+  catch (_) { target = new URL('./', self.registration.scope); }
+  if (target.origin !== self.location.origin) target = new URL('./', self.registration.scope);
+  e.waitUntil((async () => {
+    const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const mine = open.find((c) => c.url.startsWith(self.registration.scope));
+    if (mine) {
+      await mine.focus();
+      mine.postMessage({ type: 'settle-open', url: target.href });
+      return;
+    }
+    await self.clients.openWindow(target.href);
+  })());
 });
