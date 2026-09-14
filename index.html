@@ -1101,19 +1101,26 @@ button, input, select, textarea{ font-family:var(--f); }
 .paid-pop.out .paid-card{ animation:paidDrop .3s ease-in both; }
 @keyframes paidPop{ from{ opacity:0; transform:translateY(22px) scale(.88); } }
 @keyframes paidDrop{ to{ opacity:0; transform:translateY(10px) scale(.96); } }
-.paid-mark{ position:relative; width:92px; height:92px; margin:0 auto 16px; }
-.paid-mark svg{ position:relative; z-index:1; display:block; width:100%; height:100%; overflow:visible; }
-.paid-circle{ fill:var(--good); transform-box:fill-box; transform-origin:center;
-  animation:paidCircle .5s cubic-bezier(.34,1.56,.64,1) .08s both; }
-@keyframes paidCircle{ from{ transform:scale(0); } }
-.paid-check{ fill:none; stroke:#fff; stroke-width:4.5; stroke-linecap:round; stroke-linejoin:round;
-  stroke-dasharray:34; stroke-dashoffset:34; animation:paidDraw .4s cubic-bezier(.65,0,.45,1) .4s forwards; }
+.paid-mark{ position:relative; width:96px; height:96px; margin:0 auto 18px; display:flex; align-items:center; justify-content:center; }
+/* The seal: the theme's apricot (lavender in purple) as a soft square, glowing
+   like the + in the bar. */
+.paid-seal{ position:relative; width:80px; height:80px; border-radius:27px; display:flex; align-items:center; justify-content:center;
+  background:var(--apricot); color:#3A2414;
+  box-shadow:0 0 0 4px rgba(238,181,134,.22), 0 0 26px 4px rgba(238,181,134,.55), 0 12px 24px -12px rgba(0,0,0,.35);
+  animation:paidSeal .6s cubic-bezier(.3,1.6,.5,1) .05s both; }
+@keyframes paidSeal{ from{ opacity:0; transform:scale(.3) rotate(-45deg); } }
+.paid-seal svg{ position:relative; z-index:1; display:block; width:46px; height:46px; overflow:visible; }
+.paid-check{ fill:none; stroke:currentColor; stroke-width:4.2; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:32; stroke-dashoffset:32; animation:paidDraw .38s cubic-bezier(.65,0,.45,1) .42s forwards; }
 @keyframes paidDraw{ to{ stroke-dashoffset:0; } }
-.paid-ring{ position:absolute; inset:0; border-radius:50%; border:2px solid var(--good); opacity:0;
-  animation:paidRing 1.1s ease-out .32s both; }
-.paid-ring.r2{ animation-delay:.52s; }
-@keyframes paidRing{ 0%{ opacity:.55; transform:scale(.9); } 100%{ opacity:0; transform:scale(1.9); } }
-.paid-dots{ position:absolute; left:50%; top:76px; width:0; height:0; pointer-events:none; }
+.paid-halo{ position:absolute; inset:-6px; border-radius:33px; border:2px solid var(--apricot); opacity:0;
+  animation:paidHalo 1.15s ease-out .38s both; }
+.paid-halo.h2{ animation-delay:.64s; }
+@keyframes paidHalo{ 0%{ opacity:.85; transform:scale(.9); } 100%{ opacity:0; transform:scale(1.6); } }
+:root[data-theme="purple"] .paid-seal{ background:#C9B3F2; color:#2A1F3D;
+  box-shadow:0 0 0 4px rgba(186,146,255,.22), 0 0 26px 4px rgba(186,146,255,.55), 0 12px 24px -12px rgba(0,0,0,.35); }
+:root[data-theme="purple"] .paid-halo{ border-color:#C9B3F2; }
+.paid-dots{ position:absolute; left:50%; top:78px; width:0; height:0; pointer-events:none; }
 .paid-dots i{ position:absolute; left:-4px; top:-4px; width:8px; height:8px; border-radius:50%; background:var(--c); opacity:0;
   animation:paidBurst .85s cubic-bezier(.22,.61,.36,1) .42s both; }
 .paid-dots i:nth-child(even){ left:-3px; top:-3px; width:6px; height:6px; border-radius:2px; }
@@ -1126,9 +1133,9 @@ button, input, select, textarea{ font-family:var(--f); }
 .paid-to{ margin-top:8px; font-size:15px; color:var(--ink-2); animation:paidUp .45s ease-out .66s both; }
 @keyframes paidUp{ from{ opacity:0; transform:translateY(8px); } }
 @media (prefers-reduced-motion:reduce){
-  .paid-pop, .paid-card, .paid-circle, .paid-lab, .paid-amt, .paid-to{ animation:none; }
+  .paid-pop, .paid-card, .paid-seal, .paid-lab, .paid-amt, .paid-to{ animation:none; }
   .paid-check{ animation:none; stroke-dashoffset:0; }
-  .paid-ring, .paid-dots{ display:none; }
+  .paid-halo, .paid-dots{ display:none; }
 }
 
 /* Slide to record: the handle has to travel most of the way. */
@@ -4761,9 +4768,10 @@ const SFX = (()=>{
   };
 })();
 
-/* The moment a payment is saved: a check that draws itself inside a green
-   circle, a ripple and a small burst in the app's own colours, then the amount
-   and who it went to. Goes by itself after a couple of seconds; a tap closes it
+/* The moment a payment is saved: a seal in the theme's colour - glowing like
+   the + in the bar - springs in, a check draws itself on it and two halos
+   ripple out with a small burst in the app's own colours, then the amount and
+   who it went to. Goes by itself after a couple of seconds; a tap closes it
    sooner. */
 function celebratePayment(amount, to){
   const who = to===ME ? "you" : to;
@@ -4773,9 +4781,8 @@ function celebratePayment(amount, to){
   pop.setAttribute("aria-live","polite");
   pop.innerHTML=
     '<div class="paid-card">'+
-      '<div class="paid-mark"><span class="paid-ring"></span><span class="paid-ring r2"></span>'+
-        '<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="paid-circle" cx="26" cy="26" r="24"/>'+
-        '<path class="paid-check" d="M15 27.5l7 7 15-15"/></svg></div>'+
+      '<div class="paid-mark"><span class="paid-seal"><span class="paid-halo"></span><span class="paid-halo h2"></span>'+
+        '<svg viewBox="0 0 40 40" aria-hidden="true"><path class="paid-check" d="M10 21l7 7 14-15"/></svg></span></div>'+
       '<div class="paid-dots" aria-hidden="true">'+
         Array.from({length:14}, (_, i)=> '<i style="--a:'+Math.round(i*360/14)+'deg;--d:'+(58 + (i%3)*18)+'px;--c:'+tints[i%3]+'"></i>').join("")+
       '</div>'+
