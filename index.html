@@ -946,6 +946,10 @@ button, input, select, textarea{ font-family:var(--f); }
 .qa-new input{ flex:1; min-width:0; }
 .chip.add{ border-style:dashed; color:var(--apricot-dk); background:transparent; }
 .qa-each{ font-size:13px; color:var(--ink-2); margin:var(--s2) 0 0; }
+.qa-person{ margin-top:var(--s2); }
+.qa-person[hidden], #qaPickWrap[hidden]{ display:none; }
+.qa-sub{ font-size:11.5px; font-weight:700; letter-spacing:.03em; color:var(--ink-3);
+  margin:var(--s3) 0 var(--s2); }
 .nav .add[aria-current="page"]{ background:var(--apricot); color:#3A2414; }
 .fab{ display:none; }
 
@@ -4152,6 +4156,7 @@ function sheetQuickAdd(){
   let payer = null;
   let picked = {};
   let pickedFor = null;      // which group `picked` was filled for
+  let personOpen = false;    // the add-a-person panel stays open while adding several
 
   openSheet("Quick add", (b)=>{
     b.innerHTML =
@@ -4196,16 +4201,19 @@ function sheetQuickAdd(){
       // A different group has different people, so the choices start over.
       if(pickedFor!==gid){
         picked={}; ppl.forEach(n=>picked[n]=true);
-        payer = me; pickedFor = gid;
+        payer = me; pickedFor = gid; personOpen = false;
       }
       if(payer && ppl.indexOf(payer)<0) payer = me;
 
       host.innerHTML =
         '<div class="field"><label>Paid by</label><div class="chips" id="qaPayer"></div></div>'+
         '<div class="field"><label>Split equally between</label><div class="chips" id="qaSplit"></div>'+
-          '<div class="qa-new" id="qaNewPerson" hidden>'+
-            '<input id="qaPersonName" type="text" autocomplete="off" placeholder="Their name">'+
-            '<button class="btn p" id="qaPersonGo" type="button">Add</button></div>'+
+          '<div class="qa-person" id="qaNewPerson" hidden>'+
+            '<div id="qaPickWrap"><p class="qa-sub">Already in Settle — tap to add</p>'+
+              '<div class="chips" id="qaPick"></div></div>'+
+            '<p class="qa-sub">Someone new</p>'+
+            '<div class="qa-new"><input id="qaPersonName" type="text" autocomplete="off" placeholder="Their name">'+
+              '<button class="btn p" id="qaPersonGo" type="button">Add</button></div></div>'+
           '<p class="qa-each" id="qaEach"></p></div>';
 
       ppl.forEach(n=>{
@@ -4223,11 +4231,41 @@ function sheetQuickAdd(){
       });
       const ap=el("button","chip add"); ap.type="button";
       ap.innerHTML='<span class="ms" aria-hidden="true" style="font-size:17px">person_add</span>Person';
-      ap.addEventListener("click", ()=>{
-        $("qaNewPerson").hidden = !$("qaNewPerson").hidden;
-        if(!$("qaNewPerson").hidden) $("qaPersonName").focus();
-      });
       $("qaSplit").appendChild(ap);
+
+      // Everybody already approved into Settle and not yet in this group. The
+      // usual case is somebody the app already knows, so it is a tap - not a
+      // name typed in that has to match what the group calls them.
+      const inGroup = membersOf(gid).map(m=>m.uid).filter(Boolean);
+      const pool = Object.keys(DIRECTORY||{})
+        .map(u=>Object.assign({uid:u}, DIRECTORY[u]||{}))
+        .filter(p=>p.name && p.uid!==USER.uid && inGroup.indexOf(p.uid)<0)
+        .sort((a,c)=>String(a.name).localeCompare(String(c.name)));
+      $("qaPickWrap").hidden = !pool.length;
+      pool.forEach(p=>{
+        const c=el("button","chip"); c.type="button"; c.textContent=p.name;
+        c.addEventListener("click", ()=>{
+          c.disabled=true;
+          // The same add the People sheet uses: links their account, puts them
+          // on the membership list, and takes a seat the group already has for
+          // them rather than making a second one.
+          addFromDirectory(gid, p).then(()=>{
+            const m = membersOf(gid).find(x=>x.uid===p.uid);
+            picked[(m && m.name) || p.name] = true;
+            drawWho();
+          });
+        });
+        $("qaPick").appendChild(c);
+      });
+
+      ap.addEventListener("click", ()=>{
+        personOpen = !personOpen;
+        $("qaNewPerson").hidden = !personOpen;
+        // Only jump to typing when there is nobody to tap - on a phone the
+        // keyboard would otherwise cover the list.
+        if(personOpen && !pool.length) $("qaPersonName").focus();
+      });
+      $("qaNewPerson").hidden = !personOpen;
 
       $("qaPersonGo").addEventListener("click", addPerson);
       $("qaPersonName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addPerson(); } });
