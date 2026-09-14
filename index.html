@@ -1579,6 +1579,34 @@ function meIn(gid){
 }
 const loaded = (gid) => !!(DATA[gid] && (DATA[gid].meta || DATA[gid].people || DATA[gid].expenses));
 
+/* Nobody goes into a group twice. A second seat for the same account or
+   address splits one person's balance in two; a second seat with the same
+   name is worse, because the ledger is keyed by name and the two quietly
+   become one. Names are compared the way people read them - "Kavya",
+   "kavya" and " Kavya  " are the same - and so are addresses.
+   Account first, then address, then name, so the message names the real
+   reason. `exceptKey` leaves out the seat being edited. */
+const normName = (s)=> String(s||"").trim().replace(/\s+/g," ").toLowerCase();
+const normMail = (s)=> String(s||"").trim().toLowerCase();
+const tidyName = (s)=> String(s||"").trim().replace(/\s+/g," ");
+function inGroupAlready(gid, p, exceptKey){
+  const list = membersOf(gid).filter(m=> m.k!==exceptKey);
+  const n = normName(p.name), mail = normMail(p.email);
+  let m = p.uid && list.find(x=> x.uid===p.uid);
+  if(m) return {m, by:"account", text: m.name+" is already in this group"};
+  m = mail && list.find(x=> normMail(x.email)===mail || normMail(x.invite)===mail);
+  if(m) return {m, by:"email", text: mail+" is already in this group, as "+m.name};
+  if(!n) return null;
+  m = list.find(x=> normName(x.name)===n);
+  if(m) return {m, by:"name", text: "Someone in this group is already called "+m.name};
+  // A name that has left the members list but is still on expenses holds a
+  // balance; a new seat with that name would inherit it.
+  const self = exceptKey ? (membersOf(gid).find(x=>x.k===exceptKey)||{}).name : null;
+  const old = everyoneIn(gid).find(x=> x!==self && normName(x)===n);
+  if(old) return {m:{name:old}, by:"name", text: old+" is still on this group's expenses. Use that name, or merge"};
+  return null;
+}
+
 // Everyone the money actually involves. An expense can name someone who is no
 // longer on the members list; they still hold a balance, so any screen that
 // claims to show "everyone" has to include them or the figures will not add up.
@@ -3255,16 +3283,20 @@ function sheetClaim(gid){
       host.appendChild(card);
     }
     $("clAdd").addEventListener("click", ()=>{
-      const v=$("clNew").value.trim();
+      const v=tidyName($("clNew").value);
       if(!v) return toast("Enter a name");
-      if(names(gid).some(n=>n.toLowerCase()===v.toLowerCase()))
-        return toast(v+" is already on the list — pick that name above");
+      if(meIn(gid)) return toast("You are already in this group, as "+meIn(gid));
+      const hit=inGroupAlready(gid, {name:v});
+      if(hit) return toast(hit.m.k && !hit.m.uid
+        ? v+" is already on the list — pick that name above" : hit.text);
       push("trips/"+gid+"/people", {n:v, c:freeColour(gid), uid:USER.uid, email:USER.email, photo:USER.photo||null})
         .then(()=> joinUid(gid, USER.uid) )
         .then(()=>{ rememberGroup(gid, groupName(gid)); closeSheet(); toast("You are in"); });
     });
   });
   function claim(gid, key, name){
+    const mine = membersOf(gid).find(x=> x.uid===USER.uid);
+    if(mine && mine.k!==key) return toast("You are already in this group, as "+mine.name);
     set("trips/"+gid+"/people/"+key+"/uid",   USER.uid)
       .then(()=> set("trips/"+gid+"/people/"+key+"/email", USER.email))
       .then(()=> USER.photo ? set("trips/"+gid+"/people/"+key+"/photo", USER.photo) : null)
@@ -3746,14 +3778,22 @@ function paidShareLine(n, gid){
    instead is how a person ends up in a group twice with their balance split
    between the two, which has bitten this group before. */
 function addFromDirectory(gid, person){
-  const mail = String(person.email||"").toLowerCase();
-  const full = String(person.name||"").toLowerCase();
-  const first = full.split(/\s+/)[0];
+  const mail = normMail(person.email);
+  const full = normName(person.name);
+  const first = full.split(" ")[0];
   const free = membersOf(gid).filter(m=>!m.uid);
 
+  // Already here on their account, or on a seat somebody else holds under
+  // their address: adding them again is the duplicate this exists to stop.
+  // Resolves false when nothing was added, so callers do not act on it.
+  const linked = inGroupAlready(gid, {uid:person.uid, email:mail});
+  if(linked && (linked.by==="account" || linked.m.uid)){
+    toast(linked.text); return Promise.resolve(false);
+  }
+
   // The address is proof. A whole name is near enough.
-  let seat = free.find(m=> m.invite && m.invite.toLowerCase()===mail )
-          || free.find(m=> m.name.toLowerCase()===full );
+  let seat = free.find(m=> m.invite && m.invite===mail )
+          || free.find(m=> normName(m.name)===full );
 
   // A Google account says "Kelvin Raj" where the group has always said
   // "Kelvin". Take the seat on a first name only when exactly one could be
@@ -3761,15 +3801,16 @@ function addFromDirectory(gid, person){
   // because a wrong guess hands one person another person's balance.
   if(!seat && first){
     const near = free.filter(m=>{
-      const n=m.name.toLowerCase();
-      return n===first || n.split(/\s+/)[0]===first;
+      const n=normName(m.name);
+      return n===first || n.split(" ")[0]===first;
     });
     if(near.length===1) seat = near[0];
   }
 
   const after = ()=>{
-    toast(person.name+" added");
-    return mail ? inviteByEmail(gid, mail) : Promise.resolve();
+    // A seat that was waiting keeps the name the group already uses.
+    toast((seat ? seat.name : tidyName(person.name))+" added");
+    return (mail ? inviteByEmail(gid, mail) : Promise.resolve()).then(()=> true);
   };
 
   if(seat){
@@ -3777,7 +3818,14 @@ function addFromDirectory(gid, person){
       {uid:person.uid, email:mail||null, photo:person.photo||null})
       .then(()=> joinUid(gid, person.uid) ).then(after);
   }
-  return push("trips/"+gid+"/people", {n:person.name, c:freeColour(gid), uid:person.uid,
+  // No seat to take, so this is a new name in the group - and it must not be
+  // one the group already uses for somebody else.
+  const clash = inGroupAlready(gid, {name:person.name});
+  if(clash){
+    toast(clash.text+". Rename them first if this is somebody else");
+    return Promise.resolve(false);
+  }
+  return push("trips/"+gid+"/people", {n:tidyName(person.name), c:freeColour(gid), uid:person.uid,
     email:mail||null, photo:person.photo||null})
     .then(()=> joinUid(gid, person.uid) ).then(after);
 }
@@ -3864,11 +3912,19 @@ function sheetMembers(){
         host.appendChild(r);
       });
       const add=()=>{
-        const v=$("mName").value.trim();
-        const mail=$("mMail").value.trim().toLowerCase();
+        const v=tidyName($("mName").value);
+        const mail=normMail($("mMail").value);
         if(!v) return toast("Enter a name");
-        if(names(gid).some(n=>n.toLowerCase()===v.toLowerCase())) return toast(v+" is already in this group");
         if(mail && !emailOk(mail)) return toast("That does not look like an email address");
+        const hit=inGroupAlready(gid, {name:v, email:mail});
+        if(hit) return toast(hit.text);
+        // An address that already belongs to somebody in Settle is that person:
+        // add their account, not a second, unlinked copy of them.
+        const known = mail && Object.keys(DIRECTORY||{}).find(u=> normMail((DIRECTORY[u]||{}).email)===mail);
+        if(known){
+          return addFromDirectory(gid, Object.assign({uid:known}, DIRECTORY[known], {name:v}))
+            .then(ok=>{ if(ok){ $("mName").value=""; $("mMail").value=""; setTimeout(draw,150); } });
+        }
         const rec={n:v, c:freeColour(gid)};
         if(mail) rec.invite=mail;
         push("trips/"+gid+"/people", rec).then(()=>{
@@ -3932,11 +3988,13 @@ function sheetPersonEdit(gid, m, after){
         '<button class="btn d wide" id="pnMerge">Merge and remove '+esc(m.name)+'</button>':'');
 
     $("pnSave").addEventListener("click", ()=>{
-      const v=$("pnName").value.trim();
+      const v=tidyName($("pnName").value);
       if(!v) return toast("Enter a name");
       if(v===m.name){ closeSheet(); return; }
-      if(names(gid).some(n=>n.toLowerCase()===v.toLowerCase()))
-        return toast("Someone in this group is already called "+v);
+      // Their own name in different case is fine; anybody else's is not -
+      // folding two people together is what Merge is for, and it says so.
+      const hit=inGroupAlready(gid, {name:v}, m.k);
+      if(hit) return toast(hit.text);
       renamePerson(gid, m.k, m.name, v).then(()=>{
         closeSheet(); toast("Renamed to "+v); if(after) setTimeout(after,200);
       });
@@ -3948,8 +4006,10 @@ function sheetPersonEdit(gid, m, after){
       });
     });
     if($("pnInvite")) $("pnInvite").addEventListener("click", ()=>{
-      const mail=$("pnMail").value.trim().toLowerCase();
+      const mail=normMail($("pnMail").value);
       if(!emailOk(mail)) return toast("That does not look like an email address");
+      const hit=inGroupAlready(gid, {email:mail}, m.k);
+      if(hit) return toast(hit.text);
       upd("trips/"+gid+"/people/"+m.k, {invite:mail})
         .then(()=> inviteByEmail(gid, mail) )
         .then(()=>{ closeSheet(); toast(m.name+" will see this group when they sign in");
@@ -4375,9 +4435,9 @@ function sheetGroupNew(){
       const gid=slug(nm)+"-"+Math.random().toString(36).slice(2,6);
       const people={};
       people["m0"+uid().slice(-4)]={n:USER.name, c:PALETTE[0], uid:USER.uid, email:USER.email, photo:USER.photo||null};
-      const seen={}; seen[(USER.name||"").toLowerCase()]=1;
-      $("gPeople").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).forEach((n,i)=>{
-        const key=n.toLowerCase(); if(seen[key]) return; seen[key]=1;
+      const seen={}; seen[normName(USER.name)]=1;
+      $("gPeople").value.split(/\r?\n/).map(tidyName).filter(Boolean).forEach((n,i)=>{
+        const key=normName(n); if(seen[key]) return; seen[key]=1;
         people["m"+(i+1)+uid().slice(-4)]={n:n, c:PALETTE[(i+1)%PALETTE.length]};
       });
       // The person creating it is its first member, in the index the rules read
@@ -4621,9 +4681,12 @@ function sheetQuickAdd(){
           // The same add the People sheet uses: links their account, puts them
           // on the membership list, and takes a seat the group already has for
           // them rather than making a second one.
-          addFromDirectory(gid, p).then(()=>{
+          addFromDirectory(gid, p).then(ok=>{
+            // Only tick a name that is really theirs: when the add was refused
+            // because the name is taken, that name belongs to somebody else.
             const m = membersOf(gid).find(x=>x.uid===p.uid);
-            picked[(m && m.name) || p.name] = true;
+            if(m) picked[m.name] = true;
+            if(!ok && !m) c.disabled=false;
             drawWho();
           });
         });
@@ -4654,9 +4717,10 @@ function sheetQuickAdd(){
     }
 
     function addPerson(){
-      const nm=$("qaPersonName").value.trim();
+      const nm=tidyName($("qaPersonName").value);
       if(!nm) return toast("Enter a name");
-      if(qaPeople(gid).some(x=>x.toLowerCase()===nm.toLowerCase())) return toast(nm+" is already in this group");
+      const hit=inGroupAlready(gid, {name:nm});
+      if(hit) return toast(hit.text);
       const rec={n:nm, c:freeColour(gid)};
       // Shown straight away; the database's own copy replaces this when it lands.
       DATA[gid]=DATA[gid]||{}; DATA[gid].people=DATA[gid].people||{};
