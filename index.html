@@ -1038,6 +1038,63 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
+/* ---- Record a payment: who to whom, the amount, then the details --------- */
+.pf-sub{ margin:-4px 0 14px; text-align:center; font-size:13px; color:var(--ink-3); }
+.pf{ display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:start; gap:8px;
+  padding:18px 10px 16px; border-radius:20px; border:1px solid var(--line);
+  background:color-mix(in srgb, var(--apricot) 12%, var(--surface)); }
+.pf-person{ min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.pf-av{ width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; overflow:hidden;
+  color:#fff; font-size:18px; font-weight:700; box-shadow:0 0 0 4px var(--surface), 0 12px 22px -14px rgba(0,0,0,.5); }
+.pf-av img{ width:100%; height:100%; object-fit:cover; }
+.pf-role{ font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); }
+.pf-name{ display:flex; align-items:center; justify-content:center; min-height:36px; max-width:100%; padding:0 6px;
+  text-align:center; font-size:14px; font-weight:600; line-height:1.2; color:var(--ink); overflow-wrap:anywhere; }
+.pf-select{ position:relative; display:block; max-width:100%; margin:0; }
+.pf-select select{ -webkit-appearance:none; appearance:none; display:block; max-width:100%; min-height:36px; margin:0;
+  padding:6px 30px 6px 14px; border-radius:999px; border:1px solid var(--line); background:var(--surface); box-shadow:none;
+  font:inherit; font-size:14px; font-weight:600; color:var(--ink); text-overflow:ellipsis; cursor:pointer; }
+.pf-select .ms{ position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:18px; color:var(--ink-3); pointer-events:none; }
+.pf-select select:disabled{ opacity:1; cursor:default; padding-right:14px; border-color:transparent; background:transparent;
+  -webkit-text-fill-color:var(--ink); }
+.pf-select select:disabled + .ms{ display:none; }
+.pf-arrow{ display:flex; align-items:center; margin-top:17px; color:var(--apricot-dk); }
+.pf-line{ width:20px; height:2px; opacity:.7; background:repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px); }
+.pf-arrow .ms{ margin-left:-2px; font-size:22px; animation:pfNudge 1.8s ease-in-out infinite; }
+@keyframes pfNudge{ 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(4px); } }
+.pf-amount{ margin:18px 0 4px; text-align:center; }
+.pf-lab{ display:block; margin:0 0 2px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); }
+.pf-amt{ display:inline-flex; align-items:baseline; justify-content:center; gap:4px; max-width:100%; }
+.pf-amt .cur{ font-family:var(--serif); font-size:34px; font-weight:600; color:var(--ink-3); }
+.pf-amt input{ width:6.5ch; max-width:68vw; min-height:0; margin:0; padding:0 0 2px; border:0; border-bottom:2px solid var(--line);
+  border-radius:0; background:transparent; box-shadow:none; outline:none; text-align:center; color:var(--ink);
+  font-family:var(--serif); font-size:52px !important; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums;
+  -moz-appearance:textfield; transition:border-color .15s; }
+.pf-amt input::placeholder{ color:color-mix(in srgb, var(--ink) 22%, transparent); }
+.pf-amt input:focus{ border-bottom-color:var(--apricot-dk); }
+.pf-amt input::-webkit-outer-spin-button, .pf-amt input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.pf-why{ min-height:1em; margin-top:8px; font-size:12.5px; color:var(--ink-3); }
+.pf-quick{ display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.pf-quick:empty{ display:none; }
+.pf-chip{ border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:999px; padding:6px 13px;
+  font:inherit; font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:transform .12s; }
+.pf-chip:active{ transform:scale(.95); }
+.pf-chip:focus:not(:focus-visible){ outline:none; }
+#stEtx:not(:empty){ margin-top:16px; }
+.pf-details{ display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:10px; margin-top:16px; }
+.pf-details .field{ margin-bottom:12px; }
+@media (max-width:380px){ .pf-details{ grid-template-columns:1fr; gap:0; } }
+.pf-help{ margin:0 0 12px; text-align:center; font-size:12px; color:var(--ink-3); }
+.pf-save{ display:flex; align-items:center; justify-content:center; gap:8px; min-height:52px; font-size:15.5px; }
+.pf-save .ms{ font-size:20px; }
+.pf-del{ display:block; width:100%; margin:10px 0 0; padding:10px; border:0; background:transparent; font:inherit;
+  font-size:13.5px; font-weight:600; color:var(--bad); cursor:pointer; }
+@media (prefers-reduced-motion:reduce){ .pf-arrow .ms{ animation:none; } }
+:root[data-theme="purple"] .pf{ background:color-mix(in srgb, #C9B3F2 18%, var(--surface)); }
+:root[data-theme="purple"] .pf-arrow{ color:#6D3FBF; }
+:root[data-theme="purple"] .pf-amt input:focus{ border-bottom-color:#6D3FBF; }
+
 /* ---- Groups tab: a balance meter and a grid of group tiles --------------- */
 .gx-bal{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r3);
   padding:var(--s4) var(--s4) 14px; margin:0 0 var(--s4); box-shadow:var(--shadow); }
@@ -4601,30 +4658,60 @@ function sheetSettle(from, to, amt, existing){
   if(!to || toChoices.indexOf(to)<0) to = toChoices.filter(n=>n!==from)[0] || toChoices[0];
   const mayEdit = !existing || canEdit(existing);
   openSheet(existing?(mayEdit?"Edit payment":"Payment"):"Record a payment", (b)=>{
+    /* Who paid whom, as two faces and an arrow; the amount large under it,
+       with the outstanding figure a tap away; then the Interac details if
+       there are any, the date and a note side by side, and one button that
+       says exactly what it will record. */
+    const opts=(list, pick)=> list.map(n=>'<option value="'+esc(n)+'"'+(n===pick?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("");
     b.innerHTML=
-      '<div id="stEtx"></div>'+
-      '<p class="lead">Use this when cash or a transfer has actually changed hands.</p>'+
-      '<div class="field"><label for="stFrom">Who paid</label><select id="stFrom"'+(fromLocked?' disabled':'')+'>'+
-        fromChoices.map(n=>'<option value="'+esc(n)+'"'+(n===from?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
-      '</select>'+
-      (fromLocked && !existing ? '<div class="help">You can only record a payment you made. If someone paid you, they record it.</div>' : '')+
+      (existing ? '' : '<p class="pf-sub">For cash or a transfer that has already happened.</p>')+
+      '<div class="pf">'+
+        // No choice to make: say the name plainly, so it can wrap instead of
+        // being cut short inside a dropdown that does nothing.
+        '<div class="pf-person"><span class="pf-av" id="pfFromAv"></span><span class="pf-role">Paid by</span>'+
+          (fromLocked
+            ? '<span class="pf-name">'+esc(from===ME ? "You" : from)+'</span>'+
+              '<select id="stFrom" hidden disabled>'+opts(fromChoices, from)+'</select>'
+            : '<label class="pf-select"><select id="stFrom" aria-label="Who paid">'+opts(fromChoices, from)+'</select>'+
+              '<span class="ms" aria-hidden="true">expand_more</span></label>')+'</div>'+
+        '<div class="pf-arrow" aria-hidden="true"><span class="pf-line"></span><span class="ms">arrow_forward</span></div>'+
+        '<div class="pf-person"><span class="pf-av" id="pfToAv"></span><span class="pf-role">To</span>'+
+          '<label class="pf-select"><select id="stTo" aria-label="Who received it">'+opts(toChoices, to)+'</select>'+
+          '<span class="ms" aria-hidden="true">expand_more</span></label></div>'+
       '</div>'+
-      '<div class="field"><label for="stTo">Who received it</label><select id="stTo">'+
-        toChoices.map(n=>'<option value="'+esc(n)+'"'+(n===to?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("")+
-      '</select></div>'+
-      '<div class="field"><label for="stAmt">Amount</label><div class="amtbig"><span class="cur">$</span>'+
-      '<input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" value="'+(amt?esc(plain(amt)):"")+'"></div>'+
-      '<div class="help" id="stWhy"></div></div>'+
-      fieldHTML("stDate","Date","date", dateVal(existing?existing.at:null))+
-      '<div class="field"><label for="stNote">Note (optional)</label>'+
-      '<input id="stNote" type="text" placeholder="e-transfer, cash…" value="'+
-        esc(existing?(existing.note||""):"")+'"></div>'+
+      '<div class="pf-amount"><label class="pf-lab" for="stAmt">Amount</label>'+
+        '<div class="pf-amt"><span class="cur">$</span><input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" '+
+          'placeholder="0.00" value="'+(amt?esc(plain(amt)):"")+'"></div>'+
+        '<div class="pf-why" id="stWhy"></div><div class="pf-quick" id="stQuick"></div></div>'+
+      '<div id="stEtx"></div>'+
+      '<div class="pf-details">'+
+        fieldHTML("stDate","Date","date", dateVal(existing?existing.at:null))+
+        '<div class="field"><label for="stNote">Note</label>'+
+        '<input id="stNote" type="text" placeholder="e-Transfer, cash…" value="'+
+          esc(existing?(existing.note||""):"")+'"></div>'+
+      '</div>'+
+      (fromLocked && !existing && mayEdit ? '<p class="pf-help">You can only record a payment you made. If someone paid you, they record it.</p>' : '')+
       (mayEdit
-        ? '<button class="btn p wide" id="stSave">'+(existing?"Save changes":"Record payment")+'</button>'+
-          (existing?'<button class="btn d wide" id="stDel" style="margin-top:10px">Delete this payment</button>':'')
+        ? '<button class="btn p wide pf-save" id="stSave"><span class="ms" aria-hidden="true">check</span>'+
+            '<span id="stSaveLbl">'+(existing?"Save changes":"Record payment")+'</span></button>'+
+          (existing?'<button class="pf-del" id="stDel" type="button">Delete this payment</button>':'')
         : '<p class="locked"><span class="ms" aria-hidden="true">lock</span>'+
           'Only '+esc(ownerOf(existing))+' can change this, because they recorded it.</p>')+
       (existing?'<p class="fine">Recorded by '+esc(existing.by||existing.from)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
+    // The two faces and the button's wording follow the choices.
+    const face=(id, name)=>{
+      const m=memberOf(name, gid), host=$(id);
+      host.style.background = (m && m.color) || colorOf(name, gid);
+      host.innerHTML = m && m.photo ? '<img src="'+esc(m.photo)+'" alt="" referrerpolicy="no-referrer">' : esc(initials(name));
+    };
+    const refresh=()=>{
+      face("pfFromAv", $("stFrom").value); face("pfToAv", $("stTo").value);
+      if(!$("stSaveLbl")) return;
+      const a=Math.round((Number($("stAmt").value)||0)*100)/100, t=$("stTo").value;
+      $("stSaveLbl").textContent = existing ? "Save changes"
+        : a>0 ? "Record "+money(a)+" to "+(t===ME ? "you" : t) : "Record payment";
+    };
+    refresh();
     if(!mayEdit){
       [].forEach.call(b.querySelectorAll("input,select"), x=>{ x.disabled=true; });
       return;
@@ -4632,7 +4719,7 @@ function sheetSettle(from, to, amt, existing){
     // The amount follows whoever is picked, so choosing a different pair shows
     // what is outstanding between them rather than leaving a stale figure.
     let touched = false;
-    $("stAmt").addEventListener("input", ()=>{ touched = true; });
+    $("stAmt").addEventListener("input", ()=>{ touched = true; refresh(); });
     // Paying somebody who saved their Interac details: show them, with the
     // amount, ready to copy - and the bank app one tap away.
     const etx=()=> drawEtx($("stEtx"), gid, $("stFrom").value, $("stTo").value, Number($("stAmt").value)||0, existing);
@@ -4646,6 +4733,16 @@ function sheetSettle(from, to, amt, existing){
         $("stAmt").value = s2.amt ? plain(s2.amt) : "";
         touched = false;
       }
+      // What is outstanding between them, and half of it, one tap each.
+      const quick=$("stQuick"); quick.innerHTML="";
+      if(s2.amt>0.004){
+        [["Full", s2.amt], ["Half", Math.round(s2.amt/2*100)/100]].forEach(q=>{
+          const c=el("button","pf-chip"); c.type="button"; c.textContent=q[0]+" "+money(q[1]);
+          c.addEventListener("click", ()=>{ $("stAmt").value=plain(q[1]); touched=true; etx(); refresh(); });
+          quick.appendChild(c);
+        });
+      }
+      refresh();
     }
     $("stFrom").addEventListener("change", ()=>{
       if($("stFrom").value===$("stTo").value){
