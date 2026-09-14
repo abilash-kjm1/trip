@@ -1038,6 +1038,173 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
+/* ---- Bottom bar: two equal halves keep the + in the middle -------------- */
+.nav-side{ flex:1 1 0; min-width:0; display:flex; align-items:center; }
+.nav-side button{ flex:1 1 0; min-width:0; overflow:hidden; white-space:nowrap; }
+@media (max-width:420px){ .nav-side button{ font-size:9.5px; letter-spacing:-.01em; padding-left:1px; padding-right:1px; } }
+
+/* ---- Visualize --------------------------------------------------------- */
+.vz-sec{ margin:0 0 var(--s5); }
+.vz-sec.enter{ animation:gxRise .55s cubic-bezier(.22,.61,.36,1) backwards; }
+.vz-head{ display:flex; align-items:flex-start; gap:12px; margin:0 2px 10px; }
+.vz-ic{ flex:0 0 auto; width:36px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center;
+  background:var(--apricot-lt); color:var(--apricot-dk); }
+.vz-ic .ms{ font-size:20px; }
+.vz-head h2{ margin:0; font-family:var(--serif); font-size:20px; font-weight:600; line-height:1.2; color:var(--ink); text-align:left; }
+.vz-head p{ margin:2px 0 0; font-size:12.5px; color:var(--ink-3); }
+.vz-card{ padding:var(--s4); overflow:hidden; }
+.vz-headline{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 8px; font-size:14px; color:var(--ink-2); }
+.vz-big{ font-family:var(--serif); font-size:38px; font-weight:600; line-height:1; letter-spacing:-.02em; color:var(--ink);
+  font-variant-numeric:tabular-nums; }
+.vz-headline em{ font-style:normal; color:var(--ink-3); text-decoration:line-through;
+  text-decoration-color:color-mix(in srgb, var(--bad) 55%, transparent); }
+.vz-note{ margin:10px 2px 0; font-size:12.5px; line-height:1.45; color:var(--ink-3); }
+.vz-note.vz-tight{ margin-top:6px; }
+.vz-small{ font-size:12.5px !important; color:var(--ink-3) !important; }
+.vz-empty{ padding:12px 6px; text-align:center; }
+.vz-empty .ms{ font-size:34px; color:var(--apricot-dk); }
+.vz-empty b{ display:block; margin-top:6px; font-size:16px; color:var(--ink); }
+.vz-empty p{ margin:4px 0 0; font-size:13px; color:var(--ink-3); }
+.vz-btn{ flex:0 0 auto; border:0; border-radius:999px; padding:6px 13px; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;
+  background:var(--ink); color:var(--cream); -webkit-tap-highlight-color:transparent; }
+.vz-btn.soft{ background:var(--fill-1); color:var(--ink); }
+.vz-btn:disabled{ opacity:.6; cursor:default; }
+.vz-btn:focus:not(:focus-visible){ outline:none; }
+.vz-val{ font-size:15px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.vz-val.neg{ color:var(--bad); } .vz-val.pos{ color:var(--good); }
+.vz-b{ flex:1; min-width:0; }
+.vz-t{ display:block; font-size:14px; line-height:1.3; color:var(--ink-2); }
+.vz-t b{ font-weight:700; color:var(--ink); }
+.vz-m{ display:block; margin-top:2px; font-size:12px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* settle everything */
+.vz-svg{ display:block; width:100%; max-width:420px; height:auto; margin:4px auto 0; overflow:visible; }
+.vz-flow{ fill:none; stroke-linecap:round; stroke-dasharray:7 7; animation:vzFlow 1.1s linear infinite; }
+.vz-flow.out{ stroke:var(--bad); } .vz-flow.in{ stroke:var(--good); }
+.vz-flow.other{ stroke:color-mix(in srgb, var(--ink) 32%, transparent); }
+@keyframes vzFlow{ to{ stroke-dashoffset:-28; } }
+.vz-arrow.out{ fill:var(--bad); } .vz-arrow.in{ fill:var(--good); }
+.vz-arrow.other{ fill:color-mix(in srgb, var(--ink) 32%, transparent); }
+.vz-amt{ font-size:11px; font-weight:700; text-anchor:middle; fill:var(--ink); paint-order:stroke; stroke:var(--surface);
+  stroke-width:4px; stroke-linejoin:round; font-variant-numeric:tabular-nums; }
+.vz-node circle{ stroke:var(--surface); stroke-width:3; }
+.vz-node.me circle{ stroke:var(--apricot); stroke-width:4; }
+.vz-node .ini{ font-size:12px; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:central; }
+.vz-node .nm{ font-size:11px; font-weight:600; fill:var(--ink-2); text-anchor:middle; }
+.vz-legendline{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:4px 12px; margin:2px 0 0;
+  font-size:11.5px; color:var(--ink-3); }
+.vz-key{ display:inline-block; width:18px; height:3px; margin-right:-6px; border-radius:2px; vertical-align:middle; }
+.vz-key.out{ background:var(--bad); } .vz-key.in{ background:var(--good); }
+.vz-key.other{ background:color-mix(in srgb, var(--ink) 32%, transparent); }
+.vz-list{ margin-top:12px; border-top:1px solid var(--line-2); }
+.vz-move{ display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line-2); }
+.vz-move:last-child{ border-bottom:0; }
+.vz-pair{ flex:0 0 auto; display:flex; align-items:center; }
+.vz-pair .av{ width:28px; height:28px; font-size:10.5px; }
+.vz-pair > .ms{ margin:0 1px; font-size:13px; color:var(--ink-3); }
+.vz-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.vz-even{ display:flex; align-items:center; gap:8px; margin-top:10px; padding:10px 12px; border-radius:12px;
+  background:var(--fill-1); font-size:12.5px; color:var(--ink-2); }
+.vz-even .ms{ font-size:18px; color:var(--ink-3); }
+.vz-even .vz-btn{ margin-left:auto; }
+
+/* who should pay next */
+.vz-chips{ display:flex; gap:7px; overflow-x:auto; margin:0 0 12px; padding:0 0 2px; scrollbar-width:none; }
+.vz-chips::-webkit-scrollbar{ display:none; }
+.vz-chips .chip{ flex:0 0 auto; }
+.vz-turn{ display:flex; align-items:center; flex-wrap:wrap; gap:14px 18px; }
+.vz-donut{ position:relative; flex:0 0 auto; width:148px; height:148px; margin:0 auto; }
+.vz-donut svg{ display:block; width:100%; height:100%; transform:rotate(-90deg); }
+.vz-donut circle{ fill:none; stroke-width:18; }
+.vz-donut .trk{ stroke:var(--fill-1); }
+.vz-donut-c{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.vz-donut-c small{ font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); }
+.vz-donut-c b{ max-width:96px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink); }
+.vz-sec.enter .vz-seg{ animation:vzSeg .9s cubic-bezier(.22,.61,.36,1) .2s backwards; }
+@keyframes vzSeg{ from{ stroke-dasharray:0 400; } }
+.vz-turn-txt{ flex:1 1 200px; min-width:0; }
+.vz-turn-txt p{ margin:0 0 8px; font-size:14px; line-height:1.45; color:var(--ink-2); }
+.vz-turn-txt p b{ color:var(--ink); }
+.vz-next{ margin-top:4px; }
+.vz-bars{ display:flex; flex-direction:column; gap:12px; margin-top:16px; }
+.vz-bar-row{ display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 10px; }
+.vz-bar-n{ display:flex; align-items:center; gap:6px; min-width:0; font-size:13.5px; font-weight:600; color:var(--ink); }
+.vz-dot{ flex:0 0 auto; width:9px; height:9px; border-radius:50%; }
+.vz-gap{ font-size:12px; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.vz-gap.pos{ color:var(--good); } .vz-gap.neg{ color:var(--bad); } .vz-gap.zero{ color:var(--ink-3); }
+.vz-track{ grid-column:1 / -1; position:relative; height:8px; border-radius:999px; background:var(--fill-1); }
+.vz-fill{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; }
+.vz-mark{ position:absolute; top:-3px; bottom:-3px; width:2px; border-radius:2px; background:var(--ink); }
+.vz-sub{ grid-column:1 / -1; font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.vz-sec.enter .vz-fill{ animation:vzGrow .9s cubic-bezier(.22,.61,.36,1) .2s backwards; }
+@keyframes vzGrow{ from{ width:0; } }
+
+/* what this really cost you */
+.vz-stack{ display:flex; height:14px; margin:12px 0; overflow:hidden; border-radius:999px; background:var(--fill-1); }
+.vz-stack i{ display:block; height:100%; }
+.vz-sec.enter .vz-card > .vz-stack{ animation:vzGrow .9s cubic-bezier(.22,.61,.36,1) .2s backwards; }
+.vz-legend{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px 14px; }
+.vz-leg{ display:flex; align-items:center; gap:8px; min-width:0; font-size:13px; color:var(--ink-2); }
+.vz-leg .ms{ flex:0 0 auto; width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+  font-size:16px; color:#fff; }
+.vz-leg-n{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vz-leg b{ margin-left:auto; color:var(--ink); font-variant-numeric:tabular-nums; }
+.vz-gl{ display:flex; flex-direction:column; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line-2); }
+.vz-gl-row{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; font-size:13px; color:var(--ink-2); }
+.vz-gl-row b{ color:var(--ink); font-variant-numeric:tabular-nums; }
+.vz-gl-row .vz-stack{ grid-column:1 / -1; height:6px; margin:0; }
+
+/* old debts */
+.vz-debt{ padding:12px 2px; border-bottom:1px solid var(--line-2); }
+.vz-debt:first-child{ padding-top:2px; }
+.vz-debt:last-of-type{ border-bottom:0; }
+.vz-debt-top{ display:flex; align-items:center; gap:10px; }
+.vz-debt-top .av{ width:34px; height:34px; font-size:12px; }
+.vz-days{ flex:0 0 auto; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:700; white-space:nowrap; }
+.vz-days.fresh{ background:color-mix(in srgb, var(--good) 14%, transparent); color:var(--good); }
+.vz-days.warm{ background:rgba(200,137,42,.16); color:#8A5A12; }
+.vz-days.old{ background:color-mix(in srgb, var(--bad) 14%, transparent); color:var(--bad); }
+.vz-agebar{ position:relative; height:6px; margin:9px 0 0 44px; border-radius:999px; background:var(--fill-1); }
+.vz-agebar i{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; }
+.vz-agebar i.fresh{ background:var(--good); } .vz-agebar i.warm{ background:#C8892A; } .vz-agebar i.old{ background:var(--bad); }
+.vz-sec.enter .vz-agebar i{ animation:vzGrow .9s cubic-bezier(.22,.61,.36,1) .2s backwards; }
+
+/* leave clean */
+.vz-leave{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; }
+.vz-lc{ padding:14px; }
+.vz-lc.clean{ background:color-mix(in srgb, var(--good) 6%, var(--surface)); }
+.vz-lc-h{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.vz-lc-h b{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; color:var(--ink); }
+.vz-ok{ display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; color:var(--good); }
+.vz-ok .ms{ font-size:16px; }
+.vz-todo{ flex:0 0 auto; padding:2px 8px; border-radius:999px; font-size:11.5px; font-weight:700;
+  background:color-mix(in srgb, var(--bad) 12%, transparent); color:var(--bad); }
+.vz-lc-sum{ margin:4px 0 6px; font-size:13px; color:var(--ink-3); }
+.vz-lc-sum b{ color:var(--ink); }
+.vz-lc-line{ display:flex; align-items:center; gap:8px; padding:8px 0 0; margin-top:8px; border-top:1px solid var(--line-2);
+  font-size:13.5px; color:var(--ink-2); }
+.vz-lc-line > .ms{ font-size:17px; color:var(--ink-3); }
+.vz-lc-t{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vz-lc-t b{ color:var(--ink); }
+
+/* one payment across groups */
+.ns-lines{ margin:0 0 14px; overflow:hidden; border-radius:16px; border:1px solid var(--line); }
+.ns-line{ display:flex; justify-content:space-between; gap:10px; padding:11px 14px; border-top:1px solid var(--line-2);
+  font-size:14px; color:var(--ink-2); }
+.ns-line:first-child{ border-top:0; }
+.ns-line .neg{ font-weight:700; color:var(--bad); } .ns-line .pos{ font-weight:700; color:var(--good); }
+.ns-line.total{ align-items:center; background:color-mix(in srgb, var(--apricot) 14%, var(--surface)); font-weight:600; color:var(--ink); }
+.ns-line.total b{ font-family:var(--serif); font-size:22px; font-variant-numeric:tabular-nums; }
+#nsEtx:not(:empty){ margin-bottom:12px; }
+
+@media (prefers-reduced-motion:reduce){
+  .vz-flow{ animation:none; stroke-dasharray:none; }
+  .vz-sec.enter, .vz-sec.enter .vz-fill, .vz-sec.enter .vz-seg, .vz-sec.enter .vz-agebar i,
+  .vz-sec.enter .vz-card > .vz-stack{ animation:none; }
+}
+:root[data-theme="purple"] .vz-node.me circle{ stroke:#C9B3F2; }
+
 /* ---- Record a payment: who to whom, the amount, then the details --------- */
 .pf-sub{ margin:-4px 0 14px; text-align:center; font-size:13px; color:var(--ink-3); }
 .pf{ display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:start; gap:8px;
@@ -1930,6 +2097,7 @@ span.af-pill{ cursor:default; padding-right:12px; }
   <button data-tab="home"><span class="ms" aria-hidden="true">explore</span>Today</button>
   <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
   <button data-tab="groups"><span class="ms" aria-hidden="true">group</span>Groups</button>
+  <button data-tab="insights"><span class="ms" aria-hidden="true">hub</span>Visualize</button>
   <button data-tab="interac"><span class="ms" aria-hidden="true">send_money</span>Interac</button>
   <div class="foot">
     <button data-tab="account"><span class="ms" aria-hidden="true">account_circle</span>Account</button>
@@ -1957,11 +2125,16 @@ span.af-pill{ cursor:default; padding-right:12px; }
 <button class="fab" id="fab" hidden><span class="ms" aria-hidden="true">add</span><span id="fabLabel">Add expense</span></button>
 
 <nav class="nav" id="nav" aria-label="Sections">
-  <button data-tab="home" aria-current="page"><span class="ms" aria-hidden="true">explore</span>Today</button>
-  <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
+  <div class="nav-side">
+    <button data-tab="home" aria-current="page"><span class="ms" aria-hidden="true">explore</span>Today</button>
+    <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
+  </div>
   <button class="add" id="navAdd" aria-label="Add an expense"><span class="ms" aria-hidden="true">add</span></button>
-  <button data-tab="groups"><span class="ms" aria-hidden="true">group</span>Groups</button>
-  <button data-tab="interac"><span class="ms" aria-hidden="true">send_money</span>Interac</button>
+  <div class="nav-side">
+    <button data-tab="groups"><span class="ms" aria-hidden="true">group</span>Groups</button>
+    <button data-tab="insights"><span class="ms" aria-hidden="true">hub</span>Visualize</button>
+    <button data-tab="interac"><span class="ms" aria-hidden="true">send_money</span>Interac</button>
+  </div>
 </nav>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -2685,6 +2858,7 @@ function render(){
   else if(TAB==="activity") viewActivity(main);
   else if(TAB==="account")  viewAccount(main);
   else if(TAB==="interac")  viewInterac(main);
+  else if(TAB==="insights") viewInsights(main);
   if(y) window.scrollTo(0, Math.min(y, document.body.scrollHeight));
   if(typeof syncBar==="function") syncBar();
 
@@ -6314,6 +6488,457 @@ function sheetQuickAdd(){
     $("qaSave").addEventListener("click", save);
     setTimeout(()=>{ const a=$("qaAmt"); if(a) a.focus(); }, 90);
   }, render);
+}
+
+/* =========================== VISUALIZE ===========================
+   Not charts for their own sake - every part says what to do next:
+   settle everything across every group in the fewest payments, whose turn
+   it is to pay, what things really cost you, which debts have been left
+   waiting, and what stands between you and leaving a group clean. */
+let VZ_SEEN = false, VZ_ENTER = false, VZ_N = 0, VZ_GROUP = null;
+const VZ_CAT_TINT = {general:"#8A8F84", food:"#B4703E", grocery:"#4F7A5C", transport:"#4A6A8A", fuel:"#86691A",
+  home:"#7A5A86", utilities:"#3F7F7A", travel:"#5B7DB1", lodging:"#A0527A", fun:"#C07A2C", shopping:"#6E8B3D", health:"#A64B4B"};
+const vzColor = (c)=> /^#[0-9a-f]{3,8}$/i.test(String(c||"")) ? c : "#8E99A6";
+
+function viewInsights(main){
+  setTitle(main, "Visualize");
+  VZ_ENTER = !VZ_SEEN; VZ_SEEN = true; VZ_N = 0;
+  if(!JOINED.length){
+    const e=el("div","empty");
+    e.innerHTML='<span class="ms" aria-hidden="true">hub</span><h3>Nothing to show yet</h3>'+
+      '<p>Join or start a group and add a few expenses - this fills in on its own.</p>';
+    main.appendChild(e);
+    return;
+  }
+  const L=vzLedger();
+  vzSettleEverything(main, L);
+  vzWhoNext(main);
+  vzRealCost(main);
+  vzOldDebts(main, L);
+  vzLeaveClean(main, L);
+}
+
+function vzSection(main, icon, title, sub){
+  const s=el("div","vz-sec"+(VZ_ENTER?" enter":""));
+  s.style.animationDelay=(VZ_N++*80)+"ms";
+  s.innerHTML='<div class="vz-head"><span class="vz-ic"><span class="ms" aria-hidden="true">'+icon+'</span></span>'+
+    '<div><h2>'+esc(title)+'</h2><p>'+esc(sub)+'</p></div></div>';
+  main.appendChild(s);
+  return s;
+}
+function vzLastAt(gid){
+  let t=Number((DATA[gid]&&DATA[gid].meta&&DATA[gid].meta.at)||0);
+  expensesOf(gid).forEach(e=>{ const a=Number(e.at)||0; if(a>t) t=a; });
+  paymentsOf(gid).forEach(p=>{ const a=Number(p.at)||0; if(a>t) t=a; });
+  return t;
+}
+// Paying a debt in one group opens that group's payment screen, as Today does.
+function vzPay(gid, from, to, amt){ openGroup(gid); setTimeout(()=> sheetSettle(from, to, amt, null), 260); }
+function vzPayBtn(onClick){
+  const b=el("button","vz-btn","Pay"); b.type="button";
+  b.addEventListener("click", onClick);
+  return b;
+}
+function vzRemindBtn(gid, who, amt){
+  const key=gid+"|"+who;
+  const b=el("button","vz-btn soft", NUDGED[key] ? "Reminder sent" : "Remind"); b.type="button";
+  b.disabled=!!NUDGED[key];
+  b.addEventListener("click", ()=>{ if(sendNudge(gid, who, amt, b)) NUDGED[key]=true; });
+  return b;
+}
+function vzSlideHTML(id, label){
+  return '<div class="pf-slide" id="'+id+'" role="slider" aria-label="'+esc(label)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">'+
+    '<span class="pf-slide-fill" aria-hidden="true"></span><span class="pf-slide-text">'+esc(label)+'</span>'+
+    '<span class="pf-slide-knob" tabindex="0" role="button" aria-label="Drag right to confirm, or press End">'+
+      '<span class="ms" aria-hidden="true">arrow_forward</span></span></div>';
+}
+
+/* Every debt in every group, with each person known across groups - by their
+   account where they have one, by name where they do not - and then netted
+   between each pair: owing Kavya $30 in one group and being owed $20 by her
+   in another becomes one $10 payment. Only pairs are netted, never routed
+   through a third person, so nobody is asked to pay somebody they never
+   shared anything with. */
+function vzLedger(){
+  const meKey = USER ? "u:"+USER.uid : null;
+  const people = {};
+  const touch=(gid, name)=>{
+    const m=membersOf(gid).find(x=>x.name===name);
+    const key = m && m.uid ? "u:"+m.uid : "n:"+normName(name);
+    if(!people[key]){
+      const d = m && m.uid && DIRECTORY[m.uid];
+      people[key]={key, uid:(m&&m.uid)||null, name: key===meKey ? "You" : ((d&&d.name)||name),
+        color: vzColor((m&&m.color)||colorOf(name, gid)), photo:(m&&m.photo)||null, net:0};
+    }
+    return people[key];
+  };
+  const edges=[];
+  JOINED.forEach(g=>{
+    if(!loaded(g.id)) return;
+    settlements(g.id).forEach(s=>{
+      const a=touch(g.id, s.from), b=touch(g.id, s.to);
+      if(a.key===b.key) return;
+      a.net-=s.amt; b.net+=s.amt;
+      edges.push({gid:g.id, from:a.key, to:b.key, fromName:s.from, toName:s.to, amt:s.amt});
+    });
+  });
+  const pairs={};
+  edges.forEach(e=>{
+    const lo = e.from<e.to ? e.from : e.to, hi = e.from<e.to ? e.to : e.from;
+    const k=lo+"|"+hi;
+    (pairs[k]=pairs[k]||{lo, hi, sum:0, parts:[]});
+    pairs[k].sum += (e.from===lo ? 1 : -1) * e.amt;
+    pairs[k].parts.push(e);
+  });
+  const transfers=Object.keys(pairs).map(k=>{
+    const p=pairs[k], s=Math.round(p.sum*100)/100;
+    return {from: s>=0 ? p.lo : p.hi, to: s>=0 ? p.hi : p.lo, amt: Math.abs(s), parts: p.parts};
+  });
+  return {meKey, people, edges, transfers};
+}
+
+/* ---------- 1. settle everything ---------- */
+function vzSettleEverything(main, L){
+  const sec=vzSection(main, "hub", "Settle everything", "Every debt across your groups, netted into the fewest payments.");
+  const moves=L.transfers.filter(t=>t.amt>0.004);
+  const card=el("div","card vz-card");
+  sec.appendChild(card);
+  if(!moves.length){
+    card.innerHTML='<div class="vz-empty"><span class="ms" aria-hidden="true">celebration</span><b>Everyone is square</b>'+
+      '<p>Nobody owes anybody in any of your groups.</p></div>';
+  } else {
+    const before=L.edges.length;
+    card.innerHTML=
+      '<div class="vz-headline"><span class="vz-big">'+moves.length+'</span><span>payment'+(moves.length===1?'':'s')+
+        ' clear'+(moves.length===1?'s':'')+' everything'+(before>moves.length ? ' <em>instead of '+before+'</em>' : '')+'</span></div>'+
+      vzNetSvg(L, moves)+
+      '<p class="vz-legendline"><span class="vz-key out"></span>you pay <span class="vz-key in"></span>paid to you '+
+        '<span class="vz-key other"></span>between others</p>';
+    const list=el("div","vz-list");
+    const rank=t=> t.from===L.meKey ? 0 : t.to===L.meKey ? 1 : 2;
+    const ini=p=> p.key===L.meKey && USER ? USER.name : p.name;   // your own initials, not "Y" for You
+    moves.slice().sort((a,b)=> rank(a)-rank(b) || b.amt-a.amt).forEach(t=>{
+      const A=L.people[t.from], B=L.people[t.to], out=t.from===L.meKey, inn=t.to===L.meKey;
+      const gnames=[]; t.parts.forEach(p=>{ const n=groupName(p.gid); if(gnames.indexOf(n)<0) gnames.push(n); });
+      const r=el("div","vz-move"+(out||inn?" vz-mine":""));
+      r.innerHTML=
+        '<span class="vz-pair">'+avatarHTML("", ini(A), A.color, A.photo)+'<span class="ms" aria-hidden="true">arrow_forward</span>'+
+          avatarHTML("", ini(B), B.color, B.photo)+'</span>'+
+        '<span class="vz-b"><span class="vz-t"><b>'+esc(A.name)+'</b> '+(out?'pay':'pays')+' <b>'+esc(inn?'you':B.name)+'</b></span>'+
+          '<span class="vz-m">'+(t.parts.length>1 ? 'Nets '+t.parts.length+' debts · ' : '')+esc(gnames.join(", "))+'</span></span>'+
+        '<span class="vz-r"><span class="vz-val '+(out?'neg':inn?'pos':'')+'">'+esc(money(t.amt))+'</span></span>';
+      const right=r.querySelector(".vz-r");
+      if(out) right.appendChild(vzPayBtn(()=> sheetNetSettle(t, L)));
+      else if(inn){
+        const p=t.parts.filter(x=>x.to===L.meKey).sort((a,b)=>b.amt-a.amt)[0];
+        if(p) right.appendChild(vzRemindBtn(p.gid, p.fromName, t.amt));
+      }
+      list.appendChild(r);
+    });
+    card.appendChild(list);
+  }
+  // Even with somebody overall, while each group still shows a debt.
+  L.transfers.filter(t=>t.amt<=0.004 && (t.from===L.meKey || t.to===L.meKey)).forEach(t=>{
+    const other=L.people[t.from===L.meKey ? t.to : t.from];
+    const n=el("div","vz-even");
+    n.innerHTML='<span class="ms" aria-hidden="true">balance</span><span>Even with <b>'+esc(other.name)+
+      '</b> across groups, but each group still shows a debt.</span>';
+    const b=el("button","vz-btn soft","Mark even"); b.type="button";
+    b.addEventListener("click", ()=> sheetNetSettle(t, L));
+    n.appendChild(b);
+    card.appendChild(n);
+  });
+}
+
+function vzNetSvg(L, moves){
+  const keys=[];
+  moves.forEach(t=>[t.from, t.to].forEach(k=>{ if(keys.indexOf(k)<0) keys.push(k); }));
+  const W=340, H=300, cx=170, cy=142;
+  const hasMe=keys.indexOf(L.meKey)>-1, ring=keys.filter(k=>!(hasMe && k===L.meKey)), n=ring.length;
+  const pos={};
+  if(hasMe) pos[L.meKey]={x:cx, y:cy};
+  const rx = (hasMe || n>1) ? 120 : 0, ry = (hasMe || n>1) ? 98 : 0;
+  ring.forEach((k,i)=>{
+    const a=-Math.PI/2 + i*2*Math.PI/Math.max(1,n) + (hasMe ? 0 : Math.PI/Math.max(2,n));
+    pos[k]={x:cx+rx*Math.cos(a), y:cy+ry*Math.sin(a)};
+  });
+  const f=v=>Math.round(v*10)/10;
+  const maxAmt=Math.max.apply(null, moves.map(t=>t.amt)) || 1;
+  const maxNet=Math.max.apply(null, keys.map(k=>Math.abs(L.people[k].net))) || 1;
+  const rad={}; keys.forEach(k=>{ rad[k]=17+9*Math.min(1, Math.abs(L.people[k].net)/maxNet); });
+  let flows="", labels="", nodes="";
+  moves.forEach(t=>{
+    const a=pos[t.from], b=pos[t.to];
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+    const bend=Math.min(30, len*.2), qx=(a.x+b.x)/2 - dy/len*bend, qy=(a.y+b.y)/2 + dx/len*bend;
+    const trim=(p, r)=>{ const vx=qx-p.x, vy=qy-p.y, d=Math.hypot(vx,vy)||1; return {x:p.x+vx/d*r, y:p.y+vy/d*r}; };
+    const s=trim(a, rad[t.from]+3), e=trim(b, rad[t.to]+8);
+    const tone = t.from===L.meKey ? "out" : t.to===L.meKey ? "in" : "other";
+    flows+='<path class="vz-flow '+tone+'" d="M'+f(s.x)+' '+f(s.y)+' Q'+f(qx)+' '+f(qy)+' '+f(e.x)+' '+f(e.y)+
+      '" stroke-width="'+f(1.8+3.2*t.amt/maxAmt)+'" marker-end="url(#vzA-'+tone+')"/>';
+    // On the curve itself, halfway along - clear of the circles at either end.
+    const mx=.25*a.x+.5*qx+.25*b.x, my=.25*a.y+.5*qy+.25*b.y;
+    labels+='<text class="vz-amt" x="'+f(mx)+'" y="'+f(my+4)+'">'+esc(money(t.amt))+'</text>';
+  });
+  keys.forEach(k=>{
+    const p=L.people[k], q=pos[k], r=rad[k], me=k===L.meKey;
+    const nm = p.name.length>12 ? p.name.slice(0,11)+"…" : p.name;
+    nodes+='<g class="vz-node'+(me?' me':'')+'"><circle cx="'+f(q.x)+'" cy="'+f(q.y)+'" r="'+f(r)+'" style="fill:'+p.color+'"/>'+
+      '<text class="ini" x="'+f(q.x)+'" y="'+f(q.y)+'">'+esc(initials(me && USER ? USER.name : p.name))+'</text>'+
+      // You sit in the middle with arrows on every side; the ring says it is you.
+      (me ? '' : '<text class="nm" x="'+f(q.x)+'" y="'+f(q.y < cy-10 ? q.y-r-7 : q.y+r+14)+'">'+esc(nm)+'</text>')+'</g>';
+  });
+  const marker=tone=>'<marker id="vzA-'+tone+'" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto">'+
+    '<path class="vz-arrow '+tone+'" d="M0 0L10 5L0 10z"/></marker>';
+  return '<svg class="vz-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Who pays whom across your groups">'+
+    '<defs>'+marker("out")+marker("in")+marker("other")+'</defs>'+flows+nodes+labels+'</svg>';
+}
+
+/* One payment to somebody that clears what you owe them in every group, less
+   what they owe you. Written as a payment in each group so every group's own
+   balances come out right: what you owed is paid, and what they owed you is
+   marked as netted against it - not as money you received. */
+function sheetNetSettle(t, L){
+  const iSend = t.from===L.meKey && t.amt>0.004;
+  if(!iSend && t.amt>0.004) return;              // only whoever pays records it
+  const other=L.people[t.from===L.meKey ? t.to : t.from];
+  const groups=[]; t.parts.forEach(p=>{ if(groups.indexOf(p.gid)<0) groups.push(p.gid); });
+  const lines=t.parts.map(p=>{
+    const mineOut=p.from===L.meKey;
+    return '<div class="ns-line"><span>'+esc(groupName(p.gid))+'</span><span class="'+(mineOut?'neg':'pos')+'">'+
+      (mineOut ? 'You owe ' : 'Owes you ')+esc(money(p.amt))+'</span></div>';
+  }).join("");
+  openSheet(iSend ? "Settle with "+other.name : "Even with "+other.name, (b)=>{
+    b.innerHTML=
+      '<p class="pf-sub">'+(t.parts.length>1
+        ? 'One payment clears '+t.parts.length+' debts in '+groups.length+' group'+(groups.length===1?'':'s')+'.'
+        : 'This clears the debt.')+'</p>'+
+      '<div class="ns-lines">'+lines+
+        '<div class="ns-line total"><span>'+(iSend ? 'You send' : 'Nothing to send')+'</span><b>'+esc(money(t.amt))+'</b></div></div>'+
+      '<div id="nsEtx"></div>'+
+      vzSlideHTML("nsSlide", iSend ? "Slide to record "+money(t.amt) : "Slide to mark even")+
+      '<p class="pf-slide-hint">'+(t.parts.some(p=>p.to===L.meKey)
+        ? 'What '+esc(other.name)+' owed you is marked as netted, not as money received.'
+        : 'Slide all the way across to record it.')+'</p>';
+    if(iSend){
+      const p0=t.parts.find(p=>p.from===L.meKey) || t.parts[0];
+      drawEtx($("nsEtx"), p0.gid, p0.fromName, p0.toName, t.amt, null);
+    }
+    const save=()=>{
+      const at=Date.now(), multi=t.parts.length>1;
+      t.parts.forEach(p=>{
+        const mineOut=p.from===L.meKey, amt=Math.round(p.amt*100)/100;
+        const rec={from:p.fromName, to:p.toName, amount:amt, at:at, by:meIn(p.gid)||USER.name, byUid:USER.uid,
+          note: mineOut ? (multi ? "Net settle-up across groups" : "") : "Netted against other groups"};
+        if(!mineOut) rec.netted=true;
+        push("trips/"+p.gid+"/payments", rec);
+        notify("payment.add", p.gid, {desc: mineOut ? rec.from+" paid "+rec.to : rec.from+"'s debt to "+rec.to+" netted", amount:amt});
+      });
+      closeSheet();
+      setTimeout(()=> iSend ? celebratePayment(t.amt, other.name) : toast("Marked even with "+other.name), 260);
+      return true;
+    };
+    slideToConfirm($("nsSlide"), save);
+  });
+}
+
+/* ---------- 2. who should pay next ---------- */
+function vzWhoNext(main){
+  const sec=vzSection(main, "autorenew", "Who should pay next", "Who has fronted more than their share - and whose turn it is.");
+  const groups=JOINED.filter(g=> loaded(g.id) && expensesOf(g.id).length && names(g.id).length>1)
+    .sort((a,b)=> vzLastAt(b.id)-vzLastAt(a.id));
+  if(!groups.length){
+    sec.appendChild(el("p","vz-note","Add a couple of expenses to a group of two or more to see whose turn it is."));
+    return;
+  }
+  if(!VZ_GROUP || !groups.some(g=>g.id===VZ_GROUP)) VZ_GROUP=groups[0].id;
+  const card=el("div","card vz-card"); sec.appendChild(card);
+  if(groups.length>1){
+    const chips=el("div","vz-chips");
+    groups.forEach(g=>{
+      const c=el("button","chip"); c.type="button"; c.textContent=groupName(g.id);
+      c.setAttribute("aria-pressed", g.id===VZ_GROUP ? "true" : "false");
+      c.addEventListener("click", ()=>{ VZ_GROUP=g.id; render(); });
+      chips.appendChild(c);
+    });
+    card.appendChild(chips);
+  }
+  const gid=VZ_GROUP, ppl=names(gid), me=meIn(gid);
+  const paid={}, share={}; ppl.forEach(n=>{ paid[n]=0; share[n]=0; });
+  let total=0;
+  expensesOf(gid).forEach(e=>{
+    const a=Number(e.amount)||0; total+=a;
+    if(paid[e.payer]!=null) paid[e.payer]+=a;
+    const sh=sharesOf(e); Object.keys(sh).forEach(n=>{ if(share[n]!=null) share[n]+=sh[n]; });
+  });
+  const rows=ppl.map(n=>({n, paid:paid[n], share:share[n], gap:Math.round((paid[n]-share[n])*100)/100, color:vzColor(colorOf(n, gid))}));
+  const next=rows.slice().sort((a,b)=> a.gap-b.gap)[0];
+  const lead=rows.slice().sort((a,b)=> b.paid-a.paid)[0];
+  const who=n=> n===me ? "You" : n;
+
+  const R=56, C=2*Math.PI*R; let off=0;
+  const segs=rows.filter(r=>r.paid>0.004).map(r=>{
+    const len=total ? r.paid/total*C : 0;
+    const s='<circle class="vz-seg" cx="75" cy="75" r="'+R+'" style="stroke:'+r.color+'" stroke-dasharray="'+
+      Math.max(0, len-2.5).toFixed(1)+' '+C.toFixed(1)+'" stroke-dashoffset="'+(-off).toFixed(1)+'"/>';
+    off+=len; return s;
+  }).join("");
+  const behind = next.gap < -0.004;
+  const turn=el("div","vz-turn");
+  turn.innerHTML=
+    '<div class="vz-donut"><svg viewBox="0 0 150 150" aria-hidden="true"><circle class="trk" cx="75" cy="75" r="'+R+'"/>'+segs+'</svg>'+
+      '<div class="vz-donut-c"><small>Next up</small><b>'+esc(behind ? who(next.n) : "Anyone")+'</b></div></div>'+
+    '<div class="vz-turn-txt"><p>'+(behind
+        ? (next.n===me
+            ? 'It’s <b>your turn</b> - you’re '+esc(money(-next.gap))+' behind your share in '+esc(groupName(gid))+'.'
+            : '<b>'+esc(next.n)+'</b> is furthest behind ('+esc(money(-next.gap))+'), so it’s their turn to pay.')
+        : 'Everyone has fronted about their share - anyone can take the next one.')+'</p>'+
+      (total>0.004 && lead ? '<p class="vz-small">'+esc(who(lead.n))+(lead.n===me?' have':' has')+' covered '+
+        Math.round(lead.paid/total*100)+'% of the '+esc(money(total))+' spent.</p>' : '')+
+    '</div>';
+  card.appendChild(turn);
+  if(behind && next.n===me){
+    const b=el("button","btn p vz-next","+  Add the next expense"); b.type="button";
+    b.addEventListener("click", ()=>{ QA_LAST=gid; sheetQuickAdd(); });
+    turn.querySelector(".vz-turn-txt").appendChild(b);
+  }
+  const maxV=Math.max.apply(null, rows.map(r=>Math.max(r.paid, r.share))) || 1;
+  const bars=el("div","vz-bars");
+  rows.slice().sort((a,b)=> b.gap-a.gap).forEach(r=>{
+    const tone=r.gap>0.004 ? "pos" : r.gap<-0.004 ? "neg" : "zero";
+    const row=el("div","vz-bar-row");
+    row.innerHTML=
+      '<span class="vz-bar-n"><span class="vz-dot" style="background:'+r.color+'"></span>'+esc(who(r.n))+'</span>'+
+      '<span class="vz-gap '+tone+'">'+(tone==="pos" ? esc(money(r.gap))+" ahead" : tone==="neg" ? esc(money(-r.gap))+" behind" : "even")+'</span>'+
+      '<span class="vz-track"><span class="vz-fill" style="width:'+(r.paid/maxV*100).toFixed(1)+'%;background:'+r.color+'"></span>'+
+        '<span class="vz-mark" style="left:calc('+(r.share/maxV*100).toFixed(1)+'% - 1px)"></span></span>'+
+      '<span class="vz-sub">Fronted '+esc(money(r.paid))+' · fair share '+esc(money(r.share))+'</span>';
+    bars.appendChild(row);
+  });
+  card.appendChild(bars);
+  card.appendChild(el("p","vz-note","The bar is what each person paid; the line is their fair share."));
+}
+
+/* ---------- 3. what this really cost you ---------- */
+function vzRealCost(main){
+  const sec=vzSection(main, "pie_chart", "What this really cost you", "Your own share of the spending - not the group’s total.");
+  const cats={}; let share=0, paid=0, groupTotal=0; const per=[];
+  JOINED.forEach(g=>{
+    if(!loaded(g.id)) return;
+    const me=meIn(g.id); if(!me) return;
+    const gc={}; let gs=0;
+    expensesOf(g.id).forEach(e=>{
+      const a=Number(e.amount)||0; groupTotal+=a;
+      if(e.payer===me) paid+=a;
+      const s=sharesOf(e)[me]||0;
+      if(s>0.004){ const k=catOf(e.cat).k; gc[k]=(gc[k]||0)+s; cats[k]=(cats[k]||0)+s; gs+=s; }
+    });
+    if(gs>0.004) per.push({gid:g.id, share:gs, cats:gc});
+    share+=gs;
+  });
+  const card=el("div","card vz-card"); sec.appendChild(card);
+  if(share<0.005){
+    card.innerHTML='<div class="vz-empty"><span class="ms" aria-hidden="true">receipt_long</span><b>Nothing on you yet</b>'+
+      '<p>Once you’re part of an expense, your share shows up here.</p></div>';
+    return;
+  }
+  const order=Object.keys(cats).sort((a,b)=> cats[b]-cats[a]);
+  const stack=(cmap, tot)=> '<div class="vz-stack">'+order.filter(k=>cmap[k]).map(k=>
+    '<i style="width:'+(cmap[k]/tot*100).toFixed(2)+'%;background:'+(VZ_CAT_TINT[k]||"#8A8F84")+'" title="'+esc(catOf(k).n)+'"></i>').join("")+'</div>';
+  const diff=Math.round((paid-share)*100)/100;
+  card.innerHTML=
+    '<div class="vz-headline"><span class="vz-big">'+esc(money(share))+'</span><span>your share of '+esc(money(groupTotal))+' spent</span></div>'+
+    '<p class="vz-note vz-tight">You fronted '+esc(money(paid))+(diff>0.004 ? ' - '+esc(money(diff))+' more than your share.'
+      : diff<-0.004 ? ' - '+esc(money(-diff))+' less than your share.' : ', exactly your share.')+'</p>'+
+    stack(cats, share)+
+    '<div class="vz-legend">'+order.map(k=>
+      '<span class="vz-leg"><span class="ms" aria-hidden="true" style="background:'+(VZ_CAT_TINT[k]||"#8A8F84")+'">'+catOf(k).i+'</span>'+
+      '<span class="vz-leg-n">'+esc(catOf(k).n)+'</span><b>'+esc(money(cats[k]))+'</b></span>').join("")+'</div>'+
+    (per.length>1 ? '<div class="vz-gl">'+per.sort((a,b)=> b.share-a.share).map(p=>
+      '<div class="vz-gl-row"><span>'+esc(groupName(p.gid))+'</span><b>'+esc(money(p.share))+'</b>'+stack(p.cats, p.share)+'</div>').join("")+'</div>' : '');
+}
+
+/* ---------- 4. old debts ---------- */
+function vzOldDebts(main, L){
+  const sec=vzSection(main, "hourglass_bottom", "Old debts", "How long each balance has been waiting.");
+  const now=Date.now(), items=[];
+  L.edges.forEach(e=>{
+    if(e.from!==L.meKey && e.to!==L.meKey) return;
+    const gid=e.gid, a=e.fromName, b=e.toName;
+    // From the last time money moved between the two, or the first expense
+    // they shared after it.
+    let since=0;
+    paymentsOf(gid).forEach(p=>{
+      if((p.from===a && p.to===b) || (p.from===b && p.to===a)){ const t=Number(p.at)||0; if(t>since) since=t; }
+    });
+    let start=null;
+    expensesOf(gid).forEach(x=>{
+      const at=Number(x.at)||0; if(!at || at<=since) return;
+      const sh=sharesOf(x);
+      if(((x.payer===a && sh[b]) || (x.payer===b && sh[a])) && (start===null || at<start)) start=at;
+    });
+    if(start===null) expensesOf(gid).forEach(x=>{ const at=Number(x.at)||0; if(at>since && (start===null || at<start)) start=at; });
+    items.push({e, days: start ? Math.max(0, Math.floor((now-start)/864e5)) : 0});
+  });
+  const card=el("div","card vz-card"); sec.appendChild(card);
+  if(!items.length){
+    card.innerHTML='<div class="vz-empty"><span class="ms" aria-hidden="true">task_alt</span><b>No debts waiting</b>'+
+      '<p>Nothing is owed to you or by you right now.</p></div>';
+    return;
+  }
+  items.sort((x,y)=> y.days-x.days || y.e.amt-x.e.amt);
+  const span=Math.max(45, items[0].days);
+  items.forEach(it=>{
+    const e=it.e, days=it.days, out=e.from===L.meKey;
+    const other=L.people[out ? e.to : e.from], otherName=out ? e.toName : e.fromName;
+    const tone=days>30 ? "old" : days>=14 ? "warm" : "fresh";
+    const r=el("div","vz-debt");
+    r.innerHTML=
+      '<div class="vz-debt-top">'+avatarHTML("", other.name, other.color, other.photo)+
+        '<span class="vz-b"><span class="vz-t">'+(out ? 'You owe <b>'+esc(other.name)+'</b>' : '<b>'+esc(other.name)+'</b> owes you')+
+          ' <b>'+esc(money(e.amt))+'</b></span><span class="vz-m">'+esc(groupName(e.gid))+'</span></span>'+
+        '<span class="vz-days '+tone+'">'+(days===0 ? "today" : days===1 ? "1 day" : days+" days")+'</span></div>'+
+      '<div class="vz-agebar"><i class="'+tone+'" style="width:'+Math.max(4, Math.min(100, days/span*100)).toFixed(1)+'%"></i></div>';
+    r.querySelector(".vz-debt-top").appendChild(out
+      ? vzPayBtn(()=> vzPay(e.gid, e.fromName, e.toName, e.amt))
+      : vzRemindBtn(e.gid, otherName, e.amt));
+    card.appendChild(r);
+  });
+  card.appendChild(el("p","vz-note","Amber after two weeks, red after a month. A gentle reminder now is easier than an awkward one later."));
+}
+
+/* ---------- 5. leave clean ---------- */
+function vzLeaveClean(main, L){
+  const sec=vzSection(main, "door_open", "Leave clean", "What stands between you and walking away from each group owing nothing.");
+  const gs=JOINED.filter(g=> loaded(g.id) && meIn(g.id)).map(g=>({
+    gid:g.id, mine:L.edges.filter(e=> e.gid===g.id && (e.from===L.meKey || e.to===L.meKey))
+  })).sort((a,b)=> b.mine.length-a.mine.length || groupName(a.gid).localeCompare(groupName(b.gid)));
+  if(!gs.length){ sec.appendChild(el("p","vz-note","Say which name is yours in a group to see this.")); return; }
+  const wrap=el("div","vz-leave"); sec.appendChild(wrap);
+  gs.forEach(g=>{
+    const mine=g.mine;
+    const pay=mine.filter(e=>e.from===L.meKey).reduce((s,e)=>s+e.amt, 0);
+    const get=mine.filter(e=>e.to===L.meKey).reduce((s,e)=>s+e.amt, 0);
+    const c=el("div","card vz-lc"+(mine.length ? "" : " clean"));
+    c.innerHTML=
+      '<div class="vz-lc-h"><b>'+esc(groupName(g.gid))+'</b>'+(mine.length
+        ? '<span class="vz-todo">'+mine.length+' to do</span>'
+        : '<span class="vz-ok"><span class="ms" aria-hidden="true">check_circle</span>Clean</span>')+'</div>'+
+      '<p class="vz-lc-sum">'+(mine.length
+        ? (pay>0.004 ? 'Pay <b>'+esc(money(pay))+'</b>' : '')+(pay>0.004 && get>0.004 ? ' · ' : '')+
+          (get>0.004 ? 'Collect <b>'+esc(money(get))+'</b>' : '')
+        : 'You owe nothing here and nobody owes you. You can leave any time.')+'</p>';
+    mine.forEach(e=>{
+      const out=e.from===L.meKey, name=out ? e.toName : e.fromName;
+      const line=el("div","vz-lc-line");
+      line.innerHTML='<span class="ms" aria-hidden="true">'+(out ? 'north_east' : 'south_west')+'</span>'+
+        '<span class="vz-lc-t">'+(out ? 'Pay <b>'+esc(name)+'</b>' : 'Collect from <b>'+esc(name)+'</b>')+'</span>'+
+        '<b class="vz-val '+(out ? 'neg' : 'pos')+'">'+esc(money(e.amt))+'</b>';
+      line.appendChild(out ? vzPayBtn(()=> vzPay(g.gid, e.fromName, e.toName, e.amt)) : vzRemindBtn(g.gid, name, e.amt));
+      c.appendChild(line);
+    });
+    wrap.appendChild(c);
+  });
 }
 
 /* =========================== PRINT =========================== */
