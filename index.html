@@ -1038,10 +1038,69 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
-/* ---- Bottom bar: two equal halves keep the + in the middle -------------- */
-.nav-side{ flex:1 1 0; min-width:0; display:flex; align-items:center; }
-.nav-side button{ flex:1 1 0; min-width:0; overflow:hidden; white-space:nowrap; }
-@media (max-width:420px){ .nav-side button{ font-size:9.5px; letter-spacing:-.01em; padding-left:1px; padding-right:1px; } }
+/* ---- Bottom bar: five equal tabs, and the + floating centred above ------- */
+:root{ --nav-h:66px; --nav-gap:12px; }
+.nav{ display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); align-items:stretch; gap:2px;
+  left:50%; right:auto; width:min(calc(100% - 24px), 520px); max-width:none; margin:0; transform:translateX(-50%);
+  bottom:calc(var(--nav-gap) + var(--safe-b)); height:var(--nav-h); padding:6px; border-radius:26px;
+  background:var(--ink); box-shadow:0 14px 32px -10px rgba(30,32,28,.5), inset 0 1px 0 rgba(255,255,255,.06); }
+.nav button{ flex:none; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  margin:0; padding:4px 0; border:0; border-radius:18px; background:transparent; color:rgba(252,250,245,.58);
+  font:inherit; font-size:10.5px; font-weight:600; letter-spacing:0; line-height:1.1; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:color .2s; }
+.nav-ic{ display:flex; align-items:center; justify-content:center; width:50px; max-width:100%; height:30px;
+  border-radius:999px; transition:background .25s ease, transform .15s ease; }
+.nav-ic .ms{ font-size:22px; line-height:1; }
+.nav-l{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 2px; }
+.nav button[aria-current="page"]{ color:var(--cream); background:transparent; }
+.nav button[aria-current="page"] .nav-ic{ background:rgba(252,250,245,.15); }
+.nav button:active .nav-ic{ transform:scale(.9); }
+.nav button:focus:not(:focus-visible){ outline:none; }
+.nav button:focus-visible{ outline:2px solid var(--apricot); outline-offset:-2px; }
+
+.nav-fab{ --glow: rgba(238,181,134,.62); --glow-soft: rgba(238,181,134,.20);
+  position:fixed; left:50%; z-index:41; width:56px; height:56px; margin:0 0 0 -28px; padding:0;
+  bottom:calc(var(--nav-gap) + var(--safe-b) + var(--nav-h) + 12px);
+  display:flex; align-items:center; justify-content:center; border:0; border-radius:50%; cursor:pointer;
+  background:var(--apricot); color:#3A2414;
+  box-shadow:0 0 0 3px var(--glow-soft), 0 0 22px 4px var(--glow), 0 10px 20px -8px rgba(0,0,0,.45);
+  -webkit-tap-highlight-color:transparent; transition:transform .15s ease; }
+.nav-fab .ms{ font-size:28px; line-height:1; }
+.nav-fab::after{ content:""; position:absolute; inset:-5px; border-radius:50%; pointer-events:none;
+  box-shadow:0 0 18px 6px var(--glow); opacity:.35; animation:addGlow 2.8s ease-in-out infinite; }
+.nav-fab:active{ transform:scale(.93); }
+.nav-fab:focus:not(:focus-visible){ outline:none; }
+.nav-fab:focus-visible{ outline:3px solid var(--apricot); outline-offset:4px; }
+:root[data-theme="purple"] .nav-fab{ background:#C9B3F2; color:#2A1F3D;
+  --glow: rgba(186,146,255,.70); --glow-soft: rgba(186,146,255,.24); }
+.nav[hidden], .nav-fab[hidden]{ display:none !important; }
+
+/* Sizes: a little roomier on tablets, tighter on small phones, icons only on
+   the narrowest. Page content and toasts keep clear of the bar and the +. */
+@media (min-width:600px) and (max-width:999px){
+  :root{ --nav-h:70px; }
+  .nav{ width:min(calc(100% - 48px), 560px); }
+  .nav button{ font-size:11.5px; }
+  .nav-ic{ width:56px; }
+}
+@media (max-width:359px){
+  :root{ --nav-h:62px; --nav-gap:8px; }
+  .nav{ width:calc(100% - 16px); padding:5px; border-radius:22px; }
+  .nav button{ font-size:9.5px; }
+  .nav-ic{ width:40px; height:28px; }
+  .nav-ic .ms{ font-size:21px; }
+  .nav-fab{ width:52px; height:52px; margin-left:-26px; }
+}
+@media (max-width:319px){
+  :root{ --nav-h:52px; }
+  .nav-l{ display:none; }
+}
+@media (max-width:999px){
+  .wrap{ padding-bottom:calc(var(--nav-gap) + var(--safe-b) + var(--nav-h) + 110px); }
+  .toast{ bottom:calc(var(--nav-gap) + var(--safe-b) + var(--nav-h) + 84px); }
+}
+@media (min-width:1000px){ .nav-fab{ display:none !important; } }
+@media (prefers-reduced-motion:reduce){ .nav-fab::after{ animation:none; opacity:.6; } }
 
 /* ---- Visualize --------------------------------------------------------- */
 .vz-sec{ margin:0 0 var(--s5); }
@@ -2124,17 +2183,14 @@ span.af-pill{ cursor:default; padding-right:12px; }
 
 <button class="fab" id="fab" hidden><span class="ms" aria-hidden="true">add</span><span id="fabLabel">Add expense</span></button>
 
+<!-- Five equal tabs, and the + floating centred just above them. -->
+<button class="nav-fab" id="navAdd" aria-label="Add an expense"><span class="ms" aria-hidden="true">add</span></button>
 <nav class="nav" id="nav" aria-label="Sections">
-  <div class="nav-side">
-    <button data-tab="home" aria-current="page"><span class="ms" aria-hidden="true">explore</span>Today</button>
-    <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
-  </div>
-  <button class="add" id="navAdd" aria-label="Add an expense"><span class="ms" aria-hidden="true">add</span></button>
-  <div class="nav-side">
-    <button data-tab="groups"><span class="ms" aria-hidden="true">group</span>Groups</button>
-    <button data-tab="insights"><span class="ms" aria-hidden="true">hub</span>Visualize</button>
-    <button data-tab="interac"><span class="ms" aria-hidden="true">send_money</span>Interac</button>
-  </div>
+  <button data-tab="home" aria-current="page"><span class="nav-ic"><span class="ms" aria-hidden="true">explore</span></span><span class="nav-l">Today</span></button>
+  <button data-tab="activity"><span class="nav-ic"><span class="ms" aria-hidden="true">receipt_long</span></span><span class="nav-l">Expenses</span></button>
+  <button data-tab="groups"><span class="nav-ic"><span class="ms" aria-hidden="true">group</span></span><span class="nav-l">Groups</span></button>
+  <button data-tab="insights"><span class="nav-ic"><span class="ms" aria-hidden="true">hub</span></span><span class="nav-l">Visualize</span></button>
+  <button data-tab="interac"><span class="nav-ic"><span class="ms" aria-hidden="true">send_money</span></span><span class="nav-l">Interac</span></button>
 </nav>
 
 <div class="scrim" id="scrim" hidden></div>
