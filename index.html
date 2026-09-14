@@ -1614,6 +1614,14 @@ button, input, select, textarea{ font-family:var(--f); }
 .pn-linked span:not(.ms){ flex:1; min-width:0; }
 .pn-linked.ok{ background:color-mix(in srgb, var(--good) 12%, transparent); color:var(--good); }
 .pn-linked.bad{ background:color-mix(in srgb, var(--bad) 12%, transparent); color:var(--bad); }
+
+/* ---- Refresh, in the top bar: turns while it reloads ---- */
+#refreshBtn .ms{ display:block; transform-origin:50% 50%; }
+#refreshBtn:active .ms{ transform:rotate(-40deg); transition:transform .15s ease; }
+#refreshBtn.spin .ms{ animation:refreshSpin .75s linear infinite; }
+#refreshBtn:disabled{ opacity:1; cursor:progress; }
+@keyframes refreshSpin{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce){ #refreshBtn.spin .ms{ animation-duration:2.4s; } }
 .pn-linked button{ min-height:34px; padding:0 14px; border:0; border-radius:10px; background:var(--ink); color:var(--cream);
   font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
 .pn-off{ display:block; margin:12px auto 0; padding:8px 12px; border:0; background:none; font:inherit; font-size:14px;
@@ -2427,6 +2435,7 @@ span.af-pill{ cursor:default; padding-right:12px; }
   <span class="brandwrap" id="barBrand"><span class="brand">Set<i>tle</i></span><span class="byline">Created by Abilash</span></span>
   <h1 id="barTitle" hidden>Today</h1>
   <span class="spacer"></span>
+  <button class="ibtn glass" id="refreshBtn" type="button" aria-label="Refresh Settle" title="Refresh"><span class="ms" aria-hidden="true">refresh</span></button>
   <button class="ibtn glass" id="gmenuBtn" aria-label="Group settings" hidden><span class="ms" aria-hidden="true">more_horiz</span></button>
   <button class="me" id="meBtn" aria-label="Your account"></button>
 </header>
@@ -8033,7 +8042,7 @@ document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && USER)
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260914204534";
+const APP_BUILD = "20260914205524";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
@@ -8094,14 +8103,36 @@ if(!window.__NO_SW){
   setTimeout(updateCheck, 8000);
 }
 
-// Straight after an update: back on the same tab, and say so.
+/* The refresh button in the top bar. An app on the iPhone Home Screen has no
+   address bar and no pull-to-refresh, so this is the only way to reload it
+   short of closing it. It fetches the newest service worker first, so the
+   reload lands on the latest release, and comes back to the same tab. */
+async function manualRefresh(btn){
+  if(UPDATE_RELOADING) return;
+  if(btn){ btn.classList.add("spin"); btn.disabled=true; }
+  try{ sessionStorage.setItem(UPDATE_KEY, JSON.stringify({tab:TAB, at:Date.now(), manual:true})); }catch(e){}
+  try{
+    if(!window.__NO_SW && "serviceWorker" in navigator){
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg) await Promise.race([reg.update(), new Promise(r=> setTimeout(r, 2500))]);
+    }
+  }catch(e){}
+  UPDATE_RELOADING=true;
+  setTimeout(()=> location.reload(), 300);
+}
+(function(){
+  const b=$("refreshBtn");
+  if(b) b.addEventListener("click", ()=> manualRefresh(b));
+})();
+
+// Straight after an update or a refresh: back on the same tab, and say so.
 function updateRestore(){
   try{
     const u=JSON.parse(sessionStorage.getItem(UPDATE_KEY)||"null");
     sessionStorage.removeItem(UPDATE_KEY);
     if(!u || Date.now()-Number(u.at) > 60e3) return;
     if(["home","groups","activity","account","interac","insights"].indexOf(u.tab)>-1) TAB=u.tab;
-    setTimeout(()=> toast("Settle is up to date"), 1400);
+    setTimeout(()=> toast(u.manual ? "Refreshed" : "Settle is up to date"), 1400);
   }catch(e){}
 }
 
