@@ -1000,6 +1000,26 @@ button, input, select, textarea{ font-family:var(--f); }
 .linkbtn{ font-weight:600; }
 :focus-visible{ outline:3px solid var(--apricot-dk); outline-offset:3px; }
 
+
+/* ---- Today: the panel turns through everything there is to settle ---- */
+.hc-track{ position:relative; display:flex; touch-action:pan-y;
+  transition:transform .55s cubic-bezier(.22,.61,.36,1); }
+.hc-view{ position:relative; overflow:hidden; }
+.hc-slide{ flex:0 0 100%; min-width:0; }
+.hero .hc-kicker{ margin:0 0 var(--s2); font-size:11px; font-weight:700;
+  letter-spacing:.07em; text-transform:uppercase; }
+.hero .act{ margin-top:var(--s4); }
+.hc-foot{ position:relative; display:flex; align-items:flex-end; justify-content:space-between;
+  gap:var(--s4); margin-top:var(--s4); }
+.hc-dots{ display:flex; flex-wrap:wrap; gap:2px; }
+/* A bigger target than the dot you see: the padding is tappable, the colour
+   only fills the middle. */
+.hc-dot{ box-sizing:content-box; width:8px; height:8px; padding:7px 4px; border:0;
+  border-radius:999px; background:currentColor; background-clip:content-box;
+  opacity:.3; cursor:pointer; transition:width .3s, opacity .3s; }
+.hc-dot[aria-current="true"]{ width:22px; opacity:.85; }
+@media (prefers-reduced-motion: reduce){ .hc-track, .hc-dot{ transition:none; } }
+
 /* ---- desktop --------------------------------------------------------- */
 @media (min-width:1000px){
   body{ background:var(--cream); }
@@ -2650,11 +2670,29 @@ function sendNudge(gid, who, amount, btn){
   const seat = membersOf(gid).find(x=>x.name===who);
   if(!seat || !seat.uid){
     toast(who+" has not signed in yet, so there is nowhere to send it");
-    return;
+    return false;
   }
   if(btn){ btn.disabled=true; btn.textContent="Reminder sent"; }
   notify("nudge", gid, {desc: who, amount: amount});
   toast("Reminder on its way to "+who+" · "+callGap());
+  return true;
+}
+
+/* The Today panel turns through everything there is to settle, across every
+   group, for whoever is signed in. The database redraws the screen whenever
+   anything changes, so which card is showing, and who has already been
+   reminded, live out here - or every redraw would jump back to the first card
+   and forget the reminder. */
+let HERO_I = 0;
+let HERO_TIMER = null;
+const NUDGED = {};             // "gid|name" -> reminded this session
+
+// What I owe first, biggest first; then what I am owed, biggest first.
+function heroSlides(){
+  const plan = toDoNext();
+  const big = (a,b)=> b.amt-a.amt;
+  return plan.filter(t=>t.dir==="pay").sort(big)
+    .concat(plan.filter(t=>t.dir==="get").sort(big));
 }
 
 function addExpenseAnywhere(){
@@ -2698,39 +2736,117 @@ function viewHome(main){
   plan.forEach(t=> (t.dir==="pay" ? oweWho : owedWho)[t.who]=true );
   const net = owed-owe;
 
-  /* ---- the feature panel ---- */
-  const first = plan.filter(t=>t.dir==="pay")[0] || plan[0];
-  const hero = el("section","hero");
-  const forWhat = first ? whatFor(first.gid, first.who) : null;
-  hero.innerHTML =
-    '<h2>'+(first
-      ? (first.dir==="pay" ? "One payment, and you’re all set."
-                           : esc(first.who)+" still owes you.")
-      : "Everything is settled.")+'</h2>'+
-    '<p>'+(first
-      ? (first.dir==="pay" ? "Pay "+esc(first.who)+(forWhat ? " for "+esc(forWhat) : " in "+esc(groupName(first.gid)))+"."
-                           : "Nudge "+esc(first.who)+" about "+esc(groupName(first.gid))+".")
-      : "Nobody owes anybody in any of your groups.")+'</p>'+
-    '<div class="act"><span id="heroAct"></span>'+
-    '<span class="net">'+money(net)+'<small>Your overall balance</small></span></div>';
-  main.appendChild(hero);
-  if(first){
-    const b=el("button","btn dark",
-      (first.dir==="pay" ? "Pay " : "Remind ")+esc(first.who)+" "+money(first.amt));
+  /* ---- the feature panel: everything to settle, one card at a time ---- */
+  const slides = heroSlides();
+  if(HERO_TIMER){ clearInterval(HERO_TIMER); HERO_TIMER = null; }
+  if(HERO_I >= slides.length) HERO_I = 0;
+
+  const hero = el("section","hero carousel");
+  hero.setAttribute("aria-roledescription","carousel");
+  hero.setAttribute("aria-label","What there is to settle");
+  const track = el("div","hc-track");
+
+  if(!slides.length){
+    const s0 = el("div","hc-slide");
+    s0.innerHTML = '<h2>Everything is settled.</h2><p>Nobody owes anybody in any of your groups.</p>';
+    track.appendChild(s0);
+  }
+  slides.forEach((t,i)=>{
+    const pay = t.dir==="pay", forWhat = whatFor(t.gid, t.who), key = t.gid+"|"+t.who;
+    const sl = el("div","hc-slide");
+    sl.setAttribute("role","group");
+    sl.setAttribute("aria-roledescription","slide");
+    sl.setAttribute("aria-label", (i+1)+" of "+slides.length);
+    sl.innerHTML =
+      '<p class="hc-kicker">'+(pay ? "You owe" : "Owed to you")+' · '+esc(groupName(t.gid))+'</p>'+
+      '<h2>'+(pay ? "You owe "+esc(t.who)+"." : esc(t.who)+" owes you.")+'</h2>'+
+      '<p>'+money(t.amt)+(forWhat ? " for "+esc(forWhat) : "")+'.</p>'+
+      '<div class="act"></div>';
+    const b = el("button","btn dark");
+    if(!pay && NUDGED[key]){ b.textContent = "Reminder sent"; b.disabled = true; }
+    else b.textContent = (pay ? "Pay " : "Remind ")+t.who+" "+money(t.amt);
     b.addEventListener("click", ()=>{
-      if(first.dir==="pay"){
-        // I owe them: the thing to do is record that I paid.
-        const me = meIn(first.gid);
-        openGroup(first.gid);
-        setTimeout(()=> sheetSettle(me, first.who, first.amt, null), 260);
+      if(pay){
+        // I owe them: record that I paid.
+        const me = meIn(t.gid);
+        openGroup(t.gid);
+        setTimeout(()=> sheetSettle(me, t.who, t.amt, null), 260);
         return;
       }
-      // They owe me. Recording a payment they have not made would be a lie,
-      // so this asks them for it instead.
-      sendNudge(first.gid, first.who, first.amt, b);
+      // They owe me: ask them for it. Recording a payment they have not made
+      // would put a falsehood in the ledger.
+      if(sendNudge(t.gid, t.who, t.amt, b)) NUDGED[key] = true;
     });
-    $("heroAct").appendChild(b);
+    sl.querySelector(".act").appendChild(b);
+    track.appendChild(sl);
+  });
+  // The cards slide inside their own window. The panel clips at its border,
+  // not inside its padding, so without this the next card showed at the edge.
+  const view = el("div","hc-view");
+  view.appendChild(track);
+  hero.appendChild(view);
+
+  const foot = el("div","hc-foot");
+  const dots = el("div","hc-dots");
+  foot.appendChild(dots);
+  foot.insertAdjacentHTML("beforeend",
+    '<span class="net">'+money(net)+'<small>Your overall balance</small></span>');
+  hero.appendChild(foot);
+  main.appendChild(hero);
+
+  if(slides.length > 1){
+    slides.forEach((t,j)=>{
+      const d = el("button","hc-dot"); d.type = "button";
+      d.setAttribute("aria-label", "Show "+(j+1)+" of "+slides.length);
+      d.addEventListener("click", ()=> show(j, true));
+      dots.appendChild(d);
+    });
   }
+
+  function show(i, byHand){
+    if(!slides.length) return;
+    HERO_I = (i + slides.length) % slides.length;
+    track.style.transform = "translateX("+(-HERO_I*100)+"%)";
+    // Cards off to the side are out of reach of the keyboard and screen
+    // readers, so Tab never lands on a button that cannot be seen.
+    [].forEach.call(track.children, (c,j)=>{ c.inert = j!==HERO_I; });
+    [].forEach.call(dots.children, (d,j)=> d.setAttribute("aria-current", j===HERO_I ? "true" : "false"));
+    if(byHand) restart();
+  }
+
+  // Turns on its own - but not for somebody who has asked their device for
+  // less motion, not while a hand or a keyboard is on it, and not in a
+  // background tab.
+  const still = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  let held = false;
+  function restart(){
+    if(HERO_TIMER){ clearInterval(HERO_TIMER); HERO_TIMER = null; }
+    if(still || slides.length < 2) return;
+    HERO_TIMER = setInterval(()=>{
+      if(!document.body.contains(track)){ clearInterval(HERO_TIMER); HERO_TIMER = null; return; }
+      if(!held && !document.hidden) show(HERO_I + 1);
+    }, 5000);
+  }
+  hero.addEventListener("pointerenter", ()=> held = true);
+  hero.addEventListener("pointerleave", ()=> held = false);
+  hero.addEventListener("focusin",  ()=> held = true);
+  hero.addEventListener("focusout", ()=> held = false);
+
+  // Swipe between cards.
+  let x0 = null;
+  track.addEventListener("pointerdown", e=>{ x0 = e.clientX; });
+  track.addEventListener("pointerup", e=>{
+    if(x0 === null) return;
+    const dx = e.clientX - x0; x0 = null;
+    if(Math.abs(dx) > 40) show(HERO_I + (dx < 0 ? 1 : -1), true);
+  });
+
+  // Put the card that was showing back without sliding to it from the first.
+  track.style.transition = "none";
+  show(HERO_I);
+  void track.offsetWidth;
+  track.style.transition = "";
+  restart();
 
   /* ---- summary cards ---- */
   const nOwed=Object.keys(owedWho).length, nOwe=Object.keys(oweWho).length;
