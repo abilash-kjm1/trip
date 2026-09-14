@@ -1088,6 +1088,50 @@ button, input, select, textarea{ font-family:var(--f); }
 }
 @media (prefers-reduced-motion: reduce){ .hc-track, .hc-slide, .hc-seg{ transition:none; } }
 
+
+/* ---- Expenses: by month, then by day ----------------------------------- */
+.act-month{ display:flex; align-items:baseline; justify-content:space-between; gap:var(--s3);
+  margin:var(--s6) 2px var(--s1); }
+.ltitle + .act-month{ margin-top:var(--s5); }
+.act-month h2{ margin:0; text-align:left; font-family:var(--serif); font-weight:600;
+  font-size:26px; line-height:1.1; letter-spacing:-.015em; color:var(--ink); }
+.act-mtotal{ font-size:13px; font-weight:600; color:var(--ink-2); white-space:nowrap;
+  font-variant-numeric:tabular-nums; }
+.act-day{ display:flex; align-items:center; justify-content:space-between; gap:var(--s3);
+  margin:var(--s5) 6px var(--s2); font-size:11px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink-3); }
+.act-dtotal{ text-transform:none; letter-spacing:0; font-size:12px; font-weight:600;
+  color:var(--ink-2); font-variant-numeric:tabular-nums; }
+.act-card{ padding:4px 0; }
+.act-row{ position:relative; display:flex; align-items:center; gap:var(--s3); width:100%;
+  padding:12px var(--s4); border:0; background:transparent; color:inherit; font:inherit;
+  text-align:left; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:background .15s ease; }
+.act-row + .act-row::before{ content:""; position:absolute; top:0; left:66px; right:var(--s4);
+  height:1px; background:var(--line-2); }
+.act-row:active{ background:var(--fill-1); }
+@media (hover:hover){ .act-row:hover{ background:var(--fill-1); } }
+.act-row:focus:not(:focus-visible){ outline:none; }
+.act-ic{ flex:0 0 auto; width:38px; height:38px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--gc-lt, var(--apricot-lt)); color:var(--gc, var(--apricot-dk)); }
+.act-ic .ms{ font-size:20px; }
+.act-row.pay .act-ic{ border-radius:50%; background:rgba(44,106,79,.12); color:var(--good); }
+.act-b{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.act-t{ font-size:15px; font-weight:600; letter-spacing:-.01em; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* Time, group and who paid is more than a phone's width holds on one line, and
+   cut off it hid who paid - the part people look for. It wraps to a second
+   line instead, and stops there. */
+.act-m{ margin-top:2px; font-size:12.5px; line-height:1.4; color:var(--ink-3);
+  white-space:normal; overflow:hidden;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.act-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
+.act-amt{ font-size:15px; font-weight:700; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
+.act-amt.pos{ color:var(--good); } .act-amt.neg{ color:var(--bad); } .act-amt.zero{ color:var(--ink); }
+.act-cap{ margin-top:2px; font-size:11.5px; color:var(--ink-3); white-space:nowrap; }
+.act-more{ margin:var(--s4) 0 0; text-align:center; font-size:12.5px; color:var(--ink-3); }
+
 /* ---- desktop --------------------------------------------------------- */
 @media (min-width:1000px){
   body{ background:var(--cream); }
@@ -2466,40 +2510,95 @@ function viewActivity(main){
   setTitle(main, "Activity");
   const items=[];
   JOINED.forEach(g=>{
-    expensesOf(g.id).forEach(e=> items.push({t:"e", at:e.at, e, gid:g.id}) );
-    paymentsOf(g.id).forEach(p=> items.push({t:"p", at:p.at, p, gid:g.id}) );
+    expensesOf(g.id).forEach(e=> items.push({t:"e", at:Number(e.at)||0, e, gid:g.id}) );
+    paymentsOf(g.id).forEach(p=> items.push({t:"p", at:Number(p.at)||0, p, gid:g.id}) );
   });
-  items.sort((a,b)=>(b.at||0)-(a.at||0));
+  items.sort((a,b)=> b.at-a.at);
   if(!items.length){
     const e=el("div","empty");
     e.innerHTML='<span class="ms" aria-hidden="true">receipt_long</span><h3>No activity yet</h3>'+
       '<p>Everything added across your groups shows up here.</p>';
     main.appendChild(e); return;
   }
-  const card=el("div","card");
-  items.slice(0,200).forEach(it=>{
-    const r=el("button","row"), me=meIn(it.gid);
+
+  /* By month, then by day, newest first. Each day is its own card under a
+     label saying which day it is and what was spent, so finding "that dinner
+     last Tuesday" means scanning a handful of headings, not two hundred rows. */
+
+  // A group's icon takes the same colour it has on the Groups screen.
+  const order = JOINED.slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).map(g=>g.id);
+  const tint = (gid)=> "gc"+(Math.max(0, order.indexOf(gid)) % 6);
+  const monthKey = (ts)=>{ const d=new Date(ts||0); return d.getFullYear()+"-"+d.getMonth(); };
+  const monthName = (ts)=> ts ? new Date(ts).toLocaleDateString(undefined,{month:"long", year:"numeric"}) : "Undated";
+  const timeOf = (ts)=> ts ? new Date(ts).toLocaleTimeString(undefined,{hour:"numeric", minute:"2-digit"}) : "";
+  const spent = (n)=> money(n)+" spent";
+
+  const shown = items.slice(0,200);
+  let month=null, day=null, card=null, dayTotal=0, dayOut=null, monthTotal=0, monthOut=null;
+
+  shown.forEach(it=>{
+    const mk=monthKey(it.at), dk=dayKey(it.at);
+    if(mk!==month){
+      month=mk; monthTotal=0; day=null;
+      const mh=el("div","act-month");
+      mh.innerHTML='<h2>'+esc(monthName(it.at))+'</h2><span class="act-mtotal"></span>';
+      main.appendChild(mh);
+      monthOut=mh.querySelector(".act-mtotal");
+    }
+    if(dk!==day){
+      day=dk; dayTotal=0;
+      const dh=el("div","act-day");
+      dh.innerHTML='<span>'+esc(dayLabel(it.at))+'</span><span class="act-dtotal"></span>';
+      main.appendChild(dh);
+      dayOut=dh.querySelector(".act-dtotal");
+      card=el("div","card act-card");
+      main.appendChild(card);
+    }
+
+    const me=meIn(it.gid);
+    const r=el("button","act-row "+tint(it.gid));
+    r.type="button";
     if(it.t==="e"){
-      const e=it.e, c=catOf(e.cat), sh=sharesOf(e), mine=me?(sh[me]||0):0;
-      const iPaid=!!me && e.payer===me;
-      r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
-        '<span class="body"><span class="t1">'+esc(e.desc)+'</span>'+
-        '<span class="t2">'+esc(groupName(it.gid))+' · '+esc(iPaid?"you":e.payer)+' paid '+money(e.amount)+'</span></span>'+
-        '<span class="right"><span class="amt '+(iPaid?"pos":mine?"neg":"zero")+'">'+
-          (iPaid?money((Number(e.amount)||0)-mine):mine?money(mine):"—")+'</span>'+
-        '<span class="cap">'+esc(fmtDate(e.at))+'</span></span>';
+      const e=it.e, c=catOf(e.cat), amt=Number(e.amount)||0;
+      const mine = me ? (sharesOf(e)[me]||0) : 0;
+      const iPaid = !!me && e.payer===me;
+      let figure, tone, what;
+      // What this expense means for me, said plainly.
+      if(iPaid && amt-mine > 0.004){ figure="+"+money(amt-mine); tone="pos"; what="you get back"; }
+      else if(iPaid){                figure=money(amt);          tone="zero"; what="you paid"; }
+      else if(mine > 0.004){         figure="−"+money(mine); tone="neg"; what="your share"; }
+      else {                         figure=money(amt);          tone="zero"; what="not yours"; }
+      r.innerHTML=
+        '<span class="act-ic"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
+        '<span class="act-b"><span class="act-t">'+esc(e.desc)+'</span>'+
+          '<span class="act-m">'+(e.at ? esc(timeOf(e.at))+' · ' : '')+esc(groupName(it.gid))+' · '+esc(iPaid ? "You" : e.payer)+' paid '+money(amt)+'</span></span>'+
+        '<span class="act-r"><span class="act-amt '+tone+'">'+figure+'</span>'+
+          '<span class="act-cap">'+what+'</span></span>';
+      dayTotal+=amt; monthTotal+=amt;
+      dayOut.textContent=spent(dayTotal);
+      monthOut.textContent=spent(monthTotal);
     } else {
-      const p=it.p;
-      r.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">payments</span></span>'+
-        '<span class="body"><span class="t1">'+esc(p.from===me?"You":p.from)+' paid '+esc(p.to===me?"you":p.to)+'</span>'+
-        '<span class="t2">'+esc(groupName(it.gid))+'</span></span>'+
-        '<span class="right"><span class="amt pos">'+money(p.amount)+'</span>'+
-        '<span class="cap">'+esc(fmtDate(p.at))+'</span></span>';
+      const p=it.p, amt=Number(p.amount)||0;
+      const fromMe = !!me && p.from===me, toMe = !!me && p.to===me;
+      r.classList.add("pay");
+      const figure = toMe ? "+"+money(amt) : money(amt);
+      const tone   = toMe ? "pos" : "zero";
+      const what   = toMe ? "paid to you" : fromMe ? "you paid" : "payment";
+      r.innerHTML=
+        '<span class="act-ic"><span class="ms" aria-hidden="true">payments</span></span>'+
+        '<span class="act-b"><span class="act-t">'+esc(fromMe ? "You" : p.from)+' paid '+esc(toMe ? "you" : p.to)+'</span>'+
+          '<span class="act-m">'+(p.at ? esc(timeOf(p.at))+' · ' : '')+esc(groupName(it.gid))+(p.note ? ' · '+esc(p.note) : '')+'</span></span>'+
+        '<span class="act-r"><span class="act-amt '+tone+'">'+figure+'</span>'+
+          '<span class="act-cap">'+what+'</span></span>';
     }
     r.addEventListener("click", ()=>openGroup(it.gid));
     card.appendChild(r);
   });
-  main.appendChild(card);
+
+  if(items.length > shown.length){
+    main.appendChild(el("p","act-more","Showing the latest "+shown.length+" of "+items.length+
+      ". Open a group to see all of its expenses."));
+  }
 }
 
 /* ---------- account ---------- */
