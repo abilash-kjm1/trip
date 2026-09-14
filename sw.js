@@ -1,7 +1,15 @@
 /* Settle - offline service worker */
-const VERSION = 'settle-20260914205524';
+const VERSION = 'settle-20260914211017';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
+// The Firebase code: versioned files that never change, so they are kept
+// across releases and let Settle start with no signal.
+const LIBS    = 'settle-libs-v1';
+const SDK = [
+  'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js',
+  'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js',
+  'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js'
+];
 
 const PRECACHE = [
   './',
@@ -21,6 +29,10 @@ self.addEventListener('install', (e) => {
     // From the network, not the browser's own cache, or a new release could
     // install with last release's files.
     await Promise.all(PRECACHE.map((u) => c.add(new Request(u, { cache: 'reload' })).catch(() => {})));
+    const libs = await caches.open(LIBS);
+    await Promise.all(SDK.map(async (u) => {
+      if (!(await libs.match(u, { ignoreVary: true }))) await libs.add(new Request(u, { mode: 'cors' })).catch(() => {});
+    }));
     await self.skipWaiting();
   })());
 });
@@ -28,7 +40,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => !k.startsWith(VERSION) && k !== LIBS).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -55,7 +67,21 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Firebase and its SDK must always hit the network, never the cache
+  // The Firebase code itself: kept once fetched, since its address names its
+  // version and it never changes. Sign-in and the database still go live.
+  if (url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/')) {
+    e.respondWith((async () => {
+      const c = await caches.open(LIBS);
+      const hit = await c.match(req.url, { ignoreVary: true });
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res && res.ok) c.put(req.url, res.clone());
+      return res;
+    })());
+    return;
+  }
+
+  // Firebase sign-in and the database must always hit the network, never the cache
   if (/(^|\.)(firebaseio|firebasedatabase|googleapis|firebaseapp)\.com$/.test(url.hostname)
       || url.hostname === 'www.gstatic.com') return;
 

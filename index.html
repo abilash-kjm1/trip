@@ -3114,6 +3114,7 @@ function forgetPreviousAccount(uid){
   if(lsGet(LS.who, null) === uid) return false;
   JOINED = []; CURRENT = null; DATA = {};
   try{ localStorage.removeItem(LS.grp); localStorage.removeItem(LS.cur); }catch(e){}
+  forgetCachedGroups();     // the last account's groups are not this one's to see
   if(typeof location !== "undefined" && location.hash) location.hash = "";
   lsSet(LS.who, uid);
   return true;
@@ -8032,6 +8033,182 @@ if("serviceWorker" in navigator){
 // Coming back to the app - perhaps from turning them on in Settings.
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && USER) pushRefresh(); });
 
+/* ======================= NOTHING LOST OFFLINE =======================
+   The database library queues changes made with no signal - but only in
+   memory. Close the app, or let it reload for an update, before the signal
+   comes back, and those changes are gone.
+
+   So every write is also written down on this device, and crossed off only
+   when the database confirms it. Whatever is still written down the next
+   time Settle opens is sent again, in the order it was made. Payments and
+   expenses are saved under keys made on this device, so sending one twice
+   writes the same place twice rather than making a second copy.
+
+   While anything is still on its way, or there is no signal, Settle will not
+   reload itself for an update; it waits until everything has synced.
+
+   The last copy of each group is kept on the device too, with whether this
+   account has been let in, so Settle opens with no signal and can be used. */
+const OUTBOX_KEY = "settle.outbox.v1";
+const DATA_KEY   = "settle.data.v1";
+const ACCESS_KEY = "settle.access.v1";
+let OUTBOX = [];         // this account's writes the database has not confirmed
+let OUTBOX_OTHER = [];   // left on this device by another account: kept, never sent as this one
+let PENDING = 0;         // writes still waiting on the database, this session
+let ONLINE = null;       // .info/connected: null until it first answers
+let SYNC_T = null, SYNC_MINE = false;
+
+function outboxRead(){
+  const v=lsGet(OUTBOX_KEY, []);
+  return Array.isArray(v) ? v.filter(x=> x && typeof x.path==="string" && typeof x.uid==="string") : [];
+}
+function outboxWrite(){
+  try{ localStorage.setItem(OUTBOX_KEY, JSON.stringify(OUTBOX_OTHER.concat(OUTBOX))); }
+  catch(e){ /* storage full or refused: the database library still holds it for this session */ }
+}
+function forgetOutbox(){ OUTBOX=[]; outboxWrite(); }
+
+// "https://project.firebaseio.com/trips/g1/expenses/e1" -> "trips/g1/expenses/e1"
+function refPath(r){
+  try{ return new URL(String(r)).pathname.split("/").filter(Boolean).map(decodeURIComponent).join("/"); }
+  catch(e){ return null; }
+}
+
+/* The database handle the app uses, with every write written down first. */
+function durableRemote(dbMod, db){
+  function track(op, r, value, run){
+    const path=refPath(r);
+    let item=null;
+    if(USER && path){
+      let copy=null;
+      try{ copy = value==null ? null : JSON.parse(JSON.stringify(value)); }catch(e){}
+      item={id:Date.now().toString(36)+Math.random().toString(36).slice(2,8),
+            uid:USER.uid, op, path, value:copy, at:Date.now()};
+      OUTBOX.push(item);
+      if(OUTBOX.length>800) OUTBOX.splice(0, OUTBOX.length-800);
+      outboxWrite();
+    }
+    PENDING++; syncShow();
+    let p;
+    try{ p=run(); }catch(err){ p=Promise.reject(err); }
+    // Confirmed, or refused for good (a rule said no): either way it is
+    // finished, and the caller already says so if it failed.
+    const done=()=>{
+      PENDING=Math.max(0, PENDING-1);
+      if(item){ OUTBOX=OUTBOX.filter(x=>x.id!==item.id); outboxWrite(); }
+      syncShow();
+    };
+    Promise.resolve(p).then(done, done);
+    return p;
+  }
+  return {
+    db, ref:dbMod.ref, onValue:dbMod.onValue, off:dbMod.off, get:dbMod.get,
+    set:    (r, v)=> track("set", r, v, ()=> dbMod.set(r, v)),
+    update: (r, v)=> track("update", r, v, ()=> dbMod.update(r, v)),
+    remove: (r)=>    track("remove", r, null, ()=> dbMod.remove(r)),
+    // The key is made here, on the device, before anything is sent - so the
+    // same note sent again lands on the same key.
+    push:   (r, v)=>{
+      const child=dbMod.push(r);
+      if(v===undefined) return child;
+      const p=track("set", child, v, ()=> dbMod.set(child, v));
+      p.key=child.key; p.ref=child;
+      return p;
+    }
+  };
+}
+
+/* On opening: send again whatever a previous session left unconfirmed. */
+function outboxReplay(){
+  if(!remote || !USER) return;
+  const all=outboxRead();
+  OUTBOX_OTHER=all.filter(x=> x.uid!==USER.uid);
+  const mine=all.filter(x=> x.uid===USER.uid && /^(set|update|remove)$/.test(x.op))
+                .sort((a,b)=> (a.at||0)-(b.at||0));
+  OUTBOX=[];                 // each is written down again as it goes
+  outboxWrite();
+  if(!mine.length) return;
+  const writes=mine.map(x=>{
+    const r=remote.ref(remote.db, x.path);
+    const w = x.op==="set" ? remote.set(r, x.value)
+            : x.op==="update" ? remote.update(r, x.value||{})
+            : remote.remove(r);
+    return Promise.resolve(w).then(()=>true, ()=>false);
+  });
+  const all2=Promise.all(writes);
+  all2.then(res=>{
+    const ok=res.filter(Boolean).length, lost=res.length-ok;
+    if(ok) toast(ok===1 ? "A change you made offline is now saved" : ok+" changes you made offline are now saved");
+    if(lost) setTimeout(()=> toast(lost===1
+      ? "One change made offline could not be saved — you may no longer be in that group"
+      : lost+" changes made offline could not be saved"), 2800);
+  });
+  // Notes for phones that never went out: ask for them now.
+  if(mine.some(x=> x.path.indexOf("mail/queue/")===0) && typeof pushNow==="function") pushNow(all2);
+}
+
+/* The bar under the header: offline, syncing, or nothing at all. Short
+   blips while connecting are not worth a banner, so both wait a moment. */
+function syncShow(){
+  if(typeof setSync!=="function" || !USER) return;
+  clearTimeout(SYNC_T);
+  const say=(state, msg)=>{ setSync(state, msg); SYNC_MINE=true; };
+  const many=(n)=> n===1 ? "1 change" : n+" changes";
+  if(ONLINE===false){
+    SYNC_T=setTimeout(()=>{
+      if(ONLINE!==false) return;
+      say("warn", PENDING
+        ? "Offline · "+many(PENDING)+" saved on this device — "+(PENDING===1?"it syncs":"they sync")+" when you’re back online"
+        : "Offline — anything you add is kept and syncs when you’re back online");
+    }, PENDING ? 0 : 1500);
+  } else if(PENDING>0){
+    SYNC_T=setTimeout(()=>{ if(PENDING>0 && ONLINE!==false) say("", "Syncing "+many(PENDING)+"…"); }, 1500);
+  } else if(SYNC_MINE){
+    setSync(null); SYNC_MINE=false;
+  }
+}
+// Connected or not, from the database itself.
+function syncConnected(on){
+  ONLINE=!!on;
+  if(!USER) return;
+  if(ONLINE){ setSync(null); SYNC_MINE=false; }
+  syncShow();
+}
+
+/* ---- the last copy of each group, and whether this account is let in ---- */
+let DATA_SAVE_T=null;
+function cacheGroups(){
+  if(!USER) return;
+  clearTimeout(DATA_SAVE_T);
+  DATA_SAVE_T=setTimeout(()=>{
+    if(!USER) return;
+    const groups={};
+    JOINED.forEach(g=>{ if(DATA[g.id] && typeof DATA[g.id]==="object" && Object.keys(DATA[g.id]).length) groups[g.id]=DATA[g.id]; });
+    try{ localStorage.setItem(DATA_KEY, JSON.stringify({uid:USER.uid, at:Date.now(), groups})); }
+    catch(e){ try{ localStorage.removeItem(DATA_KEY); }catch(_){} }
+  }, 800);
+}
+function hydrateGroups(){
+  if(!USER) return false;
+  const c=lsGet(DATA_KEY, null);
+  if(!c || c.uid!==USER.uid || !c.groups || typeof c.groups!=="object") return false;
+  let any=false;
+  Object.keys(c.groups).forEach(gid=>{
+    const v=c.groups[gid];
+    if(!DATA[gid] && v && typeof v==="object"){ DATA[gid]=v; any=true; }
+  });
+  return any;
+}
+function cacheAccess(){ if(USER) lsSet(ACCESS_KEY, {uid:USER.uid, status:(ACCESS && ACCESS.status) || null}); }
+function hydrateAccess(){
+  if(!USER || ACCESS!==undefined) return;
+  const a=lsGet(ACCESS_KEY, null);
+  if(a && a.uid===USER.uid && typeof a.status==="string") ACCESS={status:a.status};
+}
+function forgetCachedGroups(){
+  try{ localStorage.removeItem(DATA_KEY); localStorage.removeItem(ACCESS_KEY); }catch(e){}
+}
+
 /* ======================= STAYING UP TO DATE =======================
    Everybody runs the newest Settle without having to refresh.
 
@@ -8042,13 +8219,17 @@ document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && USER)
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260914205524";
+const APP_BUILD = "20260914211017";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
-let UPDATE_WAITING = false, UPDATE_RELOADING = false;
+let UPDATE_WAITING = false, UPDATE_RELOADING = false, UPDATE_MANUAL = false;
 
 function updateBusy(){
+  // Never while changes are still on their way to the database, and never
+  // with no signal. They are kept on the device either way, but a reload
+  // offline could leave Settle unable to reach its data until signal returns.
+  if(PENDING > 0 || ONLINE === false) return true;
   const a=document.activeElement;
   if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
   const sheet=$("sheet");
@@ -8066,7 +8247,7 @@ function updateNow(build){
     const t=JSON.parse(sessionStorage.getItem(UPDATE_TRIED)||"null");
     if(build && t && t.build===build && Date.now()-t.at < 10*60e3) return;
     if(build) sessionStorage.setItem(UPDATE_TRIED, JSON.stringify({build, at:Date.now()}));
-    sessionStorage.setItem(UPDATE_KEY, JSON.stringify({tab:TAB, at:Date.now()}));
+    sessionStorage.setItem(UPDATE_KEY, JSON.stringify({tab:TAB, at:Date.now(), manual:UPDATE_MANUAL}));
   }catch(e){}
   UPDATE_RELOADING=true;
   location.reload();
@@ -8109,7 +8290,24 @@ if(!window.__NO_SW){
    reload lands on the latest release, and comes back to the same tab. */
 async function manualRefresh(btn){
   if(UPDATE_RELOADING) return;
+  const stop=()=>{ if(btn){ btn.classList.remove("spin"); btn.disabled=false; } };
+  const later=()=>{
+    // Refreshes by itself once the signal is back and everything has synced.
+    UPDATE_WAITING=true; UPDATE_MANUAL=true; stop();
+    toast(PENDING
+      ? "You’re offline. Your changes are saved on this device — Settle refreshes once they sync."
+      : "You’re offline. Settle will refresh when you’re back online.");
+  };
+  if(ONLINE===false) return later();
   if(btn){ btn.classList.add("spin"); btn.disabled=true; }
+  // Changes still on their way go first. They would survive a reload - they
+  // are written down on the device - but finishing them now is quicker.
+  if(PENDING>0){
+    toast("Saving your changes first…");
+    const t0=Date.now();
+    while(PENDING>0 && ONLINE!==false && Date.now()-t0 < 12000) await new Promise(r=> setTimeout(r, 250));
+    if(ONLINE===false) return later();
+  }
   try{ sessionStorage.setItem(UPDATE_KEY, JSON.stringify({tab:TAB, at:Date.now(), manual:true})); }catch(e){}
   try{
     if(!window.__NO_SW && "serviceWorker" in navigator){
@@ -8268,10 +8466,12 @@ function watchGroup(gid){
       // a group deleted before this device saw it sits there forever, empty.
       const had = DATA[gid] && Object.keys(DATA[gid]).length, nm = groupName(gid);
       forgetGroup(gid); if(CURRENT===gid) closeGroup();
+      delete DATA[gid]; cacheGroups();
       if(had) toast("“"+nm+"” was deleted");
       render(); return;
     }
     DATA[gid]=v;
+    cacheGroups();
     if(v.meta && v.meta.name){
       const j=JOINED.find(x=>x.id===gid);
       if(j && j.name!==v.meta.name){ j.name=v.meta.name; lsSet(LS.grp, JOINED); }
@@ -8291,7 +8491,7 @@ function watchGroup(gid){
       // moment too early never saw the group at all.
       JOINED = JOINED.filter(x=>x.id!==gid); lsSet(LS.grp, JOINED);
       if(subs[gid]){ subs[gid](); delete subs[gid]; }
-      delete DATA[gid];
+      delete DATA[gid]; cacheGroups();
       if(USER) del("users/"+USER.uid+"/groups/"+gid);
       if(CURRENT===gid) closeGroup();
       render(); return;
@@ -8366,11 +8566,18 @@ function authFailed(err){
 }
 function signOutNow(){
   if(!fb) return;
-  if(!confirm("Sign out of Settle on this device?")) return;
+  // Signing out forgets what this device is holding - including changes that
+  // have not reached the database. Say so first.
+  const waiting=Math.max(PENDING, OUTBOX.length);
+  if(!confirm(waiting
+      ? (waiting===1 ? "1 change you made has not synced yet" : waiting+" changes you made have not synced yet")+
+        ". Signing out now will lose "+(waiting===1?"it":"them")+". Sign out anyway?"
+      : "Sign out of Settle on this device?")) return;
   Object.keys(subs).forEach(k=>{ subs[k](); delete subs[k]; });
   fb.authMod.signOut(fb.auth).then(()=>{
     try{ localStorage.removeItem(LS.grp); localStorage.removeItem(LS.cur);
          localStorage.removeItem(LS.who); }catch(e){}
+    forgetCachedGroups(); forgetOutbox();
     location.hash=""; location.reload();
   });
 }
@@ -8387,6 +8594,14 @@ function onSignedIn(u){
   USER = { uid:u.uid, name:u.displayName || (u.email||"").split("@")[0] || "You",
            email:u.email || "", photo:u.photoURL || null };
   setSync(null);
+
+  // What this device was holding when it last closed: the groups as they
+  // were, whether this account is let in, and any change not yet confirmed -
+  // sent again now, in order. With no signal, Settle still opens and works.
+  hydrateAccess();
+  hydrateGroups();
+  outboxReplay();
+  syncShow();
 
   // Keep a profile record so the admin can see who is who.
   set("users/"+USER.uid+"/profile", {name:USER.name, email:USER.email, photo:USER.photo||null, at:Date.now()});
@@ -8407,7 +8622,7 @@ function onSignedIn(u){
   // Am I allowed in? Watched rather than read once, so somebody sitting on the
   // waiting screen is let through the moment they are approved, without
   // reloading and without being told to.
-  remote.onValue(ref("access/"+USER.uid), snap=>{ ACCESS = snap.val() || null; render(); },
+  remote.onValue(ref("access/"+USER.uid), snap=>{ ACCESS = snap.val() || null; cacheAccess(); render(); },
     ()=>{ ACCESS = null; render(); });
 
   // Everybody's request, for the administrator's list.
@@ -8536,11 +8751,17 @@ function adoptLegacy(){
       const auth=authMod.getAuth(app);
       const db=dbMod.getDatabase(app);
       fb = {app, auth, authMod, dbMod};
-      remote={ db:db, ref:dbMod.ref, push:dbMod.push, set:dbMod.set, remove:dbMod.remove, update:dbMod.update,
-               onValue:dbMod.onValue, off:dbMod.off, get:dbMod.get };
+      // Every write is written down on the device until the database confirms
+      // it, so nothing made offline is lost to a reload or a closed app.
+      remote=durableRemote(dbMod, db);
 
       // If we came back from a redirect sign-in, surface any failure.
-      authMod.getRedirectResult(auth).catch(authFailed);
+      // With no signal there is nothing to finish, and "could not sign in" to
+      // somebody who is signed in would only alarm them.
+      authMod.getRedirectResult(auth).catch(err=>{
+        if(err && err.code==="auth/network-request-failed") return;
+        authFailed(err);
+      });
 
       authMod.onAuthStateChanged(auth, u=>{
         // Earlier versions of this app signed people in anonymously. Those
@@ -8558,11 +8779,7 @@ function adoptLegacy(){
         }
       });
 
-      dbMod.onValue(dbMod.ref(db,".info/connected"), s=>{
-        if(!USER) return;
-        if(s.val()===false) setSync("warn","Offline — your changes will sync when signal returns");
-        else setSync(null);
-      });
+      dbMod.onValue(dbMod.ref(db,".info/connected"), s=> syncConnected(s.val()===true));
     }catch(err){
       setSync("bad","Could not start — "+((err&&err.message)?err.message:"check your connection"));
     }
