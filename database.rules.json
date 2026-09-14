@@ -9,13 +9,17 @@
 //
 // A group's name stays readable to anyone approved, so somebody following a
 // link is told what they are asking to be added to rather than nothing at all.
+//
+// Only the administrator can delete a group. Members can still change what is
+// inside it, but a write that would leave the group without its details -
+// deleting it outright, or wiping it - is refused for anyone else.
 {
   "rules": {
     "trips": {
       ".read": "auth != null && (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com')",
       "$gid": {
         ".read": "auth != null && (data.child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
-        ".write": "auth != null && (data.child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (!data.exists() && newData.child('uids').child(auth.uid).exists()))",
+        ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (data.child('uids').child(auth.uid).exists() && newData.exists() && (newData.child('meta').exists() || !data.child('meta').exists())) || (!data.exists() && newData.child('uids').child(auth.uid).exists()))",
         "meta": {
           ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
         }

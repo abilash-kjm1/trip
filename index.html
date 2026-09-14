@@ -1129,6 +1129,16 @@ button, input, select, textarea{ font-family:var(--f); }
 .act-cap{ margin-top:2px; font-size:11.5px; color:var(--ink-3); white-space:nowrap; }
 .act-more{ margin:var(--s4) 0 0; text-align:center; font-size:12.5px; color:var(--ink-3); }
 
+
+/* ---- Delete group: say what goes, then make them type the name ---------- */
+.delwarn{ display:flex; gap:12px; align-items:flex-start; padding:14px 16px; margin:0 0 14px;
+  border-radius:14px; background:color-mix(in srgb, var(--bad) 9%, transparent);
+  color:var(--ink); }
+.delwarn .ms{ flex:0 0 auto; color:var(--bad); font-size:22px; }
+.delwarn p{ margin:0; font-size:14.5px; line-height:1.45; }
+.dellist{ margin:0 0 18px; padding:0 0 0 20px; font-size:13.5px; line-height:1.7; color:var(--ink-2); }
+.btn.d:disabled{ opacity:.4; cursor:not-allowed; }
+
 /* ---- desktop --------------------------------------------------------- */
 @media (min-width:1000px){
   body{ background:var(--cream); }
@@ -4501,10 +4511,52 @@ function sheetShare(){
     });
   });
 }
+/* Deleting a group is never one tap. The menu item opens this; it says what
+   will be lost, and the button stays off until the group's name is typed -
+   a deliberate act that a stray tap or a muscle-memory "OK" cannot make. */
+function sheetGroupDelete(gid){
+  if(!isAdmin()) return toast("Only the administrator can delete a group");
+  const name = groupName(gid);
+  const ex = expensesOf(gid).length, pay = paymentsOf(gid).length, ppl = membersOf(gid).length;
+  const n = (k, one, many)=> k+" "+(k===1 ? one : many);
+  openSheet("Delete this group?", (b)=>{
+    b.innerHTML=
+      '<div class="delwarn"><span class="ms" aria-hidden="true">warning</span>'+
+        '<p>Are you sure you want to delete <strong>'+esc(name)+'</strong>? '+
+        'It is removed for everyone in it, and it cannot be undone.</p></div>'+
+      '<ul class="dellist">'+
+        '<li>'+n(ex,"expense","expenses")+' deleted</li>'+
+        '<li>'+n(pay,"payment","payments")+' deleted</li>'+
+        '<li>'+n(ppl,"person loses","people lose")+' the group and its balances</li>'+
+      '</ul>'+
+      '<div class="field"><label for="gdName">To confirm, type the group name: <strong>'+esc(name)+'</strong></label>'+
+        '<input id="gdName" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" '+
+        'spellcheck="false" placeholder="'+esc(name)+'"></div>'+
+      '<button class="btn d wide" id="gdGo" disabled>Delete for everyone</button>'+
+      '<button class="btn s wide" id="gdKeep" style="margin-top:10px">Keep the group</button>';
+    const typed = ()=> normName($("gdName").value)===normName(name);
+    $("gdName").addEventListener("input", ()=>{ $("gdGo").disabled = !typed(); });
+    $("gdName").addEventListener("keydown", e=>{ if(e.key==="Enter") e.preventDefault(); });
+    $("gdKeep").addEventListener("click", closeSheet);
+    $("gdGo").addEventListener("click", ()=>{
+      if(!typed() || !isAdmin()) return;
+      $("gdGo").disabled = true;
+      del("trips/"+gid).then(()=>{
+        closeSheet(); forgetGroup(gid); closeGroup(); toast("Group deleted");
+      }, ()=>{
+        $("gdGo").disabled = false; toast("Could not delete the group");
+      });
+    });
+    setTimeout(()=>$("gdName").focus(), 120);
+  });
+}
 function sheetGroupMenu(){
   const gid=CURRENT;
   const meta=(DATA[gid]&&DATA[gid].meta)||{};
-  const canDelete = isAdmin() || (meta.byUid && meta.byUid===USER.uid);
+  // Deleting a group takes every expense and payment in it away from everyone
+  // in it, so it is the administrator's alone - not whoever happened to create
+  // it. The database rules say the same, so the menu is not the only guard.
+  const canDelete = isAdmin();
   openSheet(groupName(gid), (b)=>{
     const items=[
       ["People in this group","Add or remove members","group", sheetMembers],
@@ -4520,8 +4572,7 @@ function sheetGroupMenu(){
     if(!meIn(gid)) items.unshift(["Tell them which one is you","Claim your name in this group","how_to_reg",
       function(){ sheetClaim(gid); }]);
     if(canDelete) items.push(["Delete group","Permanently delete it for everyone","delete_forever", function(){
-          if(!confirm("Permanently delete “"+groupName(gid)+"” and every expense in it, for everyone? This cannot be undone.")) return;
-          del("trips/"+gid).then(()=>{ forgetGroup(gid); closeGroup(); toast("Group deleted"); });
+          sheetGroupDelete(gid);
       }]);
     const c=el("div","card"); c.style.cssText="margin:-16px -16px 0;box-shadow:none";
     items.forEach(it=>{
@@ -4538,8 +4589,7 @@ function sheetGroupMenu(){
     if(canDelete){
       const f=el("p","fine");
       f.style.cssText="text-align:center;margin:14px 0 0";
-      f.textContent = isAdmin() ? "You can delete this because you are the administrator."
-                                : "You can delete this because you created it.";
+      f.textContent = "Only you can delete this, because you are the administrator.";
       b.appendChild(f);
     }
   });
