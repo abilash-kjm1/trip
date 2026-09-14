@@ -1038,6 +1038,12 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
+/* ---- Suggestions from Settle while a name is typed ---------------------- */
+.suggest{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:-8px 0 14px; }
+.suggest[hidden]{ display:none; }
+.suggest-l{ font-size:12px; font-weight:600; color:var(--ink-3); margin-right:2px; }
+.suggest .chip small{ margin-left:6px; font-size:11.5px; font-weight:500; color:var(--ink-3); }
+
 /* ---- Add an expense on a group's page: amount first, one line of choices -- */
 .qa2{ padding:var(--s4); }
 .qa2 .af-head{ display:flex; align-items:center; justify-content:space-between; gap:var(--s3);
@@ -1762,6 +1768,31 @@ function inGroupAlready(gid, p, exceptKey){
   const old = everyoneIn(gid).find(x=> x!==self && normName(x)===n);
   if(old) return {m:{name:old}, by:"name", text: old+" is still on this group's expenses. Use that name, or merge"};
   return null;
+}
+
+/* A name typed for somebody who is already in Settle should be their account,
+   not a label their app knows nothing about - otherwise the group never shows
+   up for them. An address is proof. A whole name counts only when exactly one
+   account has it: two people can share a name, and guessing wrong would hand
+   one of them a stranger's group. Returns the directory entry, or null. */
+function settleAccountFor(name, email){
+  const people = Object.keys(DIRECTORY||{}).map(u=> Object.assign({uid:u}, DIRECTORY[u]||{}));
+  const mail = normMail(email);
+  if(mail){ const p = people.find(x=> normMail(x.email)===mail); if(p) return p; }
+  const n = normName(name); if(!n) return null;
+  const same = people.filter(x=> normName(x.name)===n);
+  return same.length===1 ? same[0] : null;
+}
+/* Accounts a partly typed name could mean - "kav" for "Kavya R" - offered as
+   a tap, never linked on their own. Leaves out me and anyone already in the
+   group. */
+function settleSuggestions(name, gid){
+  const n = normName(name); if(n.length<2) return [];
+  const inGroup = gid ? membersOf(gid).map(m=>m.uid).filter(Boolean) : [];
+  return Object.keys(DIRECTORY||{}).map(u=> Object.assign({uid:u}, DIRECTORY[u]||{}))
+    .filter(p=> p.name && inGroup.indexOf(p.uid)<0 && !(USER && p.uid===USER.uid))
+    .filter(p=>{ const full=normName(p.name); return full.indexOf(n)===0 || full.split(" ").some(w=> w.indexOf(n)===0); })
+    .slice(0,4);
 }
 
 // Everyone the money actually involves. An expense can name someone who is no
@@ -4110,7 +4141,8 @@ function sheetMembers(){
         '<div id="mPick"></div>'+
         '<div class="sechead" style="margin-top:18px">Someone new</div>'+
         '<div class="field"><label for="mName">Their name</label>'+
-        '<input id="mName" type="text" placeholder="Their name"></div>'+
+        '<input id="mName" type="text" placeholder="Their name" autocomplete="off"></div>'+
+        '<div class="suggest" id="mSuggest" hidden></div>'+
         '<div class="field"><label for="mMail">Their email</label>'+
         '<div style="display:flex;gap:8px"><input id="mMail" type="email" inputmode="email" '+
         'autocapitalize="off" autocorrect="off" placeholder="name@gmail.com">'+
@@ -4190,10 +4222,14 @@ function sheetMembers(){
         if(hit) return toast(hit.text);
         // An address that already belongs to somebody in Settle is that person:
         // add their account, not a second, unlinked copy of them.
-        const known = mail && Object.keys(DIRECTORY||{}).find(u=> normMail((DIRECTORY[u]||{}).email)===mail);
+        // So is a name exactly one account in Settle has.
+        const known = settleAccountFor(v, mail);
         if(known){
-          return addFromDirectory(gid, Object.assign({uid:known}, DIRECTORY[known], {name:v}))
-            .then(ok=>{ if(ok){ $("mName").value=""; $("mMail").value=""; setTimeout(draw,150); } });
+          return addFromDirectory(gid, Object.assign({}, known, {name:v}))
+            .then(ok=>{ if(ok){
+              toast(v+" is in Settle, so their account was added");
+              $("mName").value=""; $("mMail").value=""; setTimeout(draw,150);
+            } });
         }
         const rec={n:v, c:freeColour(gid)};
         if(mail) rec.invite=mail;
@@ -4212,6 +4248,22 @@ function sheetMembers(){
         });
       };
       $("mAdd").addEventListener("click", add);
+      // While a name is typed, anybody in Settle it could mean is one tap away.
+      const suggest=()=>{
+        const host=$("mSuggest"), list=settleSuggestions($("mName").value, gid);
+        host.innerHTML=""; host.hidden=!list.length;
+        if(!list.length) return;
+        host.appendChild(el("span","suggest-l","In Settle:"));
+        list.forEach(p=>{
+          const c=el("button","chip"); c.type="button";
+          c.innerHTML=esc(p.name)+(p.email?'<small>'+esc(p.email)+'</small>':'');
+          c.addEventListener("click", ()=> addFromDirectory(gid, p).then(ok=>{
+            if(ok){ $("mName").value=""; $("mMail").value=""; setTimeout(draw,150); }
+          }));
+          host.appendChild(c);
+        });
+      };
+      $("mName").addEventListener("input", suggest);
       $("mName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } });
     };
     draw();
@@ -4678,15 +4730,21 @@ function slug(s){
   return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,28) || "group";
 }
 function sheetGroupNew(){
+  // Everybody already in Settle, so they can be picked rather than typed.
+  const pool = Object.keys(DIRECTORY||{}).map(u=> Object.assign({uid:u}, DIRECTORY[u]||{}))
+    .filter(p=> p.name && !(USER && p.uid===USER.uid))
+    .sort((a,c)=> String(a.name).localeCompare(String(c.name)));
+  const chosen = {};
   openSheet("New group", (b)=>{
     b.innerHTML=
       '<div class="field"><label for="gName">Group name</label>'+
       '<input id="gName" type="text" placeholder="Montréal trip, Flat 4B, Sunday football…"></div>'+
       '<div class="field"><label>What is it for?</label><div class="chips" id="gType"></div></div>'+
-      '<div class="field"><label for="gPeople">Everyone else (one name per line)</label>'+
-      '<textarea id="gPeople" rows="4" placeholder="One name per line"></textarea>'+
-      '<div class="help">You are added automatically. Each of them claims their name when they '+
-      'sign in and open your link — you can add more later.</div></div>'+
+      (pool.length ? '<div class="field"><label>Already in Settle — tap to include</label>'+
+        '<div class="chips" id="gPick"></div></div>' : '')+
+      '<div class="field"><label for="gPeople">'+(pool.length ? "Anyone else" : "Everyone else")+' (one name per line)</label>'+
+      '<textarea id="gPeople" rows="3" placeholder="Friends who are not on Settle yet"></textarea>'+
+      '<div class="help" id="gNote"></div></div>'+
       '<button class="btn p wide" id="gGo">Create group</button>';
     let type="trip";
     const types=[["trip","Trip","luggage"],["home","Home","home"],["couple","Couple","favorite"],["other","Other","group"]];
@@ -4706,19 +4764,60 @@ function sheetGroupNew(){
       const people={};
       people["m0"+uid().slice(-4)]={n:USER.name, c:PALETTE[0], uid:USER.uid, email:USER.email, photo:USER.photo||null};
       const seen={}; seen[normName(USER.name)]=1;
-      $("gPeople").value.split(/\r?\n/).map(tidyName).filter(Boolean).forEach((n,i)=>{
-        const key=normName(n); if(seen[key]) return; seen[key]=1;
-        people["m"+(i+1)+uid().slice(-4)]={n:n, c:PALETTE[(i+1)%PALETTE.length]};
+      const uids={[USER.uid]:true}, invite=[];
+      let i=0;
+      // One seat per person. Somebody with an account goes in as that account -
+      // on the membership list and with an invitation under their address - so
+      // the group shows up for them without anybody sending a link.
+      const seat=(n, acct)=>{
+        const key=normName(n);
+        if(seen[key] || (acct && uids[acct.uid])) return;
+        seen[key]=1; i++;
+        const rec={n:n, c:PALETTE[i%PALETTE.length]};
+        if(acct){
+          rec.uid=acct.uid; rec.email=normMail(acct.email)||null; rec.photo=acct.photo||null;
+          uids[acct.uid]=true; if(rec.email) invite.push(rec.email);
+        }
+        people["m"+i+uid().slice(-4)]=rec;
+      };
+      pool.filter(p=> chosen[p.uid]).forEach(p=> seat(tidyName(p.name), p) );
+      $("gPeople").value.split(/\r?\n/).map(tidyName).filter(Boolean).forEach(n=>{
+        const acct=settleAccountFor(n);
+        seat(n, acct && acct.uid!==USER.uid ? acct : null);
       });
       // The person creating it is its first member, in the index the rules read
       // as well as in the people list - otherwise they cannot open what they
       // have just made.
       set("trips/"+gid, {meta:{name:nm, type:type, at:Date.now(), by:USER.name, byUid:USER.uid},
-                         people:people, uids:{[USER.uid]:true}}).then(()=>{
+                         people:people, uids:uids}).then(()=>{
         rememberGroup(gid, nm); watchGroup(gid); claimAsked[gid]=true; closeSheet();
+        invite.forEach(m=> inviteByEmail(gid, m) );
         setTimeout(()=>{ openGroup(gid); toast("Group created — share the link to invite people"); }, 260);
       });
     });
+    // People already in Settle, picked with a tap.
+    if(pool.length){
+      pool.forEach(p=>{
+        const c=el("button","chip"); c.type="button"; c.textContent=p.name;
+        c.setAttribute("aria-pressed","false");
+        c.addEventListener("click", ()=>{
+          chosen[p.uid]=!chosen[p.uid];
+          c.setAttribute("aria-pressed", chosen[p.uid] ? "true" : "false");
+          note();
+        });
+        $("gPick").appendChild(c);
+      });
+    }
+    // Say which typed names will be linked to an account, as they are typed.
+    function note(){
+      const typed=$("gPeople").value.split(/\r?\n/).map(tidyName).filter(Boolean);
+      const linked=typed.map(n=> settleAccountFor(n)).filter(a=> a && a.uid!==USER.uid && !chosen[a.uid]);
+      $("gNote").textContent = linked.length
+        ? "Linked to their Settle account: "+linked.map(a=>a.name).join(", ")+". You are added automatically."
+        : "You are added automatically. Names that match someone in Settle are linked to their account.";
+    }
+    $("gPeople").addEventListener("input", note);
+    note();
     setTimeout(()=>$("gName").focus(), 90);
   });
 }
@@ -5026,11 +5125,29 @@ function sheetQuickAdd(){
                       : n ? "Split between "+n : "Pick at least one person";
     }
 
+    let qaAsked=null;
     function addPerson(){
       const nm=tidyName($("qaPersonName").value);
       if(!nm) return toast("Enter a name");
       const hit=inGroupAlready(gid, {name:nm});
       if(hit) return toast(hit.text);
+      // Somebody already in Settle goes in as their account, not as a name.
+      const known=settleAccountFor(nm);
+      if(known && known.uid!==USER.uid){
+        $("qaPersonName").value="";
+        return addFromDirectory(gid, Object.assign({}, known, {name:nm})).then(ok=>{
+          const m=membersOf(gid).find(x=>x.uid===known.uid);
+          if(m) picked[m.name]=true;
+          if(ok) toast(nm+" is in Settle, so their account was added");
+          drawWho();
+        });
+      }
+      // A near match is asked about once; pressing Add again adds the name.
+      const near=settleSuggestions(nm, gid);
+      if(near.length && qaAsked!==normName(nm)){
+        qaAsked=normName(nm);
+        return toast("Did you mean "+near.map(p=>p.name).join(" or ")+"? Tap them above, or press Add again for a new name");
+      }
       const rec={n:nm, c:freeColour(gid)};
       // Shown straight away; the database's own copy replaces this when it lands.
       DATA[gid]=DATA[gid]||{}; DATA[gid].people=DATA[gid].people||{};
