@@ -1038,6 +1038,26 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
+/* ---- Balances: you first, then most owed back down to most owing ---------- */
+.ballist{ padding:4px 0; overflow:hidden; }
+.balrow{ gap:12px; }
+.balrow.mine{ background:color-mix(in srgb, var(--apricot) 11%, transparent); }
+/* A soft tint and a "You" tag mark your row; the old edge bar is not needed. */
+.balrow.mine::after, .owe-row.mine::after{ display:none; }
+.balrow .t1{ display:flex; align-items:center; gap:6px; min-width:0; }
+.balrow .t1 .nm{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bal-tag{ flex:0 0 auto; padding:1px 8px; border-radius:999px; font-size:10.5px; font-weight:600;
+  letter-spacing:.02em; line-height:1.6; background:var(--fill-1); color:var(--ink-3); }
+.bal-tag.you{ background:var(--apricot-lt); color:var(--apricot-dk); }
+.balrow .t2{ margin-top:2px; font-size:12.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.balrow .right{ display:flex; flex-direction:column; align-items:flex-end; }
+.balrow .amt{ font-size:16px; font-weight:700; letter-spacing:-.01em; }
+.balrow .amt.pos{ color:var(--good); }
+.balrow .amt.neg{ color:var(--bad); }
+.balrow .amt.zero{ color:var(--ink-3); }
+.balrow .cap{ margin-top:1px; font-size:11.5px; color:var(--ink-3); }
+.nw{ white-space:nowrap; }
+
 /* ---- Who owes whom: one plain sentence per payment ---------------------- */
 .owelist{ padding:4px 0; overflow:hidden; }
 .owe-row{ position:relative; display:flex; align-items:center; gap:12px; padding:13px var(--s4); }
@@ -2275,7 +2295,7 @@ function viewGroup(main){
   main.appendChild(fl);
   groupExpenses(main, gid);
   sectionHead(main, "account_balance_wallet", "Balances",
-              "Green is owed money back. Red still owes.");
+              "What each person paid against their share.");
   groupBalances(main, gid);
   sectionHead(main, "swap_horiz", "Who owes whom",
               "The fewest payments that settle everyone.");
@@ -2528,18 +2548,29 @@ function groupBalances(main, gid){
       '<span class="ms" aria-hidden="true">balance</span><h3>Add people and expenses first.</h3>'));
     if(!all.length) return;
   }
-  const card=el("div","card");
-  all.forEach(n=>{
-    const m=memberOf(n, gid);
-    const v=Math.round((b[n]||0)*100)/100;
-    const r=el("button","row"+(n===ME?" mine":""));
+  /* You first, then whoever gets back the most down to whoever owes the most,
+     so the list reads top to bottom. Each figure says in words what it means,
+     so the colours never need explaining. */
+  const me=meIn(gid);
+  const val=(n)=> Math.round((b[n]||0)*100)/100;
+  const order=all.slice().sort((x,y)=>
+    (x===me ? -1 : y===me ? 1 : 0) || val(y)-val(x) || x.localeCompare(y));
+  const card=el("div","card ballist");
+  order.forEach(n=>{
+    const m=memberOf(n, gid), v=val(n);
+    const tone = v>0.004 ? "pos" : v<-0.004 ? "neg" : "zero";
+    const figure = tone==="pos" ? "+"+money(v) : tone==="neg" ? "−"+money(-v) : money(0);
+    const cap = tone==="pos" ? "gets back" : tone==="neg" ? "owes" : "settled";
+    const r=el("button","row balrow"+(n===me?" mine":""));
+    r.type="button";
     r.innerHTML=
       avatarHTML("", n, m&&m.color, m&&m.photo)+
-      '<span class="body"><span class="t1">'+esc(n)+
-        (!m?' <span class="tag warn">not on the list</span>':'')+'</span>'+
+      '<span class="body"><span class="t1"><span class="nm">'+esc(n)+'</span>'+
+        (n===me?'<span class="bal-tag you">You</span>':'')+
+        (!m?'<span class="bal-tag">not on the list</span>':'')+'</span>'+
       '<span class="t2">'+paidShareLine(n,gid)+'</span></span>'+
-      '<span class="right"><span class="amt '+(v>0.004?"pos":v<-0.004?"neg":"")+'">'+
-        (v>0.004?"+":"")+money(v)+'</span></span>'+
+      '<span class="right"><span class="amt '+tone+'">'+figure+'</span>'+
+        '<span class="cap">'+cap+'</span></span>'+
       '<span class="chev"><span class="ms" aria-hidden="true">chevron_right</span></span>';
     r.addEventListener("click", ()=>sheetPerson(n));
     card.appendChild(r);
@@ -3893,7 +3924,9 @@ function paidShareLine(n, gid){
     if(e.payer===n) paid+=Number(e.amount)||0;
     const sh=sharesOf(e); if(sh[n]) share+=sh[n];
   });
-  return 'paid '+money(paid)+' &middot; share '+money(share);
+  // Each half stays whole, so a narrow screen breaks between them, never
+  // between a word and its figure.
+  return '<span class="nw">Paid '+money(paid)+'</span> &middot; <span class="nw">Share '+money(share)+'</span>';
 }
 
 /* Add somebody we already know, by their account rather than by their name.
