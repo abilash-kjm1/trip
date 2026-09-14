@@ -1090,21 +1090,22 @@ button, input, select, textarea{ font-family:var(--f); }
 
 
 /* ---- Expenses: by month, then by day ----------------------------------- */
-.act-month{ display:flex; align-items:baseline; justify-content:space-between; gap:var(--s3);
-  margin:var(--s6) 2px var(--s1); }
-.ltitle + .act-month{ margin-top:var(--s5); }
-.act-month h2{ margin:0; text-align:left; font-family:var(--serif); font-weight:600;
-  font-size:26px; line-height:1.1; letter-spacing:-.015em; color:var(--ink); }
-.act-mtotal{ font-size:13px; font-weight:600; color:var(--ink-2); white-space:nowrap;
+/* The month is a quiet divider - a small label, a hairline and its total - not
+   a second heading competing with the page title above it. */
+.act-month{ display:flex; align-items:center; gap:var(--s3); margin:var(--s6) 4px 0; }
+.ltitle + .act-month{ margin-top:var(--s4); }
+.act-month h2{ order:0; flex:0 0 auto; margin:0; text-align:left; font-family:var(--f);
+  font-size:11.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2); }
+.act-month::after{ content:""; order:1; flex:1; height:1px; background:var(--line); }
+.act-mtotal{ order:2; font-size:12px; font-weight:600; color:var(--ink-3); white-space:nowrap;
   font-variant-numeric:tabular-nums; }
-.act-day{ display:flex; align-items:center; justify-content:space-between; gap:var(--s3);
-  margin:var(--s5) 6px var(--s2); font-size:11px; font-weight:700; letter-spacing:.08em;
-  text-transform:uppercase; color:var(--ink-3); }
-.act-dtotal{ text-transform:none; letter-spacing:0; font-size:12px; font-weight:600;
-  color:var(--ink-2); font-variant-numeric:tabular-nums; }
+/* A day is named plainly, in ordinary case, with its figure beside it. */
+.act-day{ display:flex; align-items:baseline; justify-content:space-between; gap:var(--s3);
+  margin:var(--s4) 6px var(--s2); font-size:13.5px; font-weight:600; color:var(--ink); }
+.act-dtotal{ font-size:12.5px; font-weight:500; color:var(--ink-3); font-variant-numeric:tabular-nums; }
 .act-card{ padding:4px 0; }
 .act-row{ position:relative; display:flex; align-items:center; gap:var(--s3); width:100%;
-  padding:12px var(--s4); border:0; background:transparent; color:inherit; font:inherit;
+  padding:13px var(--s4); border:0; background:transparent; color:inherit; font:inherit;
   text-align:left; cursor:pointer; -webkit-tap-highlight-color:transparent;
   transition:background .15s ease; }
 .act-row + .act-row::before{ content:""; position:absolute; top:0; left:66px; right:var(--s4);
@@ -1120,12 +1121,8 @@ button, input, select, textarea{ font-family:var(--f); }
 .act-b{ flex:1; min-width:0; display:flex; flex-direction:column; }
 .act-t{ font-size:15px; font-weight:600; letter-spacing:-.01em; color:var(--ink);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-/* Time, group and who paid is more than a phone's width holds on one line, and
-   cut off it hid who paid - the part people look for. It wraps to a second
-   line instead, and stops there. */
-.act-m{ margin-top:2px; font-size:12.5px; line-height:1.4; color:var(--ink-3);
-  white-space:normal; overflow:hidden;
-  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.act-m{ margin-top:3px; font-size:12.5px; color:var(--ink-3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .act-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
 .act-amt{ font-size:15px; font-weight:700; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
 .act-amt.pos{ color:var(--good); } .act-amt.neg{ color:var(--bad); } .act-amt.zero{ color:var(--ink); }
@@ -2530,7 +2527,6 @@ function viewActivity(main){
   const tint = (gid)=> "gc"+(Math.max(0, order.indexOf(gid)) % 6);
   const monthKey = (ts)=>{ const d=new Date(ts||0); return d.getFullYear()+"-"+d.getMonth(); };
   const monthName = (ts)=> ts ? new Date(ts).toLocaleDateString(undefined,{month:"long", year:"numeric"}) : "Undated";
-  const timeOf = (ts)=> ts ? new Date(ts).toLocaleTimeString(undefined,{hour:"numeric", minute:"2-digit"}) : "";
   const spent = (n)=> money(n)+" spent";
 
   const shown = items.slice(0,200);
@@ -2571,11 +2567,11 @@ function viewActivity(main){
       r.innerHTML=
         '<span class="act-ic"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="act-b"><span class="act-t">'+esc(e.desc)+'</span>'+
-          '<span class="act-m">'+(e.at ? esc(timeOf(e.at))+' · ' : '')+esc(groupName(it.gid))+' · '+esc(iPaid ? "You" : e.payer)+' paid '+money(amt)+'</span></span>'+
+          '<span class="act-m">'+esc(iPaid ? "You" : e.payer)+' paid · '+esc(groupName(it.gid))+'</span></span>'+
         '<span class="act-r"><span class="act-amt '+tone+'">'+figure+'</span>'+
           '<span class="act-cap">'+what+'</span></span>';
       dayTotal+=amt; monthTotal+=amt;
-      dayOut.textContent=spent(dayTotal);
+      dayOut.textContent=money(dayTotal);
       monthOut.textContent=spent(monthTotal);
     } else {
       const p=it.p, amt=Number(p.amount)||0;
@@ -2587,7 +2583,7 @@ function viewActivity(main){
       r.innerHTML=
         '<span class="act-ic"><span class="ms" aria-hidden="true">payments</span></span>'+
         '<span class="act-b"><span class="act-t">'+esc(fromMe ? "You" : p.from)+' paid '+esc(toMe ? "you" : p.to)+'</span>'+
-          '<span class="act-m">'+(p.at ? esc(timeOf(p.at))+' · ' : '')+esc(groupName(it.gid))+(p.note ? ' · '+esc(p.note) : '')+'</span></span>'+
+          '<span class="act-m">'+esc(groupName(it.gid))+'</span></span>'+
         '<span class="act-r"><span class="act-amt '+tone+'">'+figure+'</span>'+
           '<span class="act-cap">'+what+'</span></span>';
     }
