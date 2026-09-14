@@ -1726,7 +1726,13 @@ function forgetGroup(id){
   JOINED = JOINED.filter(g=>g.id!==id); lsSet(LS.grp, JOINED);
   if(subs[id]){ subs[id](); delete subs[id]; }
   delete DATA[id];
-  if(remote && USER) del("users/"+USER.uid+"/groups/"+id);
+  if(remote && USER){
+    del("users/"+USER.uid+"/groups/"+id);
+    // And the invite that brought it here. Left behind, the app read it on the
+    // next load and put the group straight back on the list - so leaving a
+    // group, or losing a deleted one, never stuck.
+    if(USER.email) del("invites/"+emailKey(USER.email)+"/"+id);
+  }
 }
 function groupName(id){
   const g=DATA[id]&&DATA[id].meta&&DATA[id].meta.name;
@@ -4465,11 +4471,11 @@ function watchGroup(gid){
   const cb=remote.onValue(r, snap=>{
     const v=snap.val();
     if(v===null){
-      if(DATA[gid] && Object.keys(DATA[gid]).length){
-        toast("“"+groupName(gid)+"” was deleted");
-        forgetGroup(gid); if(CURRENT===gid) closeGroup();
-      }
-      DATA[gid]={};
+      // Gone. It comes off the list whether or not it had loaded - otherwise
+      // a group deleted before this device saw it sits there forever, empty.
+      const had = DATA[gid] && Object.keys(DATA[gid]).length, nm = groupName(gid);
+      forgetGroup(gid); if(CURRENT===gid) closeGroup();
+      if(had) toast("“"+nm+"” was deleted");
       render(); return;
     }
     DATA[gid]=v;
@@ -4479,6 +4485,15 @@ function watchGroup(gid){
     }
     render();
   }, err=>{
+    // The rules refuse it: the group was deleted, or this account is not in
+    // it. Either way there is nothing here to open, so it stops being listed
+    // instead of showing as a group with nobody in it. If they are added back,
+    // the group returns to their list on its own.
+    const why = String((err && (err.code || err.message)) || "");
+    if(/permission/i.test(why)){
+      forgetGroup(gid); if(CURRENT===gid) closeGroup();
+      render(); return;
+    }
     setSync("bad","Cannot read this group — "+(err&&err.message?err.message:"check the database rules"));
   });
   subs[gid]=()=>{ try{ remote.off(r,"value",cb); }catch(e){} };
