@@ -136,5 +136,19 @@ is([r.pushed.length, r.log.pushed], [0, 0], "no sender configured, nothing pushe
 r = await run({ n1: note("payment.add", "p1") }, { dry: true });
 is([r.pushed.length, r.log.pushed, r.removed.length], [0, 2, 0], "a dry run counts, sends nothing, clears nothing");
 
+console.log("\nsaying why nothing was pushed");
+r = await run({ n1: note("payment.add", "p2") });
+is(r.log.pushSkipped, ["payment.add p2: already answered in the app"], "an answered payment says so");
+r = await run({ n1: note("payment.add", "p1") }, { noPush: true });
+is(r.log.pushSkipped.length === 1 && r.log.pushSkipped[0].includes("not configured"), true, "missing keys say so");
+r = await run({ n1: { ...note("payment.add", "p1"), ref: undefined } });
+is(r.log.pushSkipped.length === 1 && r.log.pushSkipped[0].includes("old copy"), true,
+   "a note from an old copy of the app says so");
+const kelvinsPhones = users.u2.push; delete users.u2.push;
+r = await run({ n1: note("payment.add", "p1") });
+is(r.log.pushSkipped.length === 1 && r.log.pushSkipped[0].includes("not turned on"), true,
+   "somebody who never turned them on says so");
+users.u2.push = kelvinsPhones;
+
 console.log(bad ? "\n" + bad + " FAILED" : "\nall good");
 process.exit(bad ? 1 : 0);

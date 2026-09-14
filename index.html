@@ -1608,6 +1608,14 @@ button, input, select, textarea{ font-family:var(--f); }
   background:var(--ink); color:var(--cream); font-size:12px; font-weight:700; }
 .pn-steps .ms{ font-size:20px; color:var(--apricot-dk); }
 .pn-btn{ display:flex; align-items:center; justify-content:center; gap:8px; }
+.pn-linked{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:0 0 14px; padding:10px 12px; border-radius:14px;
+  background:var(--fill-1); font-size:13.5px; line-height:1.4; color:var(--ink-2); }
+.pn-linked .ms{ flex:none; font-size:19px; }
+.pn-linked span:not(.ms){ flex:1; min-width:0; }
+.pn-linked.ok{ background:color-mix(in srgb, var(--good) 12%, transparent); color:var(--good); }
+.pn-linked.bad{ background:color-mix(in srgb, var(--bad) 12%, transparent); color:var(--bad); }
+.pn-linked button{ min-height:34px; padding:0 14px; border:0; border-radius:10px; background:var(--ink); color:var(--cream);
+  font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
 .pn-off{ display:block; margin:12px auto 0; padding:8px 12px; border:0; background:none; font:inherit; font-size:14px;
   font-weight:600; color:var(--bad); cursor:pointer; }
 @media (prefers-reduced-motion:reduce){ .pn-bell.ring .ms{ animation:none; } }
@@ -7866,7 +7874,8 @@ function sheetPush(){
           'When you pay someone, you hear when they confirm.</p></div></div>';
 
     if(s==="on"){
-      h+='<button class="btn p wide pn-btn" id="pnTest" type="button"><span class="ms" aria-hidden="true">notifications</span>Show a test notification</button>'+
+      h+='<p class="pn-linked" id="pnLinked"><span class="ms" aria-hidden="true">sync</span>Checking this '+esc(dev)+' is linked to your account…</p>'+
+         '<button class="btn p wide pn-btn" id="pnTest" type="button"><span class="ms" aria-hidden="true">notifications</span>Show a test notification</button>'+
          '<button class="pn-off" id="pnOff" type="button">Turn off on this '+esc(dev)+'</button>';
     } else if(s==="ios-install"){
       h+='<p class="pn-lead">On iPhone, notifications work once Settle is on your Home Screen.</p>'+
@@ -7892,6 +7901,34 @@ function sheetPush(){
          '<p class="fine">Your '+esc(dev)+' will ask you to allow them. Turn them off here any time.</p>';
     }
     b.innerHTML=h;
+
+    // A test notification only proves the phone can show one. Payments reach
+    // it through the subscription saved on the account, so check that too.
+    const linked=$("pnLinked");
+    if(linked) (async ()=>{
+      const say=(ok, text, fix)=>{
+        if(!linked.isConnected) return;
+        linked.className="pn-linked "+(ok?"ok":"bad");
+        linked.innerHTML='<span class="ms" aria-hidden="true">'+(ok?"check_circle":"error")+'</span><span>'+esc(text)+'</span>'+
+          (fix ? '<button type="button" id="pnRelink">Link it</button>' : '');
+        const rl=$("pnRelink");
+        if(rl) rl.addEventListener("click", ()=>{
+          rl.disabled=true;
+          swReady(5000).then(reg=> reg.pushManager.getSubscription())
+            .then(sub=>{ if(!sub) throw new Error("turn notifications off and on again"); return pushSave(sub); })
+            .then(()=>{ toast("Linked"); sheetPush(); })
+            .catch(e=>{ rl.disabled=false; toast("Could not link: "+((e && e.message) || "try again")); });
+        });
+      };
+      try{
+        const reg=await swReady(5000), sub=await reg.pushManager.getSubscription();
+        if(!sub) return say(false, "This "+dev+" has no subscription yet.", false);
+        const id=await pushId(sub.endpoint);
+        const snap=await remote.get(ref("users/"+USER.uid+"/push/"+id));
+        if(snap && snap.exists()) say(true, "Linked to "+(USER.email||"your account")+". Payments will reach this "+dev+".", false);
+        else say(false, "Not linked to your account, so payments can’t reach this "+dev+".", true);
+      }catch(e){ say(false, "Could not check: "+((e && e.message) || "try again"), false); }
+    })();
 
     const on=$("pnOn"); if(on) on.addEventListener("click", ()=>{ pushEnable(on).then(ok=>{ if(ok) closeSheet(); }); });
     const off=$("pnOff"); if(off) off.addEventListener("click", ()=>{ closeSheet(); pushDisable(); });
@@ -7950,6 +7987,33 @@ if("serviceWorker" in navigator){
 }
 // Coming back to the app - perhaps from turning them on in Settings.
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && USER) pushRefresh(); });
+
+/* A tab left open keeps running the version it loaded, however many releases
+   come after - and an old copy saves payments the new server cannot ask
+   anybody about. So an open copy looks for a new version when it comes back
+   into view and every half hour, and reloads onto it when it arrives - but
+   never in the middle of something: with a sheet or a question open, it waits
+   until they are closed. */
+if("serviceWorker" in navigator && !window.__NO_SW){
+  const hadController = !!navigator.serviceWorker.controller;
+  let pending=false, reloading=false;
+  const busy=()=> !$("sheet").hidden || !!document.querySelector(".arr:not(.arr-quiet)");
+  const reloadWhenFree=()=>{
+    if(reloading) return;
+    if(busy()){ pending=true; return; }
+    reloading=true; location.reload();
+  };
+  const check=()=>{
+    navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update(); }).catch(()=>{});
+    if(pending) reloadWhenFree();
+  };
+  // The first install on a fresh visit changes the controller too; that is
+  // not an update, and reloading for it would only flash the page.
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(hadController) reloadWhenFree(); });
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) check(); });
+  setInterval(check, 30*60e3);
+  setInterval(()=>{ if(pending) reloadWhenFree(); }, 5000);
+}
 
 /* =========================== PRINT =========================== */
 function doPrint(){

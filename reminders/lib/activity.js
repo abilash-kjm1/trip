@@ -13,7 +13,7 @@
 import { money } from "./ledger.js";
 import { activityEmail, accessRequestEmail, groupInviteEmail, nudgeEmail } from "./template.js";
 import { makeToken, normaliseAccess } from "./access.js";
-import { deliver, askMessage, answerMessage, nudgeMessage } from "./push.js";
+import { deliver, subscriptionsOf, askMessage, answerMessage, nudgeMessage } from "./push.js";
 
 /* Asking to join is not activity in a group - there is no group yet - so it
    travels through the same queue but down its own path, to the administrator
@@ -344,32 +344,56 @@ export async function runActivity({ users, at, dry, appUrl, db, send, push,
   // recorded it. Both are checked against the payment record itself: the note
   // only says which payment to look at. So nobody can be told a payment was
   // made, or answered, that the database does not show.
-  if (push || dry) {
-    const about = (x) => x.kind === "payment.add" || x.kind === ASK_KIND || x.kind === GOT_KIND;
-    for (const e of batch.filter((x) => about(x) && x.ref)) {
+  // Every payment that does not reach a phone says why, in the response and
+  // the logs - "nothing arrived" has too many causes to guess between.
+  log.pushSkipped = [];
+  const skip = (e, why) => {
+    if (log.pushSkipped.length < 30) log.pushSkipped.push(e.kind + " " + (e.ref || "-") + ": " + why);
+    console.log("[push] skipped " + e.kind + " " + (e.ref || "-") + " - " + why);
+  };
+  const about = (x) => x.kind === "payment.add" || x.kind === ASK_KIND || x.kind === GOT_KIND;
+  if (!push && !dry) {
+    batch.filter(about).forEach((e) =>
+      skip(e, "phone notifications are not configured on the server (VAPID keys missing or unusable)"));
+  } else {
+    for (const e of batch.filter(about)) {
       try {
+        if (!e.ref) { skip(e, "the note names no payment - it came from an old copy of the app"); continue; }
         if (groups[e.gid] === undefined) groups[e.gid] = await db.read("trips/" + e.gid);
         const g = groups[e.gid];
-        if (!g || !isMember(g, e.actorUid)) continue;
+        if (!g || !isMember(g, e.actorUid)) { skip(e, "whoever wrote it is not in that group"); continue; }
         const p = (g.payments || {})[e.ref];
-        if (!p || typeof p !== "object" || p.netted) continue;
+        if (!p || typeof p !== "object") { skip(e, "that payment no longer exists"); continue; }
+        if (p.netted) { skip(e, "netted across groups - no money moved"); continue; }
         const seat = Object.values(g.people || {}).find((s) =>
           s && s.n === p.to && typeof s.uid === "string" && s.uid);
-        if (!seat) continue;
+        if (!seat) { skip(e, "\"" + p.to + "\" has no Settle account linked in this group"); continue; }
         const gname = (g.meta && g.meta.name) || e.gid;
         const amount = Number(p.amount) || 0;
 
         if (e.kind !== GOT_KIND) {
           // Recorded by this author, still waiting, and not to themselves.
-          if (p.byUid !== e.actorUid || p.ask !== true || p.got || seat.uid === e.actorUid) continue;
+          if (p.byUid !== e.actorUid) { skip(e, "the payment was recorded by somebody else"); continue; }
+          if (p.ask !== true) { skip(e, "the payment is not asking - it was saved by an old copy of the app"); continue; }
+          if (p.got) { skip(e, "already answered in the app"); continue; }
+          if (seat.uid === e.actorUid) { skip(e, "paid to themselves"); continue; }
+          if (!subscriptionsOf(users[seat.uid]).length) {
+            skip(e, p.to + " has not turned on phone notifications on any device"); continue;
+          }
+          console.log("[push] " + (dry ? "DRY " : "") + "asking " + seat.uid + " about " + e.ref);
           await deliver({ uid: seat.uid, users, dry, push, db, log,
             message: askMessage({ from: p.from, amount, group: gname, url: openAt(e.gid),
                                   tag: "arrive-" + e.gid + "-" + e.ref }) });
         } else {
           // Answered by the person it went to, and told to whoever recorded it.
           const got = p.got;
-          if (!got || typeof got !== "object" || got.uid !== e.actorUid || seat.uid !== e.actorUid) continue;
-          if (typeof p.byUid !== "string" || !p.byUid || p.byUid === e.actorUid) continue;
+          if (!got || typeof got !== "object") { skip(e, "the payment has no answer recorded"); continue; }
+          if (got.uid !== e.actorUid || seat.uid !== e.actorUid) { skip(e, "answered by somebody it did not go to"); continue; }
+          if (typeof p.byUid !== "string" || !p.byUid || p.byUid === e.actorUid) { skip(e, "nobody else to tell"); continue; }
+          if (!subscriptionsOf(users[p.byUid]).length) {
+            skip(e, "whoever recorded it has not turned on phone notifications"); continue;
+          }
+          console.log("[push] " + (dry ? "DRY " : "") + "telling " + p.byUid + " the answer to " + e.ref);
           await deliver({ uid: p.byUid, users, dry, push, db, log,
             message: answerMessage({ to: p.to, amount, ok: got.ok === true, group: gname,
                                      url: openAt(e.gid), tag: "answer-" + e.gid + "-" + e.ref }) });

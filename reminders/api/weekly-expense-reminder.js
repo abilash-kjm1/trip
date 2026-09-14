@@ -30,6 +30,19 @@ function pushSender() {
   }
   return (sub, payload, opts) => webpush.sendNotification(sub, payload, opts);
 }
+// For the dry run: not just "set", but whether the keys actually work. The
+// start of the public key is not secret - it is in the app - and lets it be
+// compared with the key the app is using.
+function vapidReport() {
+  const pub = process.env.VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
+  if (!pub || !priv) return "NOT SET - missing " + [!pub && "VAPID_PUBLIC_KEY", !priv && "VAPID_PRIVATE_KEY"].filter(Boolean).join(" and ");
+  try {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:abilashkjm01@gmail.com", pub, priv);
+  } catch (err) {
+    return "set but NOT USABLE - " + ((err && err.message) || err);
+  }
+  return "ready - public key starts " + pub.slice(0, 10);
+}
 
 const DEFAULT_TZ = process.env.DEFAULT_TZ || "America/Toronto";
 const APP_URL = process.env.APP_URL || "https://abilash-kjm1.github.io/trip/";
@@ -77,8 +90,7 @@ export default async function handler(req, res) {
     BREVO_API_KEY: process.env.BREVO_API_KEY ? "set" : "not set",
     RESEND_API_KEY: process.env.RESEND_API_KEY ? "set" : "not set",
     REMINDER_FROM: process.env.REMINDER_FROM || "NOT SET - the sender falls back",
-    VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY ? "set" : "NOT SET - no phone notifications",
-    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY ? "set" : "NOT SET - no phone notifications",
+    PHONE_NOTIFICATIONS: vapidReport(),
     APP_URL: process.env.APP_URL || "not set - using the default"
   } : undefined;
 
