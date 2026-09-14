@@ -2,7 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<script>
+/* The page is always exactly as wide as the phone it is on.
+   iPhone and iPad zoom in on any text box whose writing is smaller than 16px
+   the moment it is tapped - and then stay zoomed, so people had to pinch back
+   out. Saying the page is already at its largest stops that. On iOS people can
+   still pinch to zoom whenever they like; Android would take the same words as
+   "no zooming at all", and does not zoom into boxes anyway, so it is left be. */
+(function(){
+  var ua = navigator.userAgent || "";
+  var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+  if(!ios) return;
+  var m = document.querySelector('meta[name="viewport"]');
+  if(m) m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover");
+})();
+</script>
 <title>Settle — shared expenses</title>
 <meta name="description" content="Split expenses with friends, flatmates and trips. Everyone adds from their own phone and it syncs live.">
 <meta name="color-scheme" content="light">
@@ -89,7 +104,10 @@
 :root[data-theme]{ color-scheme: light; }
 
 *{ box-sizing:border-box; }
-html{ -webkit-text-size-adjust:100%; }
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%;
+  /* A quick second tap - on a button, the slider, the + - no longer zooms the
+     page on Android or iPhone. Pinching to zoom still works. */
+  touch-action:manipulation; }
 body{
   margin:0; background:var(--ground); color:var(--label); font-family:var(--f);
   font-size:17px; line-height:1.41; letter-spacing:-.01em; overflow-x:hidden;
@@ -837,6 +855,7 @@ button, input, select, textarea{ font-family:var(--f); }
 .sum .v.pos{ color:var(--good); } .sum .v.neg{ color:var(--bad); }
 
 /* ---- compact expense + person cards --------------------------------- */
+.cols2 > *{ min-width:0; }
 .mom{ display:flex; align-items:center; gap:var(--s3); padding:13px var(--s4);
   width:100%; background:transparent; border:0; text-align:left; font:inherit; cursor:pointer; }
 .mom + .mom{ border-top:1px solid var(--line-2); }
@@ -2282,7 +2301,7 @@ span.af-pill{ cursor:default; padding-right:12px; }
   .bar, .nav{ display:none; }
 
   .sums{ grid-template-columns:repeat(3,1fr); }
-  .cols2{ display:grid; grid-template-columns:1.25fr 1fr; gap:var(--s5); align-items:start; }
+  .cols2{ display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:var(--s5); align-items:start; }
   .hero{ padding:var(--s6); }
   .hero h2{ font-size:30px; max-width:16ch; }
   .hero .net{ font-size:30px; }
@@ -2290,7 +2309,11 @@ span.af-pill{ cursor:default; padding-right:12px; }
 @media (max-width:999px){
   .shell{ margin:0; padding:0; }
   .panel{ background:transparent; padding:0; }
-  .cols2{ display:grid; gap:0; }
+  /* One column exactly as wide as the phone. Left to size itself, a grid
+     column grows to fit its longest unbroken line - "Saturday, September 12
+     · Montreal & Quebec" - and pushed Today 29px wider than the screen, which
+     is what let the page slide sideways and zoom. */
+  .cols2{ display:grid; grid-template-columns:minmax(0,1fr); gap:0; }
 }
 
 
@@ -8479,7 +8502,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260914225622";
+const APP_BUILD = "20260914231728";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
