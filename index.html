@@ -1088,6 +1088,49 @@ button, input, select, textarea{ font-family:var(--f); }
 .pf-help{ margin:0 0 12px; text-align:center; font-size:12px; color:var(--ink-3); }
 .pf-save{ display:flex; align-items:center; justify-content:center; gap:8px; min-height:52px; font-size:15.5px; }
 .pf-save .ms{ font-size:20px; }
+/* ---- Payment recorded: a check that draws itself, the amount, a chime ---- */
+.paid-pop{ position:fixed; inset:0; z-index:400; display:flex; align-items:center; justify-content:center; padding:24px;
+  background:color-mix(in srgb, var(--ink) 40%, transparent); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  cursor:pointer; animation:paidFade .25s ease-out both; }
+.paid-pop.out{ animation:paidFadeOut .3s ease-in both; }
+@keyframes paidFade{ from{ opacity:0; } }
+@keyframes paidFadeOut{ to{ opacity:0; } }
+.paid-card{ position:relative; width:min(300px, 100%); padding:30px 24px 26px; border-radius:28px; text-align:center;
+  background:var(--surface); color:var(--ink); box-shadow:0 30px 60px -24px rgba(0,0,0,.45);
+  animation:paidPop .55s cubic-bezier(.34,1.56,.64,1) both; }
+.paid-pop.out .paid-card{ animation:paidDrop .3s ease-in both; }
+@keyframes paidPop{ from{ opacity:0; transform:translateY(22px) scale(.88); } }
+@keyframes paidDrop{ to{ opacity:0; transform:translateY(10px) scale(.96); } }
+.paid-mark{ position:relative; width:92px; height:92px; margin:0 auto 16px; }
+.paid-mark svg{ position:relative; z-index:1; display:block; width:100%; height:100%; overflow:visible; }
+.paid-circle{ fill:var(--good); transform-box:fill-box; transform-origin:center;
+  animation:paidCircle .5s cubic-bezier(.34,1.56,.64,1) .08s both; }
+@keyframes paidCircle{ from{ transform:scale(0); } }
+.paid-check{ fill:none; stroke:#fff; stroke-width:4.5; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:34; stroke-dashoffset:34; animation:paidDraw .4s cubic-bezier(.65,0,.45,1) .4s forwards; }
+@keyframes paidDraw{ to{ stroke-dashoffset:0; } }
+.paid-ring{ position:absolute; inset:0; border-radius:50%; border:2px solid var(--good); opacity:0;
+  animation:paidRing 1.1s ease-out .32s both; }
+.paid-ring.r2{ animation-delay:.52s; }
+@keyframes paidRing{ 0%{ opacity:.55; transform:scale(.9); } 100%{ opacity:0; transform:scale(1.9); } }
+.paid-dots{ position:absolute; left:50%; top:76px; width:0; height:0; pointer-events:none; }
+.paid-dots i{ position:absolute; left:-4px; top:-4px; width:8px; height:8px; border-radius:50%; background:var(--c); opacity:0;
+  animation:paidBurst .85s cubic-bezier(.22,.61,.36,1) .42s both; }
+.paid-dots i:nth-child(even){ left:-3px; top:-3px; width:6px; height:6px; border-radius:2px; }
+@keyframes paidBurst{ 0%{ opacity:1; transform:rotate(var(--a)) translateY(0) scale(1); }
+  100%{ opacity:0; transform:rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(.5); } }
+.paid-lab{ font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3);
+  animation:paidUp .4s ease-out .5s both; }
+.paid-amt{ margin-top:6px; font-family:var(--serif); font-size:46px; font-weight:600; line-height:1; letter-spacing:-.02em;
+  color:var(--ink); font-variant-numeric:tabular-nums; animation:paidUp .45s ease-out .58s both; }
+.paid-to{ margin-top:8px; font-size:15px; color:var(--ink-2); animation:paidUp .45s ease-out .66s both; }
+@keyframes paidUp{ from{ opacity:0; transform:translateY(8px); } }
+@media (prefers-reduced-motion:reduce){
+  .paid-pop, .paid-card, .paid-circle, .paid-lab, .paid-amt, .paid-to{ animation:none; }
+  .paid-check{ animation:none; stroke-dashoffset:0; }
+  .paid-ring, .paid-dots{ display:none; }
+}
+
 /* Slide to record: the handle has to travel most of the way. */
 .pf-slide{ position:relative; height:58px; margin-top:4px; border-radius:999px; overflow:hidden; isolation:isolate;
   background:var(--ink); color:var(--cream); -webkit-user-select:none; user-select:none; touch-action:pan-y; }
@@ -4667,6 +4710,91 @@ function sheetExpense(existing){
 }
 
 /* ---------- record a payment ---------- */
+/* Sounds, made in the page with Web Audio - no files to fetch. Browsers only
+   allow sound after a touch, so the slider wakes the audio when the handle
+   is first pressed. Quiet by design: a soft click as the slide lands, and a
+   short bright chime when the payment is saved. */
+const SFX = (()=>{
+  let ctx = null;
+  const get = ()=>{
+    try{
+      if(!ctx){ const A = window.AudioContext || window.webkitAudioContext; if(!A) return null; ctx = new A(); }
+      if(ctx.state === "suspended") ctx.resume();
+      return ctx;
+    }catch(e){ return null; }
+  };
+  const tone = (c, freq, start, dur, vol, type)=>{
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || "sine";
+    o.frequency.setValueAtTime(freq, start);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(vol, start + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(start); o.stop(start + dur + 0.03);
+  };
+  return {
+    unlock(){ get(); },
+    // A soft upward sweep and a tick, like something clicking into place.
+    slide(){
+      const c = get(); if(!c) return;
+      const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+      o.type = "triangle";
+      o.frequency.setValueAtTime(420, t);
+      o.frequency.exponentialRampToValueAtTime(880, t + 0.12);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.08, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.2);
+      tone(c, 1320, t + 0.11, 0.08, 0.045, "sine");
+    },
+    // Two bright notes a fifth apart, with a soft shimmer blooming above.
+    success(){
+      const c = get(); if(!c) return;
+      const t = c.currentTime + 0.02;
+      tone(c, 659.25, t,        0.36, 0.15, "sine");      // E5
+      tone(c, 1318.5, t,        0.18, 0.028, "sine");
+      tone(c, 987.77, t + 0.12, 0.62, 0.15, "sine");      // B5
+      tone(c, 1975.5, t + 0.12, 0.34, 0.03, "sine");
+      tone(c, 1318.5, t + 0.24, 0.72, 0.06, "triangle");  // E6 bloom
+    }
+  };
+})();
+
+/* The moment a payment is saved: a check that draws itself inside a green
+   circle, a ripple and a small burst in the app's own colours, then the amount
+   and who it went to. Goes by itself after a couple of seconds; a tap closes it
+   sooner. */
+function celebratePayment(amount, to){
+  const who = to===ME ? "you" : to;
+  const tints = ["var(--apricot)", "var(--good)", "var(--apricot-dk)"];
+  const pop = el("div","paid-pop");
+  pop.setAttribute("role","status");
+  pop.setAttribute("aria-live","polite");
+  pop.innerHTML=
+    '<div class="paid-card">'+
+      '<div class="paid-mark"><span class="paid-ring"></span><span class="paid-ring r2"></span>'+
+        '<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="paid-circle" cx="26" cy="26" r="24"/>'+
+        '<path class="paid-check" d="M15 27.5l7 7 15-15"/></svg></div>'+
+      '<div class="paid-dots" aria-hidden="true">'+
+        Array.from({length:14}, (_, i)=> '<i style="--a:'+Math.round(i*360/14)+'deg;--d:'+(58 + (i%3)*18)+'px;--c:'+tints[i%3]+'"></i>').join("")+
+      '</div>'+
+      '<div class="paid-lab">Payment recorded</div>'+
+      '<div class="paid-amt">'+esc(money(amount))+'</div>'+
+      '<div class="paid-to">to '+esc(who)+'</div>'+
+    '</div>';
+  document.body.appendChild(pop);
+  SFX.success();
+  try{ if(navigator.vibrate) navigator.vibrate([12, 60, 18]); }catch(e){}
+  const close = ()=>{
+    if(pop.classList.contains("out")) return;
+    pop.classList.add("out");
+    setTimeout(()=> pop.remove(), 320);
+  };
+  pop.addEventListener("click", close);
+  setTimeout(close, 2400);
+}
+
 /* Slide to confirm. A tap cannot record a payment by accident: the handle has
    to be dragged most of the way across. Let go early and it springs back.
    onDone returns true when it went through; anything else springs it back so
@@ -4692,6 +4820,7 @@ function slideToConfirm(track, onDone){
     if(max && x >= max*0.9){
       done=true; put(max, true); track.classList.add("done"); icon.textContent="check";
       try{ if(navigator.vibrate) navigator.vibrate(15); }catch(e){}
+      SFX.slide();
       setTimeout(()=>{ if(onDone()!==true) reset(); }, 200);
     } else {
       put(0, true);
@@ -4699,6 +4828,7 @@ function slideToConfirm(track, onDone){
   };
   knob.addEventListener("pointerdown", e=>{
     if(done) return;
+    SFX.unlock();
     measure(); dragging=true; startX=e.clientX - x;
     try{ knob.setPointerCapture(e.pointerId); }catch(err){}
     track.classList.add("dragging"); track.classList.remove("anim");
@@ -4710,6 +4840,7 @@ function slideToConfirm(track, onDone){
   knob.addEventListener("pointercancel", up);
   knob.addEventListener("keydown", e=>{
     if(done) return;
+    SFX.unlock();
     measure();
     if(e.key==="ArrowRight"){ e.preventDefault(); put(x + max*0.34, true); if(x >= max*0.9) finish(); }
     else if(e.key==="ArrowLeft"){ e.preventDefault(); put(x - max*0.34, true); }
@@ -4870,7 +5001,9 @@ function sheetSettle(from, to, amt, existing){
       // A payment has no description of its own, so say who paid whom.
       notify(existing?"payment.edit":"payment.add", gid,
              {desc: f+" paid "+t, amount: a});
-      closeSheet(); toast(existing?"Payment updated":"Payment recorded");
+      closeSheet();
+      if(existing) toast("Payment updated");
+      else setTimeout(()=> celebratePayment(a, t), 260);   // once the sheet has slid away
       return true;
     };
     $("stSave").addEventListener("click", save);
