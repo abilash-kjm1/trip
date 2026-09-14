@@ -1899,13 +1899,12 @@ function inGroupAlready(gid, p, exceptKey){
    read them and only that person can change them. Checked on the way out as
    well as on the way in: whatever is in the database, only a plausible name
    and a real-looking address or phone number is ever shown. */
-/* iPhone: CIBC publishes its online-banking sign-in page as a universal link
-   for its app, so tapping it opens the app when it is installed and the
-   sign-in page when it is not. The others publish no such link for the app's
-   front door, so their App Store page opens instead, where Open is one tap. */
+/* iPhone: every bank opens its App Store page, which shows Open when the app
+   is installed - one more tap, but it always lands in the app. CIBC's
+   sign-in page is listed as a universal link for its app, yet in practice it
+   loaded the website instead, so it is not used. */
 const ETX_BANKS = [
   {id:"cibc",       name:"CIBC",       pkg:"com.cibc.android.mobi",   appstore:"351448953",
-   ios:"https://www.cibconline.cibc.com/ebm-resources/online-banking/client/index.html",
    web:"https://www.cibc.com/en/personal-banking.html"},
   {id:"rbc",        name:"RBC",        pkg:"com.rbc.mobile.android",  appstore:"407597290", web:"https://www.rbcroyalbank.com/"},
   {id:"td",         name:"TD",         pkg:"com.td",                  appstore:"358790776", web:"https://www.td.com/ca/en/personal-banking"},
@@ -3209,8 +3208,8 @@ function viewInterac(main){
   main.appendChild(el("div","sechead","Your bank app"));
   const bc=el("div","card pad etxbank");
   bc.innerHTML='<p class="etx-sub">Pay copies the email and opens this app. Banks cannot be told who to pay, '+
-    'so you paste the email and amount in. On iPhone, CIBC opens straight away; the others open their App Store '+
-    'page, where Open is one more tap.</p><div class="chips" id="ixBanks"></div>';
+    'so you paste the email and amount in. On iPhone the bank’s App Store page opens - tap Open there.</p>'+
+    '<div class="chips" id="ixBanks"></div>';
   main.appendChild(bc);
   const cur=(PREFS&&PREFS.bank)||"";
   ETX_BANKS.concat([{id:"", name:"None"}]).forEach(b=>{
