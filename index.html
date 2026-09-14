@@ -2,20 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <script>
-/* The page is always exactly as wide as the phone it is on.
-   iPhone and iPad zoom in on any text box whose writing is smaller than 16px
-   the moment it is tapped - and then stay zoomed, so people had to pinch back
-   out. Saying the page is already at its largest stops that. On iOS people can
-   still pinch to zoom whenever they like; Android would take the same words as
-   "no zooming at all", and does not zoom into boxes anyway, so it is left be. */
+/* Settle is an app, so it stays at exactly the size of the phone it is on:
+   no pinch-zoom, no double-tap zoom, no zooming into a text box.
+
+   Android honours the viewport line above. iPhone and iPad ignore it for
+   pinching - Apple removed that switch from Safari - so on them the pinch
+   itself is stopped: Safari announces a pinch as a "gesture", and a
+   two-finger move that changes the scale, and both are cancelled here. One
+   finger - scrolling, the slider, swiping the Today cards - is never touched. */
 (function(){
-  var ua = navigator.userAgent || "";
-  var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
-  if(!ios) return;
-  var m = document.querySelector('meta[name="viewport"]');
-  if(m) m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover");
+  var stop = function(e){ e.preventDefault(); };
+  document.addEventListener("gesturestart", stop, {passive:false});
+  document.addEventListener("gesturechange", stop, {passive:false});
+  document.addEventListener("gestureend", stop, {passive:false});
+  document.addEventListener("touchmove", function(e){
+    if((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) e.preventDefault();
+  }, {passive:false});
 })();
 </script>
 <title>Settle — shared expenses</title>
@@ -105,9 +109,11 @@
 
 *{ box-sizing:border-box; }
 html{ -webkit-text-size-adjust:100%; text-size-adjust:100%;
-  /* A quick second tap - on a button, the slider, the + - no longer zooms the
-     page on Android or iPhone. Pinching to zoom still works. */
-  touch-action:manipulation; }
+  /* Fingers may scroll the page - up, down, and sideways in the strips that
+     scroll - and nothing else: no pinch-zoom and no double-tap zoom, on
+     Android and on iPhone. Pieces that need more (the slider, the Today
+     cards) set their own. */
+  touch-action:pan-x pan-y; }
 body{
   margin:0; background:var(--ground); color:var(--label); font-family:var(--f);
   font-size:17px; line-height:1.41; letter-spacing:-.01em; overflow-x:hidden;
@@ -8502,7 +8508,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260914231728";
+const APP_BUILD = "20260914232211";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
