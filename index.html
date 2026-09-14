@@ -1038,6 +1038,28 @@ button, input, select, textarea{ font-family:var(--f); }
 .hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
 
+/* ---- Who owes whom: one plain sentence per payment ---------------------- */
+.owelist{ padding:4px 0; overflow:hidden; }
+.owe-row{ position:relative; display:flex; align-items:center; gap:12px; padding:13px var(--s4); }
+.owe-row + .owe-row::before{ content:""; position:absolute; top:0; left:var(--s4); right:var(--s4);
+  height:1px; background:var(--line-2); }
+.owe-row.mine{ background:color-mix(in srgb, var(--apricot) 11%, transparent); }
+.owe-pair{ flex:0 0 auto; display:flex; align-items:center; gap:2px; }
+.owe-pair > .ms{ font-size:15px; color:var(--ink-3); }
+.owe-b{ flex:1; min-width:0; }
+.owe-t{ display:block; font-size:14.5px; line-height:1.3; color:var(--ink-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.owe-t b{ font-weight:700; color:var(--ink); }
+.owe-m{ display:block; margin-top:2px; font-size:12px; color:var(--ink-3); }
+.owe-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.owe-amt{ font-size:15.5px; font-weight:700; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
+.owe-amt.neg{ color:var(--bad); } .owe-amt.pos{ color:var(--good); } .owe-amt.zero{ color:var(--ink); }
+.owe-btn{ border:0; border-radius:999px; padding:5px 13px; font:inherit; font-size:12px; font-weight:600;
+  cursor:pointer; background:var(--ink); color:var(--cream); -webkit-tap-highlight-color:transparent; }
+.owe-btn.soft{ background:var(--fill-1); color:var(--ink); }
+.owe-btn:disabled{ opacity:.6; cursor:default; }
+.owe-btn:focus:not(:focus-visible){ outline:none; }
+
 /* ---- Today card: a breathing glow, and light across it on each new card ----
    The glow matches the + in the bar, so the two read as one family. It pauses
    while a hand is on the card, and stands still for reduced motion. */
@@ -2255,8 +2277,8 @@ function viewGroup(main){
   sectionHead(main, "account_balance_wallet", "Balances",
               "Green is owed money back. Red still owes.");
   groupBalances(main, gid);
-  sectionHead(main, "bar_chart", "Who owes whom",
-              "Grouped by who gets paid back. Bar length is the amount.");
+  sectionHead(main, "swap_horiz", "Who owes whom",
+              "The fewest payments that settle everyone.");
   sectionWhoOwes(main, gid);
   sectionPayments(main, gid);
 }
@@ -2533,34 +2555,48 @@ function sectionWhoOwes(main, gid){
       '<h3>All square - nobody owes anybody.</h3>'));
     return;
   }
-  const by={};
-  st.forEach(t=>{ (by[t.to]=by[t.to]||[]).push(t); });
-  let widest=0; st.forEach(t=>{ if(t.amt>widest) widest=t.amt; });
-  if(!widest) widest=1;
-  Object.keys(by).sort((a,c)=>{
-    const sa=by[a].reduce((x,y)=>x+y.amt,0), sc=by[c].reduce((x,y)=>x+y.amt,0);
-    return sc-sa;
-  }).forEach(to=>{
-    const rows=by[to].slice().sort((a,c)=>c.amt-a.amt), m=memberOf(to,gid);
-    let total=0; rows.forEach(r=> total+=r.amt );
-    const card=el("div","card pad owed");
-    let h='<div class="owedhead">'+avatarHTML("", to, m&&m.color, m&&m.photo)+
-      '<span class="txt"><b>'+esc(to)+'</b><small>is owed by '+rows.length+' '+
-      (rows.length===1?"person":"people")+'</small></span>'+
-      '<span class="amt">'+money(total)+'</span></div>';
-    rows.forEach(r=>{
-      const pct=Math.max(3, Math.round(r.amt/widest*100));
-      h+='<div class="barrow"><span class="who">'+esc(r.from)+'</span>'+
-         '<span class="track"><span class="fill" style="width:'+pct+'%;background:'+colorOf(r.from,gid)+'"></span></span>'+
-         '<span class="val">'+money(r.amt)+'</span></div>';
-    });
-    card.innerHTML=h;
-    [].forEach.call(card.querySelectorAll(".barrow"), (row,i)=>{
-      row.style.cursor="pointer";
-      row.addEventListener("click", ()=>sheetSettle(rows[i].from, to, rows[i].amt));
-    });
-    main.appendChild(card);
+  /* One plain sentence per payment - "You pay Kavya", "Kavya pays you",
+     "Kelvin pays Kalai" - with both faces and an arrow between them. Grouping
+     by who gets paid, with bars, made you work out the direction yourself.
+     Yours come first, then everybody else's, biggest first. */
+  const me=meIn(gid);
+  const rank=(t)=> t.from===me ? 0 : t.to===me ? 1 : 2;
+  const rows=st.slice().sort((a,c)=> rank(a)-rank(c) || c.amt-a.amt);
+  const card=el("div","card owelist");
+  rows.forEach(t=>{
+    const iPay=!!me && t.from===me, iGet=!!me && t.to===me;
+    const fm=memberOf(t.from,gid), tm=memberOf(t.to,gid);
+    const line = iPay ? '<b>You</b> pay <b>'+esc(t.to)+'</b>'
+               : iGet ? '<b>'+esc(t.from)+'</b> pays <b>you</b>'
+               :        '<b>'+esc(t.from)+'</b> pays <b>'+esc(t.to)+'</b>';
+    const note = iPay ? "You owe this" : iGet ? "Owed to you" : "Between them";
+    const r=el("div","owe-row"+(iPay||iGet ? " mine" : ""));
+    r.innerHTML=
+      '<span class="owe-pair">'+avatarHTML("sm", t.from, fm&&fm.color, fm&&fm.photo)+
+        '<span class="ms" aria-hidden="true">arrow_forward</span>'+
+        avatarHTML("sm", t.to, tm&&tm.color, tm&&tm.photo)+'</span>'+
+      '<span class="owe-b"><span class="owe-t">'+line+'</span>'+
+        '<span class="owe-m">'+note+'</span></span>'+
+      '<span class="owe-r"><span class="owe-amt '+(iPay?"neg":iGet?"pos":"zero")+'">'+
+        money(t.amt)+'</span></span>';
+    const right=r.querySelector(".owe-r");
+    const btn=(label, soft)=>{
+      const b=el("button","owe-btn"+(soft?" soft":""), label); b.type="button";
+      right.appendChild(b); return b;
+    };
+    // The same two actions the Today card offers, where they belong.
+    if(iPay){
+      btn("Pay").addEventListener("click", ()=> sheetSettle(t.from, t.to, t.amt) );
+    } else if(iGet){
+      const key=gid+"|"+t.from, b=btn(NUDGED[key] ? "Reminder sent" : "Remind", true);
+      b.disabled=!!NUDGED[key];
+      b.addEventListener("click", ()=>{ if(sendNudge(gid, t.from, t.amt, b)) NUDGED[key]=true; });
+    } else if(isAdmin()){
+      btn("Record", true).addEventListener("click", ()=> sheetSettle(t.from, t.to, t.amt) );
+    }
+    card.appendChild(r);
   });
+  main.appendChild(card);
 }
 
 function sectionPayments(main, gid){
