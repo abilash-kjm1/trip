@@ -923,12 +923,27 @@ button, input, select, textarea{ font-family:var(--f); }
 .nav button .ms{ font-size:22px; }
 .nav button[aria-current="page"]{ color:var(--cream); background:rgba(255,255,255,.10); }
 .nav{ align-items:center; }
-/* Raised, but still on the row's own axis. Pushed up from the top edge it
-   read as detached, with a hole under it. */
+/* Add sits exactly on the bar's centre line, in the middle of the row, and
+   glows - a steady halo in the theme's own colour with a slow breath around
+   it, so the one thing you come here to do is the thing the eye lands on. */
 .nav .add{
-  flex:0 0 auto; align-self:center; width:52px; height:52px; margin:-14px 6px 0;
+  --glow: rgba(238,181,134,.62); --glow-soft: rgba(238,181,134,.20);
+  flex:0 0 auto; align-self:center; width:52px; height:52px; margin:0 8px;
   border-radius:50%; background:var(--apricot); color:#3A2414; padding:0; gap:0;
-  box-shadow:0 6px 18px rgba(180,112,62,.42);
+  box-shadow:0 0 0 3px var(--glow-soft), 0 0 20px 3px var(--glow), 0 4px 12px rgba(0,0,0,.22);
+}
+.nav .add::after{
+  content:""; position:absolute; inset:-5px; border-radius:50%; pointer-events:none;
+  box-shadow:0 0 18px 6px var(--glow); opacity:.35;
+  animation:addGlow 2.8s ease-in-out infinite;
+}
+@keyframes addGlow{
+  0%,100%{ opacity:.25; transform:scale(.94); }
+  50%    { opacity:.95; transform:scale(1.08); }
+}
+.nav .add:active{ transform:scale(.95); }
+@media (prefers-reduced-motion:reduce){
+  .nav .add::after{ animation:none; opacity:.6; transform:none; }
 }
 /* The bar's buttons stack icon over label from the top. The + has no label,
    so stacked from the top it sat in the upper half of its own circle. */
@@ -1228,7 +1243,7 @@ button, input, select, textarea{ font-family:var(--f); }
 :root[data-theme="purple"] .hero::after{ border-color:rgba(42,31,61,.20); }
 :root[data-theme="purple"] .hero::before{ border-color:rgba(42,31,61,.13); }
 :root[data-theme="purple"] .nav .add{ color:#2A1F3D;
-  box-shadow:0 6px 18px rgba(109,63,191,.38); }
+  --glow: rgba(186,146,255,.70); --glow-soft: rgba(186,146,255,.24); }
 :root[data-theme="purple"] .side button[aria-current="page"]{ color:#2A1F3D; }
 :root[data-theme="purple"] .me{ background:var(--apricot-lt); color:var(--apricot-dk); }
 :root[data-theme="purple"] .summary .split .v.pos{ color:#7FD0B0; }
