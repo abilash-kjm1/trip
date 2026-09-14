@@ -1001,24 +1001,92 @@ button, input, select, textarea{ font-family:var(--f); }
 :focus-visible{ outline:3px solid var(--apricot-dk); outline-offset:3px; }
 
 
-/* ---- Today: the panel turns through everything there is to settle ---- */
-.hc-track{ position:relative; display:flex; touch-action:pan-y;
-  transition:transform .55s cubic-bezier(.22,.61,.36,1); }
+/* ---- Today: the panel ----------------------------------------------------
+   One card per thing to settle. The amount is the point of the card, so it is
+   the biggest thing on it - deep red for what you owe, deep green for what you
+   are owed - and who, where and why sit around it. */
+:root{ --hero-a:#F6D3AF; --hero-b:#E7A06A; --hero-ink:#3A2414; --hero-soft:#7A5334;
+       --hero-owe:#8E3520; --hero-get:#1F5C41; --hero-line:rgba(58,36,20,.14);
+       --hero-track:rgba(58,36,20,.18); --hero-glow:rgba(120,64,24,.55); }
+.hero.carousel{
+  background-color:var(--apricot);
+  background-image:linear-gradient(140deg, var(--hero-a) 0%, var(--apricot) 46%, var(--hero-b) 100%);
+  color:var(--hero-ink);
+  padding:var(--s5) var(--s5) var(--s4);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 22px 44px -26px var(--hero-glow);
+}
+/* No blue. Swiping across the card used to select its text in the browser's
+   blue; tapping flashed the browser's blue tap highlight; a tap left a blue
+   ring on the button. The keyboard focus ring stays, in the accent. */
+.hero, .hero *{ -webkit-tap-highlight-color:transparent; }
+.hero button:focus:not(:focus-visible){ outline:none; }
+.hero ::selection{ background:transparent; }
 .hc-view{ position:relative; overflow:hidden; }
-.hc-slide{ flex:0 0 100%; min-width:0; }
-.hero .hc-kicker{ margin:0 0 var(--s2); font-size:11px; font-weight:700;
-  letter-spacing:.07em; text-transform:uppercase; }
+.hc-track{ position:relative; display:flex; touch-action:pan-y;
+  -webkit-user-select:none; user-select:none;
+  transition:transform .6s cubic-bezier(.22,.61,.36,1); }
+.hc-slide{ flex:0 0 100%; min-width:0; opacity:.2; transition:opacity .6s ease; }
+.hc-slide.on{ opacity:1; }
+
+.hc-top{ display:flex; align-items:center; justify-content:space-between; gap:var(--s3); }
+.hc-av{ flex:0 0 auto; width:40px; height:40px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.64); color:var(--hero-ink);
+  font-size:13px; font-weight:700; letter-spacing:.03em;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.6), 0 4px 10px -6px rgba(0,0,0,.35); }
+.hc-av .ms{ font-size:20px; }
+.hc-chip{ display:inline-flex; align-items:center; gap:7px; min-width:0; max-width:72%;
+  padding:6px 12px; border-radius:999px; background:rgba(255,255,255,.5);
+  color:var(--hero-soft); font-size:10.5px; font-weight:700; letter-spacing:.07em;
+  text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hc-chip i{ flex:0 0 auto; width:3px; height:3px; border-radius:50%; background:currentColor; opacity:.7; }
+
+.hero p.hc-line{ margin:var(--s4) 0 0; max-width:none; font-size:15px; color:var(--hero-soft); }
+.hc-line b{ color:var(--hero-ink); font-weight:700; }
+.hero h2.hc-amt{ margin:2px 0 0; max-width:none; font-family:var(--serif); font-weight:600;
+  font-size:clamp(42px,12vw,56px); line-height:1; letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums; }
+.hc-slide.owe .hc-amt{ color:var(--hero-owe); }
+.hc-slide.get .hc-amt{ color:var(--hero-get); }
+.hc-slide.done .hero, .hc-slide.done .hc-amt{ margin-top:var(--s4); font-size:clamp(26px,7.4vw,34px);
+  line-height:1.1; color:var(--hero-ink); }
+.hero p.hc-for{ margin:6px 0 0; max-width:none; font-size:13.5px; color:var(--hero-soft);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
 .hero .act{ margin-top:var(--s4); }
-.hc-foot{ position:relative; display:flex; align-items:flex-end; justify-content:space-between;
-  gap:var(--s4); margin-top:var(--s4); }
-.hc-dots{ display:flex; flex-wrap:wrap; gap:2px; }
-/* A bigger target than the dot you see: the padding is tappable, the colour
-   only fills the middle. */
-.hc-dot{ box-sizing:content-box; width:8px; height:8px; padding:7px 4px; border:0;
-  border-radius:999px; background:currentColor; background-clip:content-box;
-  opacity:.3; cursor:pointer; transition:width .3s, opacity .3s; }
-.hc-dot[aria-current="true"]{ width:22px; opacity:.85; }
-@media (prefers-reduced-motion: reduce){ .hc-track, .hc-dot{ transition:none; } }
+.hc-btn{ display:inline-flex; align-items:center; gap:8px; padding:11px 18px 11px 14px;
+  box-shadow:0 10px 20px -12px rgba(0,0,0,.6); }
+.hc-btn .ms{ font-size:18px; }
+.hc-btn:disabled{ opacity:1; cursor:default; background:rgba(255,255,255,.58);
+  color:var(--hero-get); box-shadow:none; }
+
+.hc-foot{ position:relative; display:flex; align-items:center; justify-content:space-between;
+  gap:var(--s4); margin-top:var(--s5); padding-top:var(--s3); border-top:1px solid var(--hero-line); }
+.hero .hc-foot .net{ text-align:right; font-size:18px; font-weight:700; letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums; }
+.hero .hc-foot .net small{ display:block; margin:0 0 1px; font-size:10px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--hero-soft); }
+
+/* Slim bars rather than dots. The tappable area is taller than the bar. */
+.hc-segs{ display:flex; align-items:center; gap:6px; min-height:24px; }
+.hc-seg{ position:relative; box-sizing:content-box; width:16px; height:4px; padding:10px 0;
+  border:0; background:transparent; cursor:pointer; transition:width .35s ease; }
+.hc-seg i{ position:absolute; left:0; right:0; top:10px; height:4px; border-radius:999px;
+  background:var(--hero-track); overflow:hidden; }
+.hc-seg i::after{ content:""; position:absolute; top:0; bottom:0; left:0; width:0;
+  border-radius:inherit; background:var(--hero-ink); }
+.hc-seg[aria-current="true"]{ width:36px; }
+.hc-seg[aria-current="true"] i::after{ width:100%; }
+.hc-seg.run i::after{ width:0; animation:hcfill 5s linear forwards; }
+.hero.held .hc-seg.run i::after{ animation-play-state:paused; }
+@keyframes hcfill{ from{ width:0; } to{ width:100%; } }
+
+@media (min-width:1000px){
+  .hero.carousel{ padding:var(--s6) var(--s6) var(--s5); }
+  .hero.carousel h2.hc-amt{ font-size:64px; }
+  .hero.carousel .hc-foot .net{ font-size:20px; }
+}
+@media (prefers-reduced-motion: reduce){ .hc-track, .hc-slide, .hc-seg{ transition:none; } }
 
 /* ---- desktop --------------------------------------------------------- */
 @media (min-width:1000px){
@@ -1058,6 +1126,7 @@ button, input, select, textarea{ font-family:var(--f); }
   .panel{ background:transparent; padding:0; }
   .cols2{ display:grid; gap:0; }
 }
+
 
 
 
@@ -1143,14 +1212,14 @@ button, input, select, textarea{ font-family:var(--f); }
    this says the same thing in line art - a heart, seven dots, two notes. It
    sits under the words at low opacity and never competes with them. */
 :root[data-theme="purple"] .hero{
-  background-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20320%20240'%20fill='none'%20stroke='%232A1F3D'%20stroke-width='1.5'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%20%3Cg%20opacity='.30'%3E%20%3Cpath%20d='M196%2074c-9-13-31-9-31%207%200%2015%2018%2026%2031%2037%2013-11%2031-22%2031-37%200-16-22-20-31-7z'/%3E%20%3Cpath%20d='M188%2084c-3-5-11-3-11%203%200%205%206%209%2011%2013'%20opacity='.55'/%3E%20%3C/g%3E%20%3Cg%20opacity='.26'%3E%20%3Ccircle%20cx='142'%20cy='150'%20r='3.4'/%3E%3Ccircle%20cx='160'%20cy='143'%20r='3.4'/%3E%20%3Ccircle%20cx='179'%20cy='139'%20r='3.4'/%3E%3Ccircle%20cx='198'%20cy='138'%20r='3.4'/%3E%20%3Ccircle%20cx='217'%20cy='139'%20r='3.4'/%3E%3Ccircle%20cx='236'%20cy='143'%20r='3.4'/%3E%20%3Ccircle%20cx='254'%20cy='150'%20r='3.4'/%3E%20%3C/g%3E%20%3Cg%20opacity='.22'%3E%20%3Cpath%20d='M262%2056v34'/%3E%3Cpath%20d='M262%2056c9%202%2015%206%2017%2012'/%3E%20%3Cellipse%20cx='256'%20cy='92'%20rx='7'%20ry='5.4'%20transform='rotate(-18%20256%2092)'/%3E%20%3Cpath%20d='M292%2092v26'/%3E%3Cpath%20d='M292%2092c7%202%2012%205%2013%209'/%3E%20%3Cellipse%20cx='287'%20cy='120'%20rx='5.6'%20ry='4.4'%20transform='rotate(-18%20287%20120)'/%3E%20%3C/g%3E%20%3C/svg%3E");
-  background-repeat:no-repeat;
-  background-position:right -18px top -10px;
-  background-size:250px auto;
+  background-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20320%20240'%20fill='none'%20stroke='%232A1F3D'%20stroke-width='1.5'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%20%3Cg%20opacity='.30'%3E%20%3Cpath%20d='M196%2074c-9-13-31-9-31%207%200%2015%2018%2026%2031%2037%2013-11%2031-22%2031-37%200-16-22-20-31-7z'/%3E%20%3Cpath%20d='M188%2084c-3-5-11-3-11%203%200%205%206%209%2011%2013'%20opacity='.55'/%3E%20%3C/g%3E%20%3Cg%20opacity='.26'%3E%20%3Ccircle%20cx='142'%20cy='150'%20r='3.4'/%3E%3Ccircle%20cx='160'%20cy='143'%20r='3.4'/%3E%20%3Ccircle%20cx='179'%20cy='139'%20r='3.4'/%3E%3Ccircle%20cx='198'%20cy='138'%20r='3.4'/%3E%20%3Ccircle%20cx='217'%20cy='139'%20r='3.4'/%3E%3Ccircle%20cx='236'%20cy='143'%20r='3.4'/%3E%20%3Ccircle%20cx='254'%20cy='150'%20r='3.4'/%3E%20%3C/g%3E%20%3Cg%20opacity='.22'%3E%20%3Cpath%20d='M262%2056v34'/%3E%3Cpath%20d='M262%2056c9%202%2015%206%2017%2012'/%3E%20%3Cellipse%20cx='256'%20cy='92'%20rx='7'%20ry='5.4'%20transform='rotate(-18%20256%2092)'/%3E%20%3Cpath%20d='M292%2092v26'/%3E%3Cpath%20d='M292%2092c7%202%2012%205%2013%209'/%3E%20%3Cellipse%20cx='287'%20cy='120'%20rx='5.6'%20ry='4.4'%20transform='rotate(-18%20287%20120)'/%3E%20%3C/g%3E%20%3C/svg%3E"), linear-gradient(140deg, var(--hero-a) 0%, var(--apricot) 46%, var(--hero-b) 100%);
+  background-repeat:no-repeat, no-repeat;
+  background-position:right -18px top -10px, 0 0;
+  background-size:250px auto, 100% 100%;
 }
 @media (max-width:560px){
-  :root[data-theme="purple"] .hero{ background-size:176px auto;
-    background-position:right -26px top -6px; }
+  :root[data-theme="purple"] .hero{ background-size:176px auto, 100% 100%;
+    background-position:right -26px top -6px, 0 0; }
 }
 
 /* ---- a colour for each group -----------------------------------------
@@ -1178,6 +1247,13 @@ button, input, select, textarea{ font-family:var(--f); }
 :root[data-theme="purple"] .gc4{ --gc:#946A1E; --gc-lt:#F4E7C8; }   /* honey gold - grape sat too
                                                                    close to violet and lavender */
 :root[data-theme="purple"] .gc5{ --gc:#6A5F8F; --gc-lt:#E6E2F1; }   /* lavender grey */
+
+/* The Today panel in purple: a lilac gradient under the engraved motif. */
+:root[data-theme="purple"]{
+  --hero-a:#E4D7F9; --hero-b:#A98BE3; --hero-ink:#2A1F3D; --hero-soft:#584A72;
+  --hero-owe:#9B2C55; --hero-get:#1D5F4F; --hero-line:rgba(42,31,61,.14);
+  --hero-track:rgba(42,31,61,.18); --hero-glow:rgba(74,40,140,.55);
+}
 
 
 /* ---------- printing (kept last so it wins the cascade) ---------- */
@@ -2684,7 +2760,6 @@ function sendNudge(gid, who, amount, btn){
    reminded, live out here - or every redraw would jump back to the first card
    and forget the reminder. */
 let HERO_I = 0;
-let HERO_TIMER = null;
 const NUDGED = {};             // "gid|name" -> reminded this session
 
 // What I owe first, biggest first; then what I am owed, biggest first.
@@ -2736,35 +2811,58 @@ function viewHome(main){
   plan.forEach(t=> (t.dir==="pay" ? oweWho : owedWho)[t.who]=true );
   const net = owed-owe;
 
-  /* ---- the feature panel: everything to settle, one card at a time ---- */
+  /* ---- the feature panel: everything to settle, one card at a time ----
+     The amount is the point of each card, so it is the biggest thing on it;
+     who, which group and what for sit around it. */
   const slides = heroSlides();
-  if(HERO_TIMER){ clearInterval(HERO_TIMER); HERO_TIMER = null; }
   if(HERO_I >= slides.length) HERO_I = 0;
+  const still = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
 
-  const hero = el("section","hero carousel");
+  const hero = el("section","hero carousel"+(still ? " still" : ""));
   hero.setAttribute("aria-roledescription","carousel");
   hero.setAttribute("aria-label","What there is to settle");
+  // The cards slide inside their own window. The panel clips at its border,
+  // not inside its padding, so without this the next card showed at the edge.
+  const view = el("div","hc-view");
   const track = el("div","hc-track");
+  view.appendChild(track);
+  hero.appendChild(view);
+
+  const face = (icon, text)=> '<span class="ms" aria-hidden="true">'+icon+'</span>'+esc(text);
 
   if(!slides.length){
-    const s0 = el("div","hc-slide");
-    s0.innerHTML = '<h2>Everything is settled.</h2><p>Nobody owes anybody in any of your groups.</p>';
+    const s0 = el("div","hc-slide done on");
+    s0.innerHTML =
+      '<div class="hc-top"><span class="hc-av" aria-hidden="true"><span class="ms">check</span></span>'+
+        '<span class="hc-chip">All clear</span></div>'+
+      '<h2 class="hc-amt">Everything is settled.</h2>'+
+      '<p class="hc-for">Nobody owes anybody in any of your groups.</p>';
     track.appendChild(s0);
   }
   slides.forEach((t,i)=>{
     const pay = t.dir==="pay", forWhat = whatFor(t.gid, t.who), key = t.gid+"|"+t.who;
-    const sl = el("div","hc-slide");
+    const sl = el("div","hc-slide "+(pay ? "owe" : "get"));
     sl.setAttribute("role","group");
     sl.setAttribute("aria-roledescription","slide");
     sl.setAttribute("aria-label", (i+1)+" of "+slides.length);
     sl.innerHTML =
-      '<p class="hc-kicker">'+(pay ? "You owe" : "Owed to you")+' · '+esc(groupName(t.gid))+'</p>'+
-      '<h2>'+(pay ? "You owe "+esc(t.who)+"." : esc(t.who)+" owes you.")+'</h2>'+
-      '<p>'+money(t.amt)+(forWhat ? " for "+esc(forWhat) : "")+'.</p>'+
+      '<div class="hc-top">'+
+        '<span class="hc-av" aria-hidden="true">'+esc(initials(t.who))+'</span>'+
+        '<span class="hc-chip">'+(pay ? "You owe" : "Owed to you")+'<i aria-hidden="true"></i>'+esc(groupName(t.gid))+'</span>'+
+      '</div>'+
+      '<p class="hc-line">'+(pay ? 'You owe <b>'+esc(t.who)+'</b>' : '<b>'+esc(t.who)+'</b> owes you')+'</p>'+
+      '<h2 class="hc-amt">'+money(t.amt)+'</h2>'+
+      '<p class="hc-for">'+(forWhat ? 'for '+esc(forWhat) : 'in '+esc(groupName(t.gid)))+'</p>'+
       '<div class="act"></div>';
-    const b = el("button","btn dark");
-    if(!pay && NUDGED[key]){ b.textContent = "Reminder sent"; b.disabled = true; }
-    else b.textContent = (pay ? "Pay " : "Remind ")+t.who+" "+money(t.amt);
+    const b = el("button","btn dark hc-btn");
+    const label = (pay ? "Pay " : "Remind ")+t.who;
+    b.setAttribute("aria-label", label+" "+money(t.amt));
+    if(!pay && NUDGED[key]){
+      b.innerHTML = face("done","Reminder sent"); b.disabled = true;
+      b.setAttribute("aria-label","Reminder sent to "+t.who);
+    } else {
+      b.innerHTML = face(pay ? "north_east" : "notifications_active", label);
+    }
     b.addEventListener("click", ()=>{
       if(pay){
         // I owe them: record that I paid.
@@ -2775,62 +2873,61 @@ function viewHome(main){
       }
       // They owe me: ask them for it. Recording a payment they have not made
       // would put a falsehood in the ledger.
-      if(sendNudge(t.gid, t.who, t.amt, b)) NUDGED[key] = true;
+      if(sendNudge(t.gid, t.who, t.amt, b)){
+        NUDGED[key] = true;
+        b.innerHTML = face("done","Reminder sent");
+        b.setAttribute("aria-label","Reminder sent to "+t.who);
+      }
     });
     sl.querySelector(".act").appendChild(b);
     track.appendChild(sl);
   });
-  // The cards slide inside their own window. The panel clips at its border,
-  // not inside its padding, so without this the next card showed at the edge.
-  const view = el("div","hc-view");
-  view.appendChild(track);
-  hero.appendChild(view);
 
   const foot = el("div","hc-foot");
-  const dots = el("div","hc-dots");
-  foot.appendChild(dots);
+  const segs = el("div","hc-segs");
+  foot.appendChild(segs);
   foot.insertAdjacentHTML("beforeend",
-    '<span class="net">'+money(net)+'<small>Your overall balance</small></span>');
+    '<span class="net"><small>Overall balance</small>'+money(net)+'</span>');
   hero.appendChild(foot);
   main.appendChild(hero);
 
   if(slides.length > 1){
     slides.forEach((t,j)=>{
-      const d = el("button","hc-dot"); d.type = "button";
+      const d = el("button","hc-seg"); d.type = "button";
       d.setAttribute("aria-label", "Show "+(j+1)+" of "+slides.length);
-      d.addEventListener("click", ()=> show(j, true));
-      dots.appendChild(d);
+      d.innerHTML = "<i></i>";
+      d.addEventListener("click", ()=> show(j) );
+      // The bar filling on the showing segment is the clock: when it runs out
+      // the next card comes up. Holding the card pauses the fill, so the time
+      // left can never drift from what the bar shows. No timer to leak, and a
+      // background tab pauses it by itself.
+      d.firstChild.addEventListener("animationend", ()=>{ if(j===HERO_I) show(HERO_I + 1); });
+      segs.appendChild(d);
     });
   }
 
-  function show(i, byHand){
+  function show(i){
     if(!slides.length) return;
     HERO_I = (i + slides.length) % slides.length;
     track.style.transform = "translateX("+(-HERO_I*100)+"%)";
     // Cards off to the side are out of reach of the keyboard and screen
     // readers, so Tab never lands on a button that cannot be seen.
-    [].forEach.call(track.children, (c,j)=>{ c.inert = j!==HERO_I; });
-    [].forEach.call(dots.children, (d,j)=> d.setAttribute("aria-current", j===HERO_I ? "true" : "false"));
-    if(byHand) restart();
+    [].forEach.call(track.children, (c,j)=>{ c.inert = j!==HERO_I; c.classList.toggle("on", j===HERO_I); });
+    [].forEach.call(segs.children, (d,j)=>{
+      d.setAttribute("aria-current", j===HERO_I ? "true" : "false");
+      d.classList.remove("run");
+      if(j===HERO_I && !still){ void d.offsetWidth; d.classList.add("run"); }
+    });
   }
 
-  // Turns on its own - but not for somebody who has asked their device for
-  // less motion, not while a hand or a keyboard is on it, and not in a
-  // background tab.
-  const still = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-  let held = false;
-  function restart(){
-    if(HERO_TIMER){ clearInterval(HERO_TIMER); HERO_TIMER = null; }
-    if(still || slides.length < 2) return;
-    HERO_TIMER = setInterval(()=>{
-      if(!document.body.contains(track)){ clearInterval(HERO_TIMER); HERO_TIMER = null; return; }
-      if(!held && !document.hidden) show(HERO_I + 1);
-    }, 5000);
-  }
-  hero.addEventListener("pointerenter", ()=> held = true);
-  hero.addEventListener("pointerleave", ()=> held = false);
-  hero.addEventListener("focusin",  ()=> held = true);
-  hero.addEventListener("focusout", ()=> held = false);
+  // Hold still while a hand is on it, or while it has keyboard focus - but not
+  // merely because a tap left focus on a button, or it would stay stopped
+  // after every tap.
+  const hold = (on)=> hero.classList.toggle("held", on);
+  hero.addEventListener("pointerenter", ()=> hold(true));
+  hero.addEventListener("pointerleave", ()=> hold(false));
+  hero.addEventListener("focusin", (e)=>{ if(e.target.matches && e.target.matches(":focus-visible")) hold(true); });
+  hero.addEventListener("focusout", ()=> hold(false));
 
   // Swipe between cards.
   let x0 = null;
@@ -2838,7 +2935,7 @@ function viewHome(main){
   track.addEventListener("pointerup", e=>{
     if(x0 === null) return;
     const dx = e.clientX - x0; x0 = null;
-    if(Math.abs(dx) > 40) show(HERO_I + (dx < 0 ? 1 : -1), true);
+    if(Math.abs(dx) > 40) show(HERO_I + (dx < 0 ? 1 : -1));
   });
 
   // Put the card that was showing back without sliding to it from the first.
@@ -2846,7 +2943,6 @@ function viewHome(main){
   show(HERO_I);
   void track.offsetWidth;
   track.style.transition = "";
-  restart();
 
   /* ---- summary cards ---- */
   const nOwed=Object.keys(owedWho).length, nOwe=Object.keys(oweWho).length;
