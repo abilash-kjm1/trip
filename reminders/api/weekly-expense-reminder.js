@@ -264,6 +264,11 @@ export default async function handler(req, res) {
           : /root\.child\('access'\)/.test(live)
             ? "approval gate, but any approved account can open any group"
             : "no approval gate on groups";
+        // Only the administrator may delete a group: a member's write has to
+        // leave the group, and its details, in place.
+        log.groupDelete = /newData\.exists\(\)\s*&&\s*\(newData\.child\('meta'\)\.exists\(\)/.test(live)
+          ? "administrator only"
+          : "any member (rules not yet published)";
       } catch (err) {
         log.rules = "could not read: " + ((err && err.message) || String(err)).slice(0, 200);
       }
