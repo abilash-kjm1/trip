@@ -66,16 +66,49 @@
         ".validate": "newData.hasChildren(['online','at']) && newData.child('online').isBoolean() && newData.child('at').isNumber()"
       }
     },
+    // Realtime Database only honours a .read rule at the exact path being
+    // listened to - a rule nested under $id does not apply to a listener on
+    // the parent "announcements" itself, which is what a broad list needs.
+    // So this is two real, separately-readable places rather than one:
+    // "all" for broadcasts, everyone approved can list it directly; "inbox"
+    // for a message to one person, keyed by their uid, so their own listen
+    // is a listen at a path that actually grants it. "sent" is the admin's
+    // own write-once log of everything sent, for the history list - reading
+    // it never has to reach into every account's private inbox.
     "announcements": {
-      ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
-      "$id": {
-        ".read": "auth != null && ((root.child('access').child(auth.uid).child('status').val() == 'approved' && (data.child('to').val() == 'all' || data.child('to').val() == auth.uid)) || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
-        ".validate": "newData.hasChildren(['text','at','byUid','to']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.child('at').isNumber() && newData.child('to').isString()",
-        "ack": {
-          "$uid": {
-            ".write": "auth != null && auth.uid == $uid",
-            ".validate": "newData.hasChildren(['at']) && newData.child('at').isNumber()"
+      "all": {
+        ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
+        ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
+        "$id": {
+          ".validate": "newData.hasChildren(['text','at','byUid']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.child('at').isNumber()",
+          "ack": {
+            "$uid": {
+              ".write": "auth != null && auth.uid == $uid",
+              ".validate": "newData.hasChildren(['at']) && newData.child('at').isNumber()"
+            }
           }
+        }
+      },
+      "inbox": {
+        "$to": {
+          ".read": "auth != null && (auth.uid == $to || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
+          "$id": {
+            ".validate": "newData.hasChildren(['text','at','byUid']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.child('at').isNumber()",
+            "ack": {
+              "$uid": {
+                ".write": "auth != null && auth.uid == $uid && auth.uid == $to",
+                ".validate": "newData.hasChildren(['at']) && newData.child('at').isNumber()"
+              }
+            }
+          }
+        }
+      },
+      "sent": {
+        ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
+        ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
+        "$id": {
+          ".validate": "newData.hasChildren(['text','at','byUid','to']) && newData.child('text').isString() && newData.child('at').isNumber() && newData.child('to').isString()"
         }
       }
     },
