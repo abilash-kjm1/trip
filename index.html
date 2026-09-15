@@ -257,6 +257,16 @@ button, input, select, textarea{ font:inherit; font-family:var(--f); }
 .av.sm{ width:30px; height:30px; font-size:12px; }
 .av.lg{ width:62px; height:62px; font-size:24px; }
 img.av{ object-fit:cover; background:var(--fill-1); }
+
+/* A person with Settle open right now: a small green dot on their avatar,
+   only ever drawn when they actually are - no dot at all otherwise. */
+.avwrap{ position:relative; display:inline-flex; flex:0 0 auto; }
+.av-dot{ position:absolute; right:-1px; bottom:-1px; width:10px; height:10px; border-radius:50%;
+  background:#22A45D; box-shadow:0 0 0 2px var(--surface); font-style:normal; }
+.avwrap.sm .av-dot{ width:8px; height:8px; }
+.avwrap.lg .av-dot{ width:14px; height:14px; box-shadow:0 0 0 3px var(--surface); }
+.etx-h.pres{ color:var(--ink-3); }
+.etx-h.pres.on{ color:#1E8F55; font-weight:600; }
 .cat{
   width:44px; height:44px; border-radius:12px; flex:0 0 auto;
   background:var(--fill-1); color:var(--label-2);
@@ -3279,6 +3289,7 @@ let ACCESS   = undefined;                   // access/{uid} - undefined until it
 let REQUESTS = {};                          // access/* - everybody, admin only
 let ALLUSERS = {};                          // users/* - admin only, to find who never asked
 let DIRECTORY= {};                          // directory/* - everybody in Settle, to pick from
+let PRESENCE = {};                          // presence/{uid} -> {online, at} - who has Settle open right now
 let ME       = null;                        // my person-name inside CURRENT group
 let JOINED   = lsGet(LS.grp, []);           // [{id,name}]
 let CURRENT  = null;                        // active group id
@@ -3542,9 +3553,41 @@ function dayLabel(ts){
   if(dayKey(ts)===dayKey(Date.now()-864e5)) return "Yesterday";
   return d.toLocaleDateString(undefined,{weekday:"long", day:"numeric", month:"long"});
 }
-function avatarHTML(cls, name, colour, photo){
-  if(photo) return '<img class="av '+cls+'" src="'+esc(photo)+'" alt="" referrerpolicy="no-referrer">';
-  return '<span class="av '+cls+'" style="background:'+(colour||"#8e99a6")+'">'+esc(initials(name))+'</span>';
+/* ---------------- presence: who has Settle open right now ----------------
+   presence/{uid} = {online, at}, kept current with Firebase's own
+   .info/connected + onDisconnect: the database itself notices a phone has
+   gone away - closed, lost signal, out of battery - and flips the record,
+   with nothing left for that phone to do on its way out. */
+const isOnline = (uid)=> !!(uid && PRESENCE[uid] && PRESENCE[uid].online===true);
+function presenceText(uid){
+  if(!uid || !PRESENCE[uid]) return "";
+  if(PRESENCE[uid].online===true) return "Online now";
+  const at=Number(PRESENCE[uid].at)||0;
+  return at ? "Last seen "+arrAgo(at) : "";
+}
+/* Told directly, the moment a connection exists: onDisconnect is registered
+   fresh on every reconnect (an earlier registration does not survive a drop),
+   so this runs whenever ".info/connected" turns true, not only at sign-in.
+   A raw write, outside the durable/outbox layer on purpose - there is
+   nothing to gain by queuing "I am online" for later delivery: read while
+   offline, that would only be stale. */
+function presenceGoOnline(){
+  if(!fb || !fb.dbMod || !remote || !remote.db || !USER) return;
+  const r=fb.dbMod.ref(remote.db, "presence/"+USER.uid);
+  fb.dbMod.onDisconnect(r).set({online:false, at:Date.now()}).then(()=>{
+    fb.dbMod.set(r, {online:true, at:Date.now()});
+  }).catch(()=>{});
+}
+function presenceGoOffline(){
+  if(!fb || !fb.dbMod || !remote || !remote.db || !USER) return;
+  try{ fb.dbMod.set(fb.dbMod.ref(remote.db, "presence/"+USER.uid), {online:false, at:Date.now()}); }catch(e){}
+}
+function avatarHTML(cls, name, colour, photo, uid){
+  const inner = photo
+    ? '<img class="av '+cls+'" src="'+esc(photo)+'" alt="" referrerpolicy="no-referrer">'
+    : '<span class="av '+cls+'" style="background:'+(colour||"#8e99a6")+'">'+esc(initials(name))+'</span>';
+  if(!isOnline(uid)) return inner;
+  return '<span class="avwrap '+cls+'">'+inner+'<i class="av-dot" aria-label="Online now"></i></span>';
 }
 
 /* ---------------- group data accessors ---------------- */
@@ -5356,10 +5399,12 @@ function ixPeople(main, enter, o){
     const r=el("div","etx-person ix-person"+(d?"":" off"));
     r.style.setProperty("--i", n++);
     r.dataset.q=(p.name+" "+(d ? d.id+" "+d.name : "")).toLowerCase();
-    r.innerHTML=avatarHTML("", p.name, p.color, p.photo)+
+    const pres=presenceText(p.uid);
+    r.innerHTML=avatarHTML("", p.name, p.color, p.photo, p.uid)+
       '<span class="etx-b"><span class="etx-n">'+esc(p.name)+'</span>'+
         (d ? '<span class="etx-h">'+esc(d.id)+(d.name!==p.name ? ' &middot; '+esc(d.name) : '')+'</span>'
-           : '<span class="etx-h none">'+esc(o.none)+'</span>')+'</span>';
+           : '<span class="etx-h none">'+esc(o.none)+'</span>')+
+        (pres ? '<span class="etx-h pres'+(isOnline(p.uid)?' on':'')+'">'+esc(pres)+'</span>' : '')+'</span>';
     if(d){
       const b=el("button","etx-copy"); b.type="button";
       b.innerHTML='<span class="ms" aria-hidden="true">content_copy</span>Copy';
@@ -7440,9 +7485,9 @@ function sheetMembers(){
         const ph=$("mPickList");
         pool.forEach(p=>{
           const r=el("button","row");
-          r.innerHTML=avatarHTML("", p.name, null, p.photo)+
+          r.innerHTML=avatarHTML("", p.name, null, p.photo, p.uid)+
             '<span class="body"><span class="t1">'+esc(p.name)+'</span>'+
-            '<span class="t2">'+esc(p.email||"")+'</span></span>'+
+            '<span class="t2">'+esc(p.email||presenceText(p.uid)||"")+'</span></span>'+
             '<span class="right"><span class="ms" aria-hidden="true" '+
             'style="color:var(--tint)">person_add</span></span>';
           r.addEventListener("click", ()=> addFromDirectory(gid, p).then(()=>setTimeout(draw,150)) );
@@ -7454,10 +7499,12 @@ function sheetMembers(){
       list.forEach(m=>{
         const v=bal[m.name]||0, isMe=m.name===ME, mayEdit=isAdmin()||isMe||!m.uid;
         const r=el("div","splitrow");
-        r.innerHTML=avatarHTML("sm", m.name, m.color, m.photo)+
+        const presence=presenceText(m.uid);
+        r.innerHTML=avatarHTML("sm", m.name, m.color, m.photo, m.uid)+
           '<span class="nm">'+esc(m.name)+(isMe?' <span class="tag on">you</span>':'')+
           '<span style="display:block;font-size:11.5px;color:var(--label-3)">'+
-            (m.email?esc(m.email)
+            (m.email?esc(m.email)+(presence?" \u00b7 "+esc(presence):"")
+                    :presence?esc(presence)
                     :m.invite?"invited \u00b7 "+esc(m.invite)
                     :"not signed in yet")+'</span></span>'+
           '<span class="calc">'+(Math.abs(v)<0.005?"settled":money(v))+'</span>';
@@ -9929,7 +9976,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915194022";
+const APP_BUILD = "20260915211405";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
@@ -10402,6 +10449,7 @@ function signOutNow(){
         ". Signing out now will lose "+(waiting===1?"it":"them")+". Sign out anyway?"
       : "Sign out of Settle on this device?")) return;
   Object.keys(subs).forEach(k=>{ subs[k](); delete subs[k]; });
+  presenceGoOffline();
   fb.authMod.signOut(fb.auth).then(()=>{
     try{ localStorage.removeItem(LS.grp); localStorage.removeItem(LS.cur);
          localStorage.removeItem(LS.who); }catch(e){}
@@ -10417,6 +10465,10 @@ function onSignedIn(u){
   // this person's to see. Signing out clears it, but signing straight in as
   // somebody else does not, and that is exactly how one account ended up
   // looking at another's group.
+  // Switching to a different account on this device without signing all
+  // the way out first: the account being left is not using Settle any more
+  // either, even though nothing here formally signed it out.
+  if(USER && USER.uid!==u.uid) presenceGoOffline();
   forgetPreviousAccount(u.uid);
 
   USER = { uid:u.uid, name:u.displayName || (u.email||"").split("@")[0] || "You",
@@ -10433,6 +10485,11 @@ function onSignedIn(u){
 
   // Keep a profile record so the admin can see who is who.
   set("users/"+USER.uid+"/profile", {name:USER.name, email:USER.email, photo:USER.photo||null, at:Date.now()});
+
+  // Everybody who has Settle open right now, or when they last did.
+  remote.onValue(ref("presence"), snap=>{ PRESENCE = snap.val() || {}; render(); },
+    ()=>{ PRESENCE = {}; });
+  presenceGoOnline();
 
   // My entry in the directory, so other people can add me to a group by
   // picking my name instead of typing it and hoping they spell it the same.
@@ -10607,7 +10664,13 @@ function adoptLegacy(){
         }
       });
 
-      dbMod.onValue(dbMod.ref(db,".info/connected"), s=> syncConnected(s.val()===true));
+      dbMod.onValue(dbMod.ref(db,".info/connected"), s=>{
+        const on=s.val()===true;
+        syncConnected(on);
+        // onDisconnect only lasts until the connection that set it drops, so
+        // it is registered again every time one comes back, not only once.
+        if(on && USER) presenceGoOnline();
+      });
     }catch(err){
       setSync("bad","Could not start — "+((err&&err.message)?err.message:"check your connection"));
     }
