@@ -1280,6 +1280,68 @@ button, input, select, textarea{ font-family:var(--f); }
 .vz-turn-txt p{ margin:0 0 8px; font-size:14px; line-height:1.45; color:var(--ink-2); }
 .vz-turn-txt p b{ color:var(--ink); }
 .vz-next{ margin-top:4px; }
+
+/* ---- Who should pay next: the answer, the order, and why ---- */
+.wn-hero{ display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:18px;
+  background:linear-gradient(135deg, var(--apricot-lt) 0%, color-mix(in srgb, var(--apricot) 32%, var(--surface)) 100%);
+  border:1px solid color-mix(in srgb, var(--apricot) 40%, transparent); }
+.wn-hero.even{ background:color-mix(in srgb, var(--good) 9%, var(--surface)); border-color:color-mix(in srgb, var(--good) 22%, transparent); }
+.wn-av{ --c:var(--line); flex:none; width:38px; height:38px; border-radius:50%; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; font-weight:700;
+  box-shadow:0 0 0 2px var(--surface), 0 0 0 3.5px var(--c); }
+.wn-av img{ width:100%; height:100%; object-fit:cover; display:block; }
+.wn-av.big{ width:60px; height:60px; font-size:20px; box-shadow:0 0 0 3px var(--surface), 0 0 0 5px var(--c);
+  animation:wnPulse 2.8s ease-in-out infinite; }
+.wn-av.even{ --c:var(--good); background:var(--good); animation:none; }
+.wn-av.even .ms{ font-size:30px; }
+@keyframes wnPulse{ 50%{ box-shadow:0 0 0 3px var(--surface), 0 0 0 5px var(--c), 0 0 0 12px color-mix(in srgb, var(--c) 20%, transparent); } }
+.wn-hero-t{ min-width:0; }
+.wn-hero-t small{ display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--apricot-dk); }
+.wn-hero.even .wn-hero-t small{ color:var(--good); }
+.wn-hero-t b{ display:block; margin-top:1px; font-family:var(--serif); font-size:28px; font-weight:600; line-height:1.1;
+  color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wn-hero-t p{ margin:3px 0 0; font-size:13.5px; line-height:1.4; color:var(--ink-2); }
+.wn-hero-t strong{ color:var(--bad); font-weight:700; }
+.wn-cta{ display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:10px; }
+.wn-cta .ms{ font-size:20px; }
+.wn-label{ margin:18px 2px 8px; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); }
+
+.wn-queue{ display:flex; align-items:flex-start; gap:2px; overflow-x:auto; padding:6px 2px 4px; scrollbar-width:none; }
+.wn-queue::-webkit-scrollbar{ display:none; }
+.wn-q{ flex:0 0 auto; width:62px; display:flex; flex-direction:column; align-items:center; gap:5px; text-align:center; }
+.wn-q-av{ position:relative; }
+.wn-q-av i{ position:absolute; right:-4px; top:-4px; min-width:18px; height:18px; padding:0 4px; border-radius:999px;
+  display:flex; align-items:center; justify-content:center; font-style:normal; font-size:10.5px; font-weight:700;
+  background:var(--ink); color:var(--cream); box-shadow:0 0 0 2px var(--surface); }
+.wn-q.first .wn-q-av i{ background:var(--apricot-dk); }
+.wn-q.first .wn-av{ width:44px; height:44px; margin-top:-3px; }
+.wn-q .nm{ max-width:62px; font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wn-arrow{ flex:none; align-self:flex-start; margin:12px -2px 0; font-size:16px; color:var(--ink-3); }
+.wn-tag{ padding:1px 7px; border-radius:999px; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.wn-tag.neg{ background:color-mix(in srgb, var(--bad) 12%, transparent); color:var(--bad); }
+.wn-tag.pos{ background:color-mix(in srgb, var(--good) 12%, transparent); color:var(--good); }
+.wn-tag.zero{ background:var(--fill-1); color:var(--ink-3); }
+
+.wn-list{ display:flex; flex-direction:column; gap:12px; }
+.wn-row{ display:grid; grid-template-columns:minmax(0, 92px) minmax(0, 1fr) 72px; align-items:center; gap:3px 10px; }
+.wn-axis{ margin-bottom:-6px; }
+.wn-axis .ax{ display:flex; justify-content:space-between; font-size:10.5px; color:var(--ink-3); }
+.wn-axis .ax i{ font-style:normal; }
+.wn-name{ display:flex; align-items:center; gap:7px; min-width:0; font-size:13.5px; font-weight:600; color:var(--ink); }
+.wn-name i{ flex:none; width:9px; height:9px; border-radius:50%; }
+.wn-name span{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wn-row.is-me .wn-name span{ color:var(--apricot-dk); }
+.wn-bar{ position:relative; height:10px; border-radius:999px; background:var(--fill-1); }
+.wn-bar::after{ content:""; position:absolute; left:50%; top:-4px; bottom:-4px; width:2px; margin-left:-1px; border-radius:2px; background:var(--ink-3); opacity:.45; }
+.wn-fill{ position:absolute; top:0; bottom:0; border-radius:999px; }
+.wn-fill.neg{ right:50%; transform-origin:100% 50%; background:linear-gradient(270deg, var(--bad), color-mix(in srgb, var(--bad) 55%, var(--surface))); }
+.wn-fill.pos{ left:50%; transform-origin:0 50%; background:linear-gradient(90deg, var(--good), color-mix(in srgb, var(--good) 55%, var(--surface))); }
+.vz-sec.enter .wn-fill{ animation:wnGrow .9s cubic-bezier(.22,.61,.36,1) .25s backwards; }
+@keyframes wnGrow{ from{ transform:scaleX(0); } }
+.wn-val{ text-align:right; font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.wn-val.neg{ color:var(--bad); } .wn-val.pos{ color:var(--good); } .wn-val.zero{ color:var(--ink-3); }
+.wn-sub{ grid-column:2 / 4; margin-top:-1px; font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+@media (prefers-reduced-motion:reduce){ .wn-av.big, .vz-sec.enter .wn-fill{ animation:none; } }
 .vz-bars{ display:flex; flex-direction:column; gap:12px; margin-top:16px; }
 .vz-bar-row{ display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 10px; }
 .vz-bar-n{ display:flex; align-items:center; gap:6px; min-width:0; font-size:13.5px; font-weight:600; color:var(--ink); }
@@ -7698,7 +7760,7 @@ function sheetNetSettle(t, L){
 
 /* ---------- 2. who should pay next ---------- */
 function vzWhoNext(main){
-  const sec=vzSection(main, "autorenew", "Who should pay next", "Who has fronted more than their share - and whose turn it is.");
+  const sec=vzSection(main, "autorenew", "Who should pay next", "Whoever has paid least compared with their share.");
   const groups=JOINED.filter(g=> loaded(g.id) && expensesOf(g.id).length && names(g.id).length>1)
     .sort((a,b)=> vzLastAt(b.id)-vzLastAt(a.id));
   if(!groups.length){
@@ -7719,58 +7781,75 @@ function vzWhoNext(main){
   }
   const gid=VZ_GROUP, ppl=names(gid), me=meIn(gid);
   const paid={}, share={}; ppl.forEach(n=>{ paid[n]=0; share[n]=0; });
-  let total=0;
   expensesOf(gid).forEach(e=>{
-    const a=Number(e.amount)||0; total+=a;
+    const a=Number(e.amount)||0;
     if(paid[e.payer]!=null) paid[e.payer]+=a;
     const sh=sharesOf(e); Object.keys(sh).forEach(n=>{ if(share[n]!=null) share[n]+=sh[n]; });
   });
+  // gap: what someone has paid, less what they have used. Below zero, they
+  // have paid less than their share - and whoever is furthest below pays next.
   const rows=ppl.map(n=>({n, paid:paid[n], share:share[n], gap:Math.round((paid[n]-share[n])*100)/100, color:vzColor(colorOf(n, gid))}));
-  const next=rows.slice().sort((a,b)=> a.gap-b.gap)[0];
-  const lead=rows.slice().sort((a,b)=> b.paid-a.paid)[0];
+  const order=rows.slice().sort((a,b)=> a.gap-b.gap);
+  const next=order[0];
+  const EVEN=0.5;                                   // cents either way is not a turn
+  const behind = next.gap < -EVEN;
   const who=n=> n===me ? "You" : n;
+  const tone=g=> g < -EVEN ? "neg" : g > EVEN ? "pos" : "zero";
+  const tag=g=> tone(g)==="neg" ? "−"+money(-g) : tone(g)==="pos" ? "+"+money(g) : "Even";
+  const face=(r, cls)=>{
+    const m=memberOf(r.n, gid);
+    return '<span class="wn-av'+(cls ? ' '+cls : '')+'" style="--c:'+r.color+(m && m.photo ? '' : ';background:'+r.color)+'">'+
+      (m && m.photo ? '<img src="'+esc(m.photo)+'" alt="" referrerpolicy="no-referrer">' : esc(initials(r.n)))+'</span>';
+  };
 
-  const R=56, C=2*Math.PI*R; let off=0;
-  const segs=rows.filter(r=>r.paid>0.004).map(r=>{
-    const len=total ? r.paid/total*C : 0;
-    const s='<circle class="vz-seg" cx="75" cy="75" r="'+R+'" style="stroke:'+r.color+'" stroke-dasharray="'+
-      Math.max(0, len-2.5).toFixed(1)+' '+C.toFixed(1)+'" stroke-dashoffset="'+(-off).toFixed(1)+'"/>';
-    off+=len; return s;
-  }).join("");
-  const behind = next.gap < -0.004;
-  const turn=el("div","vz-turn");
-  turn.innerHTML=
-    '<div class="vz-donut"><svg viewBox="0 0 150 150" aria-hidden="true"><circle class="trk" cx="75" cy="75" r="'+R+'"/>'+segs+'</svg>'+
-      '<div class="vz-donut-c"><small>Next up</small><b>'+esc(behind ? who(next.n) : "Anyone")+'</b></div></div>'+
-    '<div class="vz-turn-txt"><p>'+(behind
-        ? (next.n===me
-            ? 'It’s <b>your turn</b> - you’re '+esc(money(-next.gap))+' behind your share in '+esc(groupName(gid))+'.'
-            : '<b>'+esc(next.n)+'</b> is furthest behind ('+esc(money(-next.gap))+'), so it’s their turn to pay.')
-        : 'Everyone has fronted about their share - anyone can take the next one.')+'</p>'+
-      (total>0.004 && lead ? '<p class="vz-small">'+esc(who(lead.n))+(lead.n===me?' have':' has')+' covered '+
-        Math.round(lead.paid/total*100)+'% of the '+esc(money(total))+' spent.</p>' : '')+
-    '</div>';
-  card.appendChild(turn);
+  // 1. The answer, first and large.
+  const hero=el("div","wn-hero"+(behind ? "" : " even"));
+  hero.innerHTML = behind
+    ? face(next, "big")+
+      '<div class="wn-hero-t"><small>Next to pay</small><b>'+esc(who(next.n))+'</b>'+
+        '<p>'+(next.n===me ? 'You’ve' : esc(next.n)+' has')+' paid <strong>'+esc(money(-next.gap))+'</strong> less than '+
+        (next.n===me ? 'your' : 'their')+' share so far.</p></div>'
+    : '<span class="wn-av big even"><span class="ms" aria-hidden="true">handshake</span></span>'+
+      '<div class="wn-hero-t"><small>Next to pay</small><b>Anyone</b><p>Everyone has paid about their share.</p></div>';
+  card.appendChild(hero);
   if(behind && next.n===me){
-    const b=el("button","btn p vz-next","+  Add the next expense"); b.type="button";
+    const b=el("button","btn p wn-cta"); b.type="button";
+    b.innerHTML='<span class="ms" aria-hidden="true">add</span>Add the next expense';
     b.addEventListener("click", ()=>{ QA_LAST=gid; sheetQuickAdd(); });
-    turn.querySelector(".vz-turn-txt").appendChild(b);
+    card.appendChild(b);
   }
-  const maxV=Math.max.apply(null, rows.map(r=>Math.max(r.paid, r.share))) || 1;
-  const bars=el("div","vz-bars");
-  rows.slice().sort((a,b)=> b.gap-a.gap).forEach(r=>{
-    const tone=r.gap>0.004 ? "pos" : r.gap<-0.004 ? "neg" : "zero";
-    const row=el("div","vz-bar-row");
-    row.innerHTML=
-      '<span class="vz-bar-n"><span class="vz-dot" style="background:'+r.color+'"></span>'+esc(who(r.n))+'</span>'+
-      '<span class="vz-gap '+tone+'">'+(tone==="pos" ? esc(money(r.gap))+" ahead" : tone==="neg" ? esc(money(-r.gap))+" behind" : "even")+'</span>'+
-      '<span class="vz-track"><span class="vz-fill" style="width:'+(r.paid/maxV*100).toFixed(1)+'%;background:'+r.color+'"></span>'+
-        '<span class="vz-mark" style="left:calc('+(r.share/maxV*100).toFixed(1)+'% - 1px)"></span></span>'+
-      '<span class="vz-sub">Fronted '+esc(money(r.paid))+' · fair share '+esc(money(r.share))+'</span>';
-    bars.appendChild(row);
-  });
-  card.appendChild(bars);
-  card.appendChild(el("p","vz-note","The bar is what each person paid; the line is their fair share."));
+
+  // 2. Turn order: who pays first, then who, then who.
+  if(order.length>1){
+    card.appendChild(el("div","wn-label","Turn order"));
+    const q=el("div","wn-queue");
+    q.innerHTML=order.map((r,i)=>
+      (i ? '<span class="wn-arrow ms" aria-hidden="true">chevron_right</span>' : '')+
+      '<div class="wn-q'+(i===0 && behind ? ' first' : '')+'">'+
+        '<span class="wn-q-av">'+face(r, "")+'<i>'+(i+1)+'</i></span>'+
+        '<span class="nm">'+esc(who(r.n))+'</span>'+
+        '<span class="wn-tag '+tone(r.gap)+'">'+esc(tag(r.gap))+'</span>'+
+      '</div>').join("");
+    card.appendChild(q);
+  }
+
+  // 3. Paid against share, from a middle line: left is less, right is more.
+  card.appendChild(el("div","wn-label","Paid vs share"));
+  const maxGap=Math.max(1, ...rows.map(r=>Math.abs(r.gap)));
+  const list=el("div","wn-list");
+  list.innerHTML=
+    '<div class="wn-row wn-axis" aria-hidden="true"><span></span><span class="ax"><i>Paid less</i><i>Paid more</i></span><span></span></div>'+
+    order.map(r=>{
+      const t=tone(r.gap), w=(Math.abs(r.gap)/maxGap*50).toFixed(1);
+      return '<div class="wn-row'+(r.n===me ? ' is-me' : '')+'">'+
+        '<span class="wn-name"><i style="background:'+r.color+'"></i><span>'+esc(who(r.n))+'</span></span>'+
+        '<span class="wn-bar">'+(t==="zero" ? '' : '<span class="wn-fill '+t+'" style="width:'+w+'%"></span>')+'</span>'+
+        '<span class="wn-val '+t+'">'+esc(tag(r.gap))+'</span>'+
+        '<span class="wn-sub">Paid '+esc(money(r.paid))+' · share '+esc(money(r.share))+'</span>'+
+      '</div>';
+    }).join("");
+  card.appendChild(list);
+  card.appendChild(el("p","vz-note","Share is each person’s part of every expense in "+groupName(gid)+". Whoever has paid least against it pays next."));
 }
 
 /* ---------- 3. what this really cost you ---------- */
@@ -8742,7 +8821,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915000625";
+const APP_BUILD = "20260915001659";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
