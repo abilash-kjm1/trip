@@ -9923,7 +9923,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915192912";
+const APP_BUILD = "20260915193703";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
@@ -10066,8 +10066,12 @@ let NOTIF_SELF_UNTIL = 0;         // Date.now() until which my own writes are no
 const NOTIF_CAP = 5;
 
 /* Every local write goes through push/set/del/upd/updStrict in app-js.js,
-   each of which calls this first - so whatever I just did, on either side,
-   is folded into the next baseline rather than read back to me as news. */
+   each of which calls this first - so whatever THIS device just did is
+   folded into the next baseline rather than read back to it as news.
+   Deliberately per-device, not per-account: it lives only in this tab's
+   memory and is never synced, so an account's other phones and computers
+   still hear about a change made here - which is the point of a device
+   knowing when something you did elsewhere has landed. */
 function notifSelfGrace(){ NOTIF_SELF_UNTIL = Date.now() + 2500; }
 
 /* One colour per kind of change, so the stack can be read at a glance
@@ -10103,10 +10107,6 @@ function notifRender(){
   });
 }
 
-/* Whoever's name is on a record, not me. Old records with no byUid fall back
-   to the name, the same rule the flag badge uses. */
-function notifOther(x, me){ return x.byUid ? x.byUid!==USER.uid : (!me || x.by!==me); }
-
 function notifCheck(){
   if(!USER || !mayUse()) return;
   const grace = Date.now() < NOTIF_SELF_UNTIL;
@@ -10123,7 +10123,7 @@ function notifCheck(){
   JOINED.forEach(g=>{
     const gid=g.id;
     if(!loaded(gid)) return;
-    const me=meIn(gid), first=!NOTIF_SHADOW[gid];
+    const first=!NOTIF_SHADOW[gid];
     const shadow = NOTIF_SHADOW[gid] = NOTIF_SHADOW[gid] || {expenses:{}, payments:{}};
 
     [["expenses", expensesOf(gid), "add_circle",
@@ -10141,8 +10141,8 @@ function notifCheck(){
         now[item.k]={sig, label};
         if(first || grace) return;
         const was=shadow[kind][item.k];
-        if(!was){ if(notifOther(item, me)) notifPush(addKind, addIcon, addText(item), gid); }
-        else if(was.sig!==sig){ if(notifOther(item, me)) notifPush("edit", "edit", editText(item), gid); }
+        if(!was){ notifPush(addKind, addIcon, addText(item), gid); }
+        else if(was.sig!==sig){ notifPush("edit", "edit", editText(item), gid); }
       });
       if(!first && !grace){
         Object.keys(shadow[kind]).forEach(k=>{
