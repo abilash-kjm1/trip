@@ -2926,28 +2926,31 @@ span.af-pill{ cursor:default; padding-right:12px; }
 }
 
 
-/* ---- the live activity feed: a small stack, top right ---- */
+/* ---- the live activity feed: small, top right, one line each ---- */
 .notif-stack{ position:fixed; top:calc(var(--safe-t) + 76px); right:var(--s3); z-index:60;
-  display:flex; flex-direction:column; gap:8px; width:min(324px, calc(100vw - 24px)); pointer-events:none; }
-.notif-card{ pointer-events:auto; display:flex; align-items:flex-start; gap:10px; padding:11px 10px 11px 12px;
-  border-radius:16px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line), 0 10px 26px -12px rgba(0,0,0,.35);
+  display:flex; flex-direction:column; align-items:flex-end; gap:6px;
+  max-width:min(210px, calc(100vw - 24px)); pointer-events:none; }
+.notif-card{ pointer-events:auto; display:flex; align-items:center; gap:6px; max-width:100%;
+  padding:6px 6px 6px 9px; border-radius:999px; background:var(--surface);
+  box-shadow:inset 0 0 0 1px var(--line), 0 8px 20px -12px rgba(0,0,0,.35);
   cursor:pointer; -webkit-tap-highlight-color:transparent;
-  animation:notifIn .35s cubic-bezier(.22,.61,.36,1) backwards; }
-@keyframes notifIn{ from{ opacity:0; transform:translateX(18px) scale(.97); } }
-.notif-ic{ flex:none; width:30px; height:30px; margin-top:1px; border-radius:50%; display:flex; align-items:center;
+  animation:notifIn .3s cubic-bezier(.22,.61,.36,1) backwards; }
+@keyframes notifIn{ from{ opacity:0; transform:translateX(14px) scale(.96); } }
+.notif-ic{ flex:none; width:20px; height:20px; border-radius:50%; display:flex; align-items:center;
   justify-content:center; background:var(--apricot-lt); color:var(--apricot-dk); }
-.notif-ic .ms{ font-size:17px; }
-.notif-t{ flex:1; min-width:0; font-size:13px; line-height:1.4; color:var(--ink); }
-.notif-x{ flex:none; width:26px; height:26px; margin-top:-2px; margin-right:-2px; border:0; border-radius:50%;
+.notif-ic .ms{ font-size:13px; }
+.notif-t{ flex:1; min-width:0; font-size:11.5px; font-weight:600; line-height:1.25; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.notif-x{ flex:none; width:19px; height:19px; border:0; border-radius:50%;
   display:flex; align-items:center; justify-content:center; background:transparent; color:var(--ink-3); cursor:pointer;
   -webkit-tap-highlight-color:transparent; transition:background .15s, color .15s; }
-.notif-x .ms{ font-size:16px; }
+.notif-x .ms{ font-size:13px; }
 .notif-x:hover{ background:var(--fill-1); color:var(--ink); }
 .notif-x:active{ transform:scale(.9); }
 .notif-x:focus:not(:focus-visible){ outline:none; }
 .notif-x:focus-visible{ outline:2px solid var(--apricot-dk); outline-offset:1px; }
-@media (hover:hover){ .notif-card:hover{ box-shadow:inset 0 0 0 1px var(--line), 0 14px 30px -12px rgba(0,0,0,.4); } }
-@media (max-width:460px){ .notif-stack{ top:calc(var(--safe-t) + 8px); left:var(--s3); right:var(--s3); width:auto; } }
+@media (hover:hover){ .notif-card:hover{ box-shadow:inset 0 0 0 1px var(--line), 0 12px 24px -12px rgba(0,0,0,.4); } }
+@media (max-width:460px){ .notif-stack{ top:calc(var(--safe-t) + 8px); right:var(--s3); } }
 @media (prefers-reduced-motion:reduce){ .notif-card{ animation:none; } }
 :root[data-theme="purple"] .notif-ic{ background:rgba(109,63,191,.14); color:#6D3FBF; }
 
@@ -9914,7 +9917,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915192157";
+const APP_BUILD = "20260915192522";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
@@ -10102,7 +10105,7 @@ function notifCheck(){
     NOTIF_KNOWN_GROUPS = new Set(JOINED.map(g=>g.id));
   } else if(!grace){
     JOINED.forEach(g=>{
-      if(!NOTIF_KNOWN_GROUPS.has(g.id)) notifPush("group_add", "You were added to "+groupName(g.id), g.id);
+      if(!NOTIF_KNOWN_GROUPS.has(g.id)) notifPush("group_add", "Added to "+groupName(g.id), g.id);
     });
   }
   JOINED.forEach(g=> NOTIF_KNOWN_GROUPS.add(g.id));
@@ -10114,17 +10117,16 @@ function notifCheck(){
     const shadow = NOTIF_SHADOW[gid] = NOTIF_SHADOW[gid] || {expenses:{}, payments:{}};
 
     [["expenses", expensesOf(gid), "add_circle",
-      (e)=> (e.by||"Someone")+" added "+(e.desc||"an expense")+(e.amount ? " · "+money(e.amount, gid) : "")+" in "+groupName(gid),
-      (e)=> (e.by||"Someone")+" changed "+(e.desc||"an expense")+" in "+groupName(gid)],
+      (e)=> (e.by||"Someone")+" added "+(e.desc||"an expense"),
+      (e)=> (e.by||"Someone")+" edited "+(e.desc||"an expense")],
      ["payments", paymentsOf(gid), "payments",
-      (p)=> (p.by||p.from||"Someone")+" recorded "+(p.from||"?")+" paid "+(p.to||"?")+
-            (p.amount ? " · "+money(p.amount, gid) : "")+" in "+groupName(gid),
-      (p)=> "A payment was changed in "+groupName(gid)]
+      (p)=> (p.by||p.from||"Someone")+" paid "+(p.to||"?")+(p.amount ? " "+money(p.amount, gid) : ""),
+      ()=> "A payment was edited"]
     ].forEach(([kind, list, addIcon, addText, editText])=>{
       const now={};
       list.forEach(item=>{
         const sig=JSON.stringify([item.desc, item.amount, item.payer, item.between, item.vals, item.from, item.to, item.note]);
-        const label=item.desc || ((item.from||"?")+" paid "+(item.to||"?"));
+        const label=item.desc || ((item.from||"?")+" → "+(item.to||"?"));
         now[item.k]={sig, label};
         if(first || grace) return;
         const was=shadow[kind][item.k];
@@ -10133,7 +10135,7 @@ function notifCheck(){
       });
       if(!first && !grace){
         Object.keys(shadow[kind]).forEach(k=>{
-          if(!(k in now)) notifPush("delete", "“"+shadow[kind][k].label+"” was removed from "+groupName(gid), gid);
+          if(!(k in now)) notifPush("delete", "“"+shadow[kind][k].label+"” removed", gid);
         });
       }
       shadow[kind]=now;
