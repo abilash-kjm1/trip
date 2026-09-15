@@ -2347,6 +2347,12 @@ span.af-pill{ cursor:default; padding-right:12px; }
 .mp-paws{ left:50%; top:calc(var(--ct) - 18px); width:164px; height:36px; margin-left:-60px; }
 .mp-paws.night{ top:calc(var(--ct) - 10px); }
 .mp-jar{ left:22px; top:calc(var(--ct) - 50px); width:62px; height:58px; }
+/* a little paw holding the card's bottom-left corner */
+.mp-cornerpaw{ left:-9px; bottom:-11px; width:38px; height:34px; transform:rotate(-28deg); }
+.mp-pat{ transform-box:fill-box; transform-origin:50% 100%; animation:mpPat 6s ease-in-out infinite; }
+.mp-cornerpaw.night .mp-pat{ animation:none; }
+@keyframes mpPat{ 0%, 76%, 100%{ transform:translate(0,0) rotate(0); } 81%{ transform:translate(2px,-5px) rotate(-8deg); }
+  86%{ transform:translate(0,0) rotate(0); } 91%{ transform:translate(2px,-4px) rotate(-6deg); } 96%{ transform:translate(0,0) rotate(0); } }
 .mp-sun{ right:20px; top:calc(var(--ct) - 86px); width:58px; height:58px; }
 .mp-moon{ right:20px; top:calc(var(--ct) - 90px); width:58px; height:58px; animation:mpGlow 4s ease-in-out infinite; }
 .mp-leaf{ right:40px; top:calc(var(--ct) - 112px); width:22px; height:22px; animation:mpFall 9s linear infinite; }
@@ -5070,7 +5076,19 @@ function bearDecoFront(sky){
         mpPaw(18, "", '<path d="M26 9 v7 M34 9 v7" class="mp-o mp-thin"/>')+
         mpPaw(118, "mp-wave", '<ellipse cx="132" cy="16" rx="5" ry="4" fill="#F6DDBE"/><circle cx="124" cy="9" r="2" fill="#F6DDBE"/>'+
           '<circle cx="132" cy="7" r="2" fill="#F6DDBE"/><circle cx="140" cy="9" r="2" fill="#F6DDBE"/>')+'</svg>';
-  return '<div class="bear-deco front" aria-hidden="true">'+jar+paws+'</div>';
+  // A little paw holding the card's bottom-left corner: it taps by day and
+  // rests at night.
+  const toes = '<ellipse cx="20" cy="23" rx="13" ry="11"/><circle cx="7.5" cy="11" r="5.2"/><circle cx="15" cy="5.5" r="5.2"/>'+
+               '<circle cx="25" cy="5.5" r="5.2"/><circle cx="32.5" cy="11" r="5.2"/>';
+  const cornerPaw =
+    '<svg class="mp-cornerpaw'+(night ? ' night' : '')+'" viewBox="0 0 40 36"><g class="mp-pat">'+
+      '<g fill="#fff" stroke="#fff" stroke-width="9" stroke-linejoin="round">'+toes+'</g>'+
+      '<g fill="'+MP_INK+'" stroke="'+MP_INK+'" stroke-width="4.4" stroke-linejoin="round">'+toes+'</g>'+
+      '<g fill="#C98A55">'+toes+'</g>'+
+      '<g fill="#F6DDBE"><ellipse cx="20" cy="24.5" rx="7" ry="5.4"/><circle cx="8" cy="11.5" r="2.4"/><circle cx="15.2" cy="6.4" r="2.4"/>'+
+        '<circle cx="24.8" cy="6.4" r="2.4"/><circle cx="32" cy="11.5" r="2.4"/></g>'+
+    '</g></svg>';
+  return '<div class="bear-deco front" aria-hidden="true">'+jar+paws+cornerPaw+'</div>';
 }
 // Inside the card: a glossy coat of honey along the top edge, drips that
 // stretch, a drop that falls down the empty right-hand side, and a soft shine.
@@ -8724,7 +8742,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260914235654";
+const APP_BUILD = "20260915000625";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
