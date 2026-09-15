@@ -2970,6 +2970,31 @@ span.af-pill{ cursor:default; padding-right:12px; }
 @media (prefers-reduced-motion:reduce){ .notif-card{ animation:none; } }
 :root[data-theme="purple"] .notif-ic{ background:rgba(109,63,191,.14); color:#6D3FBF; }
 
+/* ---- admin: Team Pulse ---- */
+.tp-hero{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:0 0 var(--s4); }
+.tp-stat{ padding:16px 10px 14px; border-radius:18px; background:var(--surface); text-align:center;
+  box-shadow:inset 0 0 0 1px var(--line); }
+.tp-stat b{ display:block; font-family:var(--serif); font-size:clamp(24px,7vw,30px); font-weight:600; line-height:1; color:var(--ink); }
+.tp-stat span{ display:block; margin-top:6px; font-size:11px; font-weight:600; letter-spacing:.03em; color:var(--ink-3); }
+.tp-stat.tp-on{ background:color-mix(in srgb, #22A45D 10%, var(--surface)); box-shadow:inset 0 0 0 1px color-mix(in srgb, #22A45D 30%, var(--line)); }
+.tp-stat.tp-on b{ color:#1E8F55; }
+.tp-strip{ display:flex; gap:16px; overflow-x:auto; padding:4px 2px 14px; margin:0 0 var(--s2); scrollbar-width:none; }
+.tp-strip::-webkit-scrollbar{ display:none; }
+.tp-face{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:6px; width:62px; }
+.tp-face span:last-child{ max-width:100%; font-size:11px; font-weight:600; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tp-ring{ position:relative; display:inline-flex; border-radius:50%; }
+.tp-ring::before{ content:""; position:absolute; inset:-4px; border-radius:50%; border:2px solid #22A45D; opacity:.55;
+  animation:tpRing 2.2s ease-out infinite; }
+@keyframes tpRing{ 0%{ transform:scale(.85); opacity:.6; } 100%{ transform:scale(1.22); opacity:0; } }
+.tp-empty{ display:flex; align-items:center; gap:8px; margin:0; padding:14px 4px; font-size:13px; color:var(--ink-3); }
+.tp-empty .ms{ font-size:19px; }
+.tp-list .row{ cursor:default; }
+.tp-pill{ flex:none; padding:4px 10px; border-radius:999px; background:var(--fill-1); color:var(--ink-2);
+  font-size:11.5px; font-weight:700; white-space:nowrap; box-shadow:inset 0 0 0 1px var(--line); }
+.tp-pill.on{ background:color-mix(in srgb, #22A45D 14%, transparent); color:#1E8F55; box-shadow:none; }
+.tp-pill.warm{ background:color-mix(in srgb, var(--apricot) 22%, transparent); color:var(--apricot-dk); box-shadow:none; }
+@media (prefers-reduced-motion:reduce){ .tp-ring::before{ animation:none; opacity:.4; transform:none; } }
+
 /* ---- currencies: rupee and dollar groups side by side ---- */
 .pf-amt input.long{ width:8.4ch; font-size:40px !important; }
 .pf-amt input.xlong{ width:10.4ch; font-size:32px !important; }
@@ -4201,6 +4226,7 @@ function setTitle(main, text){
   if(main) main.appendChild(el("h1","ltitle", esc(text)));
 }
 let ADMIN_VIEW = false;      // admin browsing every group in the database
+let ADMIN_PEOPLE = false;    // admin's presence dashboard
 let FILT = {q:"", payer:"", ways:0};   // expense filters, reset per group
 const claimAsked = {};       // gid -> we have already offered the claim sheet
 const autoLinked = {};       // gid -> the silent link has been attempted
@@ -4246,7 +4272,7 @@ function render(){
   if(USER && typeof netShow==="function") netShow();
   ME = CURRENT ? meIn(CURRENT) : null;
   document.querySelectorAll(".nav button[data-tab], .side button[data-tab]").forEach(b=>{
-    if(b.dataset.tab===TAB && !CURRENT && !ADMIN_VIEW) b.setAttribute("aria-current","page");
+    if(b.dataset.tab===TAB && !CURRENT && !ADMIN_VIEW && !ADMIN_PEOPLE) b.setAttribute("aria-current","page");
     else b.removeAttribute("aria-current");
   });
 
@@ -4255,6 +4281,7 @@ function render(){
   else if(!mayUse())      { $("nav").hidden=true; viewAccess(main); }
   else if(CURRENT)          viewGroup(main);
   else if(ADMIN_VIEW)       viewAdmin(main);
+  else if(ADMIN_PEOPLE)     viewAdminPeople(main);
   else if(TAB==="home")     viewHome(main);
   else if(TAB==="groups")   viewGroups(main);
   else if(TAB==="activity") viewActivity(main);
@@ -4268,9 +4295,9 @@ function render(){
   const bar=$("bar");
   if(bar){
     bar.classList.toggle("in-group", !!CURRENT);
-    bar.classList.toggle("is-home", !CURRENT && !ADMIN_VIEW && TAB==="home" && !!USER && mayUse());
+    bar.classList.toggle("is-home", !CURRENT && !ADMIN_VIEW && !ADMIN_PEOPLE && TAB==="home" && !!USER && mayUse());
     const eb=$("barEyebrow");
-    if(eb) eb.textContent = CURRENT ? "Group" : ADMIN_VIEW ? "Administrator"
+    if(eb) eb.textContent = CURRENT ? "Group" : (ADMIN_VIEW || ADMIN_PEOPLE) ? "Administrator"
       : TAB==="home" && USER ? SIDES[SIDE].name+" · "+new Date().toLocaleDateString(undefined, {weekday:"long", month:"long", day:"numeric"})
       : USER ? SIDES[SIDE].name : "Settle";
   }
@@ -4293,7 +4320,7 @@ function flipSide(){
   const to=otherSide();
   if(!setSide(to)) return;
   if(CURRENT){ CURRENT=null; lsSet(LS.cur, null); if(location.hash) location.hash=""; }
-  ADMIN_VIEW=false; HERO_I=0; VZ_GROUP=null;
+  ADMIN_VIEW=false; ADMIN_PEOPLE=false; HERO_I=0; VZ_GROUP=null;
   IX_SEEN=false; GROUPS_SEEN=false; TH_SEEN=false; IX_EDIT=false; UPI_EDIT=false;
   window.scrollTo(0,0);
   const main=$("main");
@@ -5670,6 +5697,16 @@ function viewAccount(main){
     r.addEventListener("click", ()=>{ ADMIN_VIEW=true; window.scrollTo(0,0); render(); });
     a.appendChild(r);
 
+    const online=Object.keys(PRESENCE||{}).filter(u=>PRESENCE[u]&&PRESENCE[u].online).length;
+    const pr=el("button","row");
+    pr.innerHTML='<span class="cat'+(online?" teal":"")+'"><span class="ms" aria-hidden="true">bolt</span></span>'+
+      '<span class="body"><span class="t1">Team Pulse</span>'+
+      '<span class="t2">Who has Settle open, and who last did</span></span>'+
+      '<span class="right">'+(online?'<span class="tag on">'+online+' online</span>':
+        '<span class="ms" aria-hidden="true" style="color:var(--label-3)">chevron_right</span>')+'</span>';
+    pr.addEventListener("click", ()=>{ ADMIN_PEOPLE=true; window.scrollTo(0,0); render(); });
+    a.appendChild(pr);
+
     const sr=el("button","row");
     sr.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">schedule</span></span>'+
       '<span class="body"><span class="t1">Reminder schedule</span>'+
@@ -5801,6 +5838,80 @@ function viewAdmin(main){
   const note=el("p","fine");
   note.style.cssText="text-align:center;color:var(--label-3);font-size:12px;margin:16px 4px";
   note.textContent="Opening a group here adds it to your own list so you can work in it.";
+  main.appendChild(note);
+}
+
+/* ---------- admin: Team Pulse ----------
+   Everybody Settle has ever heard of - from the directory, from users/*, and
+   from presence itself - so somebody who signed in before presence existed
+   still shows up, going by the last time their profile was written (which
+   happens on every sign-in) rather than vanishing from the list entirely. */
+function adminPeopleList(){
+  const seen={};
+  Object.keys(DIRECTORY||{}).forEach(u=> seen[u]=1);
+  Object.keys(ALLUSERS||{}).forEach(u=> seen[u]=1);
+  Object.keys(PRESENCE||{}).forEach(u=> seen[u]=1);
+  return Object.keys(seen).map(uid=>{
+    const d=DIRECTORY[uid]||{}, prof=(ALLUSERS[uid]&&ALLUSERS[uid].profile)||{};
+    const p=PRESENCE[uid];
+    const online=!!(p && p.online===true);
+    const at = p ? (Number(p.at)||0) : (Number(prof.at)||0);
+    return { uid, name:d.name||prof.name||"Someone", email:d.email||prof.email||"",
+             photo:d.photo||prof.photo||null, online, at, isMe: !!(USER && uid===USER.uid) };
+  }).sort((a,b)=> (b.online-a.online) || (b.at-a.at) || a.name.localeCompare(b.name));
+}
+function viewAdminPeople(main){
+  setTitle(main, "Team Pulse");
+  $("backBtn").hidden=false;
+  const people=adminPeopleList();
+  const online=people.filter(p=>p.online);
+  const dayAgo=Date.now()-864e5;
+  const activeToday=people.filter(p=> p.online || p.at>dayAgo).length;
+
+  const hero=el("div","tp-hero");
+  hero.innerHTML=
+    '<div class="tp-stat tp-on"><b>'+online.length+'</b><span>Online now</span></div>'+
+    '<div class="tp-stat"><b>'+activeToday+'</b><span>Active today</span></div>'+
+    '<div class="tp-stat"><b>'+people.length+'</b><span>People in Settle</span></div>';
+  main.appendChild(hero);
+
+  main.appendChild(el("div","sechead","Here right now"));
+  const strip=el("div","tp-strip");
+  if(!online.length){
+    strip.innerHTML='<p class="tp-empty"><span class="ms" aria-hidden="true">bedtime</span>Nobody else is around right now.</p>';
+  } else {
+    online.forEach(p=>{
+      const f=el("div","tp-face");
+      f.innerHTML='<span class="tp-ring">'+avatarHTML("lg", p.name, "#8e99a6", p.photo, p.uid)+'</span>'+
+        '<span>'+esc((p.name||"").split(" ")[0])+(p.isMe?" (you)":"")+'</span>';
+      strip.appendChild(f);
+    });
+  }
+  main.appendChild(strip);
+
+  main.appendChild(el("div","sechead", people.length+" "+(people.length===1?"person":"people")+" total"));
+  if(!people.length){
+    main.appendChild(el("div","empty",
+      '<span class="ms" aria-hidden="true">bolt</span><h3>Nobody yet</h3>'+
+      '<p>Presence fills in once people open Settle with the rules published.</p>'));
+    return;
+  }
+  const card=el("div","card tp-list");
+  people.forEach(p=>{
+    const r=el("div","row"); r.style.cursor="default";
+    const fresh = p.at && (Date.now()-p.at < 864e5);
+    const pillText = p.online ? "Online now" : p.at ? "Last seen "+arrAgo(p.at) : "Never opened it";
+    const pillCls = p.online ? "on" : fresh ? "warm" : "";
+    r.innerHTML=avatarHTML("", p.name, "#8e99a6", p.photo, p.uid)+
+      '<span class="body"><span class="t1">'+esc(p.name)+(p.isMe?' <span class="tag on">you</span>':'')+'</span>'+
+      '<span class="t2">'+esc(p.email||"no email on file")+'</span></span>'+
+      '<span class="right"><span class="tp-pill '+pillCls+'">'+esc(pillText)+'</span></span>';
+    card.appendChild(r);
+  });
+  main.appendChild(card);
+  const note=el("p","fine");
+  note.style.cssText="text-align:center;color:var(--label-3);font-size:12px;margin:16px 4px";
+  note.textContent="Online means Settle is open for them right now, worked out the moment their connection drops - not a guess.";
   main.appendChild(note);
 }
 
@@ -9976,7 +10087,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915211405";
+const APP_BUILD = "20260915212449";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
@@ -10285,7 +10396,9 @@ function doPrint(){
 
 /* =========================== WIRING =========================== */
 $("backBtn").addEventListener("click", ()=>{
-  if(ADMIN_VIEW && !CURRENT){ ADMIN_VIEW=false; TAB="account"; window.scrollTo(0,0); render(); return; }
+  if((ADMIN_VIEW || ADMIN_PEOPLE) && !CURRENT){
+    ADMIN_VIEW=false; ADMIN_PEOPLE=false; TAB="account"; window.scrollTo(0,0); render(); return;
+  }
   closeGroup();
 });
 $("gmenuBtn").addEventListener("click", sheetGroupMenu);
@@ -10296,14 +10409,14 @@ $("fab").addEventListener("click", ()=>{ CURRENT ? sheetExpense(null) : sheetGro
 // people can be made from inside it, so it no longer changes meaning by screen.
 $("navAdd").addEventListener("click", sheetQuickAdd);
 $("meBtn").addEventListener("click", ()=>{
-  ADMIN_VIEW=false; CURRENT=null; TAB="account"; window.scrollTo(0,0); render();
+  ADMIN_VIEW=false; ADMIN_PEOPLE=false; CURRENT=null; TAB="account"; window.scrollTo(0,0); render();
 });
 // Only the buttons that name a tab. The add button lives in the same bar and
 // names none, so it was setting the tab to undefined and leaving a blank
 // screen behind the sheet it opened.
 document.querySelectorAll(".nav button[data-tab], .side button[data-tab]").forEach(b=>{
   b.addEventListener("click", ()=>{
-    ADMIN_VIEW=false;
+    ADMIN_VIEW=false; ADMIN_PEOPLE=false;
     if(CURRENT){ CURRENT=null; lsSet(LS.cur,null); if(location.hash) location.hash=""; }
     TAB=b.dataset.tab; window.scrollTo(0,0); render();
   });
