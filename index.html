@@ -3398,8 +3398,11 @@ function sideSync(){
   if(now-SIDE_SAVED > 4000){ SIDE_SAVED=now; lsSet(LS_SIDE_SEEN, SIDE_SEEN); }
 }
 /* What is new on a side since it was last on screen: expenses and payments
-   somebody else added, answers about my payments, and payments still waiting
-   for me to say whether they arrived. */
+   somebody else added, and payments still waiting for me to say whether they
+   arrived. Not "got" answers - those already popped up as their own slip, on
+   whichever side was on screen when they arrived, and are gone the moment
+   that slip is dismissed. Counting them here too would leave a number on the
+   flag with nothing behind it to go and find. */
 function sideNews(side){
   if(!USER) return 0;
   const since=Number(SIDE_SEEN[side])||Date.now(), hit={};
@@ -3413,7 +3416,6 @@ function sideNews(side){
       if((Number(p.at)||0)>since && byOther(p)) hit[id]=1;
       if(me && p.ask && !p.netted && !p.got && p.to===me && p.from!==me && p.byUid!==USER.uid &&
          !(p.later && p.later.uid===USER.uid && Number(p.later.until)>Date.now())) hit[id]=1;
-      if(p.got && p.byUid===USER.uid && (Number(p.got.at)||0)>since) hit[id+"/got"]=1;
     });
   });
   return Object.keys(hit).length;
@@ -9879,7 +9881,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915181205";
+const APP_BUILD = "20260915190538";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
