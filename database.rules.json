@@ -66,6 +66,19 @@
         ".validate": "newData.hasChildren(['online','at']) && newData.child('online').isBoolean() && newData.child('at').isNumber()"
       }
     },
+    "announcements": {
+      ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
+      "$id": {
+        ".read": "auth != null && ((root.child('access').child(auth.uid).child('status').val() == 'approved' && (data.child('to').val() == 'all' || data.child('to').val() == auth.uid)) || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
+        ".validate": "newData.hasChildren(['text','at','byUid','to']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.child('at').isNumber() && newData.child('to').isString()",
+        "ack": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.hasChildren(['at']) && newData.child('at').isNumber()"
+          }
+        }
+      }
+    },
     "config": {
       ".read": "auth != null",
       ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'"

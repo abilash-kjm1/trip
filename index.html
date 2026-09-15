@@ -2970,6 +2970,34 @@ span.af-pill{ cursor:default; padding-right:12px; }
 @media (prefers-reduced-motion:reduce){ .notif-card{ animation:none; } }
 :root[data-theme="purple"] .notif-ic{ background:rgba(109,63,191,.14); color:#6D3FBF; }
 
+/* ---- a message from the administrator: blocks the screen ---- */
+.announce{ position:fixed; inset:0; z-index:400; display:flex; align-items:center; justify-content:center; padding:22px; }
+.announce-scrim{ position:absolute; inset:0; background:rgba(20,18,14,.6); backdrop-filter:blur(2px); animation:anIn .25s; }
+.announce-hold{ position:relative; width:100%; max-width:400px; }
+.announce-card{ position:relative; padding:30px 24px 24px; border-radius:26px; text-align:center; color:#FCFAF5;
+  background:radial-gradient(120% 90% at 22% 0%, rgba(238,181,134,.22), transparent 56%),
+             linear-gradient(160deg, #2F332D 0%, #1E211B 100%);
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.1);
+  animation:anCardIn .4s cubic-bezier(.22,.61,.36,1); }
+.announce-ic{ display:inline-flex; width:52px; height:52px; border-radius:50%; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.14); margin-bottom:14px; }
+.announce-ic .ms{ font-size:26px; }
+.announce-card h2{ margin:0 0 12px; font-family:var(--serif); font-size:19px; font-weight:600; line-height:1.3; }
+.announce-text{ margin:0 0 10px; font-size:15px; line-height:1.55; color:rgba(252,250,245,.94); text-wrap:balance; }
+.announce-when{ margin:0 0 20px; font-size:12px; color:rgba(252,250,245,.5); }
+.announce-ack{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:52px;
+  border:0; border-radius:14px; background:var(--apricot); color:#3A2414; font:inherit; font-size:15px; font-weight:700;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .15s; }
+.announce-ack .ms{ font-size:19px; }
+.announce-ack:active{ transform:scale(.97); }
+.announce-ack:disabled{ opacity:.6; }
+.announce-ack:focus-visible{ outline:2px solid #FCFAF5; outline-offset:2px; }
+@keyframes anIn{ from{ opacity:0; } }
+@keyframes anCardIn{ from{ opacity:0; transform:translateY(18px) scale(.95); } }
+.announce.out .announce-scrim, .announce.out .announce-card{ animation:anOut .28s ease forwards; }
+@keyframes anOut{ to{ opacity:0; transform:translateY(10px) scale(.96); } }
+@media (prefers-reduced-motion:reduce){ .announce-scrim, .announce-card{ animation:none; } }
+
 /* ---- admin: Team Pulse ---- */
 .tp-hero{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:0 0 var(--s4); }
 .tp-stat{ padding:16px 10px 14px; border-radius:18px; background:var(--surface); text-align:center;
@@ -4185,6 +4213,7 @@ function forgetPreviousAccount(uid){
   // freshly joined, or its existing expenses compared against what the
   // last account happened to have loaded.
   if(typeof notifForget==="function") notifForget();
+  if(typeof announceForget==="function") announceForget();
   if(typeof location !== "undefined" && location.hash) location.hash = "";
   lsSet(LS.who, uid);
   return true;
@@ -4305,6 +4334,8 @@ function render(){
   if(typeof arrivals==="function") arrivals();
   // What just changed - added, edited, deleted, or being added to a group.
   if(typeof notifCheck==="function") notifCheck();
+  // A message from the administrator, waiting to be acknowledged.
+  if(typeof announceCheck==="function") announceCheck();
 
   // Someone opened a group they have not yet identified themselves in.
   if(USER && CURRENT && loaded(CURRENT) && !ME && autoLink(CURRENT)) return;
@@ -5706,6 +5737,14 @@ function viewAccount(main){
         '<span class="ms" aria-hidden="true" style="color:var(--label-3)">chevron_right</span>')+'</span>';
     pr.addEventListener("click", ()=>{ ADMIN_PEOPLE=true; window.scrollTo(0,0); render(); });
     a.appendChild(pr);
+
+    const anr=el("button","row");
+    anr.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">campaign</span></span>'+
+      '<span class="body"><span class="t1">Send an announcement</span>'+
+      '<span class="t2">Blocks their screen until they acknowledge it</span></span>'+
+      '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--label-3)">chevron_right</span></span>';
+    anr.addEventListener("click", sheetAnnounce);
+    a.appendChild(anr);
 
     const sr=el("button","row");
     sr.innerHTML='<span class="cat teal"><span class="ms" aria-hidden="true">schedule</span></span>'+
@@ -9590,6 +9629,155 @@ function arrTrap(node){
   });
 }
 
+/* ===========================================================================
+   Announcements: a message from the administrator that blocks the screen
+   until it is acknowledged. Sent to everyone or to one person; each account
+   only ever reads the ones addressed to it - the database rules themselves
+   enforce that, nothing here has to - and answers for itself by writing its
+   own acknowledgement, nobody else's to write.
+
+   Shown one at a time, oldest first, the same way the did-it-arrive slip
+   works: whichever is due comes up, and nothing else on screen can be
+   reached until it is dealt with. There is no way to dismiss one without
+   acknowledging it - no scrim tap, no swipe, no back button.
+   =========================================================================== */
+let ANNOUNCE = {};                 // announcements/* as the rules let this account see
+let ANNOUNCE_NODE = null;          // the slip on screen now, so a redraw does not restart it
+
+/* Mine to answer: addressed to me (or everyone), not written by me, and I
+   have not already acknowledged it. Oldest first, so an earlier notice is
+   never skipped for a newer one. */
+function announceQueue(){
+  if(!USER) return [];
+  return Object.keys(ANNOUNCE||{})
+    .map(k=>Object.assign({k}, ANNOUNCE[k]))
+    .filter(a=> a && a.text && a.byUid!==USER.uid && !(a.ack && a.ack[USER.uid]))
+    .sort((a,b)=> (Number(a.at)||0) - (Number(b.at)||0));
+}
+
+function announceCheck(){
+  if(!USER || !mayUse()){ announceClose(true); return; }
+  const due=announceQueue();
+  if(!due.length){ announceClose(); return; }
+  const next=due[0];
+  if(ANNOUNCE_NODE && ANNOUNCE_NODE.dataset.k===next.k) return;   // already showing this one
+  announceClose(true);
+  announceShow(next);
+}
+
+function announceClose(now){
+  if(!ANNOUNCE_NODE) return;
+  const node=ANNOUNCE_NODE; ANNOUNCE_NODE=null;
+  if(now){ node.remove(); return; }
+  node.classList.add("out");
+  setTimeout(()=> node.remove(), 320);
+}
+
+/* Switching to a different account on the same device: whatever is on
+   screen belongs to whoever was signed in a moment ago. */
+function announceForget(){ announceClose(true); }
+
+function announceShow(a){
+  const node=el("div","announce");
+  node.dataset.k=a.k;
+  node.innerHTML=
+    '<div class="announce-scrim" aria-hidden="true"></div>'+
+    '<div class="announce-hold">'+
+      '<div class="announce-card" role="alertdialog" aria-modal="true" aria-labelledby="anTitle" aria-describedby="anBody">'+
+        '<span class="announce-ic" aria-hidden="true"><span class="ms">campaign</span></span>'+
+        '<h2 id="anTitle">Message from '+esc(a.by||"the administrator")+'</h2>'+
+        '<p id="anBody" class="announce-text">'+esc(a.text).replace(/\n/g,"<br>")+'</p>'+
+        '<p class="announce-when">'+esc(fmtWhen(a.at))+'</p>'+
+        '<button class="announce-ack" type="button"><span class="ms" aria-hidden="true">check</span>I understand</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(node);
+  ANNOUNCE_NODE=node;
+  const btn=node.querySelector(".announce-ack");
+  setTimeout(()=>{ if(ANNOUNCE_NODE===node) btn.focus({preventScroll:true}); }, 350);
+  btn.addEventListener("click", ()=>{
+    btn.disabled=true;
+    updStrict("announcements/"+a.k+"/ack", {[USER.uid]:{at:Date.now(), name:ME||USER.name}}).then(()=>{
+      announceClose();
+      setTimeout(announceCheck, 380);
+    }).catch(e=>{ btn.disabled=false; toast(writeError(e)); });
+  });
+}
+
+/* ---------- admin: write one, and see who has read the last few ---------- */
+function sheetAnnounce(){
+  if(!isAdmin()) return;
+  const people = Object.keys(DIRECTORY||{}).map(u=>Object.assign({uid:u}, DIRECTORY[u]||{}))
+    .filter(p=>p.name && p.uid!==USER.uid)
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  let target="all";
+  openSheet("Send an announcement", (b)=>{
+    b.innerHTML=
+      '<p class="lead">Blocks their screen the moment they open Settle, until they tap through it.</p>'+
+      '<div class="field"><label>Who should see this?</label><div class="chips" id="anWho"></div></div>'+
+      '<div class="field"><label for="anText">Message</label>'+
+      '<textarea id="anText" rows="4" maxlength="500" placeholder="What do you need them to know?"></textarea>'+
+      '<div class="help" id="anCount">0 / 500</div></div>'+
+      '<button class="btn p wide" id="anSend" type="button">Send</button>'+
+      '<div id="anHist"></div>';
+
+    const who=$("anWho");
+    const setTarget=(val, c)=>{
+      target=val;
+      [].forEach.call(who.children, x=>x.setAttribute("aria-pressed","false"));
+      c.setAttribute("aria-pressed","true");
+    };
+    const chip=(label, val)=>{
+      const c=el("button","chip"); c.type="button"; c.textContent=label;
+      c.setAttribute("aria-pressed", val===target ? "true":"false");
+      c.addEventListener("click", ()=> setTarget(val, c));
+      who.appendChild(c);
+    };
+    chip("Everyone", "all");
+    people.forEach(p=> chip(p.name, p.uid));
+
+    const ta=$("anText");
+    ta.addEventListener("input", ()=> $("anCount").textContent=ta.value.length+" / 500");
+    $("anSend").addEventListener("click", ()=>{
+      const text=ta.value.trim();
+      if(!text) return toast("Write a message first");
+      $("anSend").disabled=true;
+      const rec={text, at:Date.now(), byUid:USER.uid, by:USER.name, to:target};
+      push("announcements", rec).then(()=>{
+        closeSheet();
+        toast(target==="all" ? "Sent to everyone" : "Sent to "+(DIRECTORY[target]&&DIRECTORY[target].name || "them"));
+      }).catch(()=>{ $("anSend").disabled=false; });
+    });
+
+    // Sent before, newest first - and who has actually seen it.
+    // Everyone approved right now, aside from the admin: the closest count
+    // available of who a broadcast could reach, so a fraction is only shown
+    // when it can be trusted rather than guessed at.
+    const approved = Object.keys(REQUESTS||{}).filter(u=>REQUESTS[u]&&REQUESTS[u].status==="approved" && u!==USER.uid).length;
+    const past = Object.keys(ANNOUNCE||{}).map(k=>Object.assign({k}, ANNOUNCE[k]))
+      .filter(a=>a && a.text).sort((x,y)=> (Number(y.at)||0)-(Number(x.at)||0)).slice(0,12);
+    if(past.length){
+      const host=$("anHist");
+      host.innerHTML='<div class="sechead" style="margin-top:22px">Sent before</div><div class="card" id="anHistList"></div>';
+      const list=$("anHistList");
+      past.forEach(a=>{
+        const ackN=Object.keys(a.ack||{}).length;
+        const audience = a.to==="all" ? approved : 1;
+        const done = audience>0 && ackN>=audience;
+        const pill = audience>0 ? ackN+" / "+audience : ackN+(ackN===1?" seen it":" have seen it");
+        const r=el("div","row"); r.style.cursor="default";
+        r.innerHTML=
+          '<span class="cat'+(done?" teal":"")+'"><span class="ms" aria-hidden="true">'+(done?"mark_email_read":"mail")+'</span></span>'+
+          '<span class="body"><span class="t1">'+esc(a.text.length>64 ? a.text.slice(0,64)+"…" : a.text)+'</span>'+
+          '<span class="t2">'+(a.to==="all" ? "Everyone" : esc((DIRECTORY[a.to]&&DIRECTORY[a.to].name)||"Someone"))+
+            ' · '+esc(fmtWhen(a.at))+'</span></span>'+
+          '<span class="right"><span class="tp-pill'+(done?" on":"")+'">'+esc(pill)+'</span></span>';
+        list.appendChild(r);
+      });
+    }
+  });
+}
+
 /* ======================= PHONE NOTIFICATIONS =======================
    Web Push, so a phone hears about a payment without Settle being open.
 
@@ -10087,7 +10275,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915212449";
+const APP_BUILD = "20260915214520";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
@@ -10603,6 +10791,12 @@ function onSignedIn(u){
   remote.onValue(ref("presence"), snap=>{ PRESENCE = snap.val() || {}; render(); },
     ()=>{ PRESENCE = {}; });
   presenceGoOnline();
+
+  // Messages from the administrator - only the ones the rules let this
+  // account see, which is everything for the admin and only what is
+  // addressed to me for everyone else.
+  remote.onValue(ref("announcements"), snap=>{ ANNOUNCE = snap.val() || {}; render(); },
+    ()=>{ ANNOUNCE = {}; });
 
   // My entry in the directory, so other people can add me to a group by
   // picking my name instead of typing it and hoping they spell it the same.
