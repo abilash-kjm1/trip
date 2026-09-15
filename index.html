@@ -3417,6 +3417,19 @@ function sideShow(){
   const badge=b.querySelector(".sf-badge");
   badge.hidden=!n; badge.textContent = n>9 ? "9+" : String(n); badge.dataset.on=other;
 }
+/* People follow the same split. Somebody is offered on a side once they are
+   in one of my groups on it - or while they are in none of my groups at all,
+   so a newcomer can be added on either side. Somebody added only on India is
+   not offered on Canada until they are added there too, and the other way. */
+function sideUids(){
+  const here={}, there={};
+  JOINED.forEach(g=>{
+    const on = sideOf(g.id)===SIDE;
+    membersOf(g.id).forEach(m=>{ if(m.uid) (on ? here : there)[m.uid]=1; });
+  });
+  return {here, there};
+}
+function onThisSide(uid, s){ s = s || sideUids(); return !!s.here[uid] || !s.there[uid]; }
 // The empty screen for a side with no groups yet.
 function sideEmptyHTML(icon){
   return '<span class="ms" aria-hidden="true">'+icon+'</span><h3>No '+SIDES[SIDE].name+' groups yet</h3>'+
@@ -3710,7 +3723,7 @@ function settleSuggestions(name, gid){
   const n = normName(name); if(n.length<2) return [];
   const inGroup = gid ? membersOf(gid).map(m=>m.uid).filter(Boolean) : [];
   return Object.keys(DIRECTORY||{}).map(u=> Object.assign({uid:u}, DIRECTORY[u]||{}))
-    .filter(p=> p.name && inGroup.indexOf(p.uid)<0 && !(USER && p.uid===USER.uid))
+    .filter(p=> p.name && inGroup.indexOf(p.uid)<0 && !(USER && p.uid===USER.uid) && onThisSide(p.uid))
     .filter(p=>{ const full=normName(p.name); return full.indexOf(n)===0 || full.split(" ").some(w=> w.indexOf(n)===0); })
     .slice(0,4);
 }
@@ -5245,7 +5258,7 @@ function ixPeople(main, enter, o){
   // Settle, not only the people in their own groups.
   if(isAdmin()) Object.keys(DIRECTORY||{}).forEach(u=>{
     const e=DIRECTORY[u]||{};
-    if(u===USER.uid || seen[u] || !e.name) return;
+    if(u===USER.uid || seen[u] || !e.name || !onThisSide(u)) return;
     seen[u]=true;
     people.push({uid:u, name:e.name, color:null, photo:e.photo||null});
   });
@@ -7349,7 +7362,7 @@ function sheetMembers(){
       const taken = membersOf(gid).map(m=>m.uid).filter(Boolean);
       const pool = Object.keys(DIRECTORY)
         .map(u=>Object.assign({uid:u}, DIRECTORY[u]||{}))
-        .filter(p=>p.name && taken.indexOf(p.uid)<0)
+        .filter(p=>p.name && taken.indexOf(p.uid)<0 && onThisSide(p.uid))
         .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
 
       if(pool.length){
@@ -7923,7 +7936,7 @@ function slug(s){
 function sheetGroupNew(){
   // Everybody already in Settle, so they can be picked rather than typed.
   const pool = Object.keys(DIRECTORY||{}).map(u=> Object.assign({uid:u}, DIRECTORY[u]||{}))
-    .filter(p=> p.name && !(USER && p.uid===USER.uid))
+    .filter(p=> p.name && !(USER && p.uid===USER.uid) && onThisSide(p.uid))
     .sort((a,c)=> String(a.name).localeCompare(String(c.name)));
   const chosen = {};
   openSheet("New group", (b)=>{
@@ -8315,7 +8328,7 @@ function sheetQuickAdd(){
       const inGroup = membersOf(gid).map(m=>m.uid).filter(Boolean);
       const pool = Object.keys(DIRECTORY||{})
         .map(u=>Object.assign({uid:u}, DIRECTORY[u]||{}))
-        .filter(p=>p.name && p.uid!==USER.uid && inGroup.indexOf(p.uid)<0)
+        .filter(p=>p.name && p.uid!==USER.uid && inGroup.indexOf(p.uid)<0 && onThisSide(p.uid))
         .sort((a,c)=>String(a.name).localeCompare(String(c.name)));
       $("qaPickWrap").hidden = !pool.length;
       pool.forEach(p=>{
@@ -9786,7 +9799,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915020547";
+const APP_BUILD = "20260915022115";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
