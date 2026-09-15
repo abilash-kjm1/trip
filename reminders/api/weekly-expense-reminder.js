@@ -7,12 +7,12 @@
    Protected by CRON_SECRET: Vercel Cron sends it as a bearer token, and
    without it the endpoint answers 401. Nobody can use this to fan out mail.
    =========================================================================== */
-import { readPath, removePath, database, claimNote } from "../lib/firebase.js";
+import { readPath, removePath, database, claimNote, claimLater } from "../lib/firebase.js";
 import { sendEmail, provider } from "../lib/email.js";
 import { reminderEmail } from "../lib/template.js";
 import { groupSummary, cents } from "../lib/ledger.js";
 import { normalise, isDue, isValidTz, describe } from "../lib/schedule.js";
-import { runActivity } from "../lib/activity.js";
+import { runActivity, runLater } from "../lib/activity.js";
 import { pushSender, vapidReport } from "../lib/sender.js";
 
 const DEFAULT_TZ = process.env.DEFAULT_TZ || "America/Toronto";
@@ -124,6 +124,7 @@ export default async function handler(req, res) {
       }
     }
 
+    let tripsNow = {};    // kept for the "not yet" reminders below
     // Keep groups, invited seats and everybody's pointers to groups in step.
     //
     // Membership: the rules read trips/{gid}/uids to decide who may open a
@@ -143,6 +144,7 @@ export default async function handler(req, res) {
     // A dry run reports what it would do and changes nothing.
     {
       const trips = await readPath("trips");
+      tripsNow = trips;
       const invites = await readPath("invites");
       const byEmail = {};
       Object.keys(users).forEach((uid) => {
@@ -322,6 +324,21 @@ export default async function handler(req, res) {
       const msg = (err && err.message) || String(err);
       log.activity = { error: msg.slice(0, 600) };
       console.error("[activity] aborted:", msg);
+    }
+
+    // ---- "not yet" reminders ---------------------------------------------
+    // A payment whose receiver asked to be reminded later gets one phone
+    // notification when that time comes. Its own try, like the notices.
+    try {
+      log.later = await runLater({
+        trips: tripsNow, users, at, dry, appUrl: APP_URL, push: pushSender(),
+        db: { remove: removePath,
+              claimLater: dry ? undefined : (gid, k, until, now, gap) => claimLater(gid, k, until, now, gap) }
+      });
+    } catch (err) {
+      const msg = (err && err.message) || String(err);
+      log.later = { error: msg.slice(0, 600) };
+      console.error("[later] aborted:", msg);
     }
 
     if (!cfg.enabled && !force) {

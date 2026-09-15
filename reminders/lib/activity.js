@@ -13,7 +13,7 @@
 import { money, sharesOf, cents, currencyOf } from "./ledger.js";
 import { activityEmail, accessRequestEmail, groupInviteEmail, nudgeEmail } from "./template.js";
 import { makeToken, normaliseAccess } from "./access.js";
-import { deliver, subscriptionsOf, askMessage, answerMessage, nudgeMessage, expenseMessage } from "./push.js";
+import { deliver, subscriptionsOf, askMessage, answerMessage, nudgeMessage, expenseMessage, laterMessage } from "./push.js";
 
 /* Asking to join is not activity in a group - there is no group yet - so it
    travels through the same queue but down its own path, to the administrator
@@ -505,4 +505,60 @@ export async function runPush({ entries, users, dry, push, db, log, appUrl, grou
     }
     console.log("[push] " + (dry ? "DRY " : "") + e.kind + " " + (e.ref || "-") + " told " + reachable.length + " account(s)");
   }
+}
+
+/* ---------------------------------------------------------------------------
+   "Not yet": ask again at the time they chose.
+
+   Whoever a payment went to can put the question off - in an hour, this
+   evening, tomorrow morning. Their app brings it back by itself; this sends
+   the phone notification when the time comes. The payment decides everything:
+   still asking, still unanswered, and put off by the account the money went
+   to. One reminder per chosen time, and never two for the same payment within
+   three hours - kept where the app cannot write, so rewriting the time cannot
+   turn it into a stream of notifications.
+   --------------------------------------------------------------------------- */
+export const LATER_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+export const LATER_GAP_MS = 3 * 3600 * 1000;
+export const MAX_LATER = 50;
+
+export async function runLater({ trips, users, at, dry, push, db, appUrl }) {
+  const now = at.getTime();
+  const log = { due: 0, pushed: 0, pushGone: 0, pushFailed: 0, errors: [], skipped: [] };
+  const openAt = (gid) => String(appUrl || "").replace(/#.*$/, "") + "#g=" + encodeURIComponent(gid);
+  const skip = (gid, k, why) => { if (log.skipped.length < 20) log.skipped.push(gid + "/" + k + ": " + why); };
+
+  for (const gid of Object.keys(trips || {})) {
+    const g = trips[gid];
+    if (!g || typeof g !== "object" || !g.payments || typeof g.payments !== "object") continue;
+    for (const k of Object.keys(g.payments)) {
+      if (log.due >= MAX_LATER) return log;
+      const p = g.payments[k], l = p && p.later;
+      if (!l || typeof l !== "object") continue;
+      const until = Number(l.until);
+      if (!Number.isFinite(until) || until > now) continue;
+      if (now - until > LATER_MAX_AGE_MS) { skip(gid, k, "put off more than a week ago"); continue; }
+      if (p.got || p.netted || p.ask !== true) continue;
+      const seat = Object.values(g.people || {}).find((s) =>
+        s && s.n === p.to && typeof s.uid === "string" && s.uid);
+      if (!seat || seat.uid !== l.uid) { skip(gid, k, "put off by somebody it did not go to"); continue; }
+      log.due++;
+      if (!subscriptionsOf(users && users[seat.uid]).length) { skip(gid, k, "no phone notifications on"); continue; }
+      if (!push && !dry) { skip(gid, k, "phone notifications are not configured on the server"); continue; }
+      if (!dry && db && db.claimLater && !(await db.claimLater(gid, k, until, now, LATER_GAP_MS))) {
+        skip(gid, k, "already reminded"); continue;
+      }
+      try {
+        await deliver({ uid: seat.uid, users, dry, push, db, log,
+          message: laterMessage({ from: p.from, amount: Number(p.amount) || 0, cur: currencyOf(g),
+                                  group: (g.meta && g.meta.name) || gid, url: openAt(gid),
+                                  tag: "arrive-" + gid + "-" + k }) });
+        console.log("[later] " + (dry ? "DRY " : "") + "reminded " + seat.uid + " about " + gid + "/" + k);
+      } catch (err) {
+        log.pushFailed++;
+        log.errors.push({ gid, error: ("later: " + ((err && err.message) || String(err))).slice(0, 300) });
+      }
+    }
+  }
+  return log;
 }

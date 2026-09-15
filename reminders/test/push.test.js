@@ -1,7 +1,7 @@
 /* Phone notifications: which subscriptions are believed, who gets pushed,
    and what a tampered note can and cannot do. */
 import { cleanSubscription, subscriptionsOf, askMessage, answerMessage } from "../lib/push.js";
-import { runActivity, notesFor } from "../lib/activity.js";
+import { runActivity, notesFor, runLater } from "../lib/activity.js";
 
 let bad = 0;
 const is = (a, e, w) => {
@@ -123,6 +123,41 @@ is(r.pushed.length, 0, "an answer the record does not have");
 console.log("\nasking again");
 r = await run({ n1: note("payment.ask", "p1") });
 is([r.pushed.length, r.sent.length], [2, 0], "Kelvin's phones are asked again, and nobody is emailed");
+
+console.log('\n"not yet" comes back at the time they chose');
+group.payments.p5 = { from: "Abilash", to: "Kelvin", amount: 12, byUid: "u1", ask: true,
+                      later: { uid: "u2", until: NOW - 60000, at: NOW - 3600e3 } };
+async function later(opts = {}) {
+  const pushed = [], claims = [];
+  const log = await runLater({
+    trips: { montreal: group }, users, at: new Date(NOW), appUrl: "https://app.test/trip/",
+    push: opts.noPush ? null : async (s, payload) => { pushed.push({ to: s.endpoint, msg: JSON.parse(payload) }); },
+    db: { remove: async () => {}, claimLater: opts.claim || (async (...a) => { claims.push(a); return true; }) }
+  });
+  return { log, pushed, claims };
+}
+let L = await later();
+is([L.pushed.length, L.pushed[0] && L.pushed[0].msg.title], [2, "Did $12.00 arrive?"], "Kelvin's phones are asked again when the time comes");
+is(/reminder/i.test(L.pushed[0].msg.body) && L.pushed[0].msg.sticky, true, "saying it is the reminder they asked for, and staying up");
+is(L.pushed[0].msg.tag, "arrive-montreal-p5", "replacing the first question rather than stacking up");
+is(L.claims[0].slice(0, 3), ["montreal", "p5", NOW - 60000], "claimed first, for exactly this time");
+L = await later({ claim: async () => false });
+is([L.pushed.length, L.log.skipped[0]], [0, "montreal/p5: already reminded"], "never twice for the same time");
+group.payments.p5.later.until = NOW + 3600e3;
+L = await later();
+is(L.pushed.length, 0, "not before the time");
+group.payments.p5.later = { uid: "u3", until: NOW - 60000 };
+L = await later();
+is(L.pushed.length, 0, "not when somebody else put it off");
+group.payments.p5.later = { uid: "u2", until: NOW - 60000 };
+group.payments.p5.got = { ok: true, uid: "u2", at: NOW - 1000 };
+L = await later();
+is(L.pushed.length, 0, "not once it has been answered");
+delete group.payments.p5.got;
+group.payments.p5.later = { uid: "u2", until: NOW - 8 * 864e5 };
+L = await later();
+is(L.pushed.length, 0, "not a week-old reminder");
+delete group.payments.p5;
 
 console.log("\na phone that has gone away is forgotten");
 r = await run({ n1: note("payment.add", "p1") }, {

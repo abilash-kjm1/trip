@@ -80,6 +80,16 @@ export function askMessage({ from, amount, group, url, tag, cur }) {
   };
 }
 
+/** The same question again, at the time they chose with "Not yet". */
+export function laterMessage({ from, amount, group, url, tag, cur }) {
+  return {
+    title: "Did " + money(amount, cur) + " arrive?",
+    body: "Your reminder · " + clip(from, 40) + " sent it · " + clip(group, 40) +
+          ". Check your " + (cur === "INR" ? "UPI app" : "bank") + ", then tap to answer.",
+    url, tag, sticky: true
+  };
+}
+
 /** To whoever recorded the payment: the answer. */
 export function answerMessage({ to, amount, ok, group, url, tag, cur }) {
   return ok

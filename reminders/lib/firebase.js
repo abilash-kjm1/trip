@@ -61,6 +61,20 @@ export async function claimNote(key) {
   return !!(r.committed && v && v.pushed === token);
 }
 
+/** Take the one reminder for a payment put off with "Not yet". Kept under
+    mail/, which the app cannot read or write. True only when this chosen time
+    has not been reminded about, and the last reminder for this payment was at
+    least `gapMs` ago. */
+export async function claimLater(gid, k, until, now, gapMs) {
+  const r = await database().ref("mail/later/" + gid + "~" + k).transaction((cur) => {
+    if (cur && Number(cur.until) === until) return;          // this time already reminded
+    if (cur && now - Number(cur.at) < gapMs) return;         // too soon after the last one
+    return { until, at: now };
+  });
+  const v = r.snapshot && r.snapshot.val();
+  return !!(r.committed && v && Number(v.until) === until && Number(v.at) === now);
+}
+
 /** Delete one path. Used to clear notes the mailer has already acted on. */
 export async function removePath(path) {
   await database().ref(path).remove();
