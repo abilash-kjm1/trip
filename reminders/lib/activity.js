@@ -515,11 +515,12 @@ export async function runPush({ entries, users, dry, push, db, log, appUrl, grou
    the phone notification when the time comes. The payment decides everything:
    still asking, still unanswered, and put off by the account the money went
    to. One reminder per chosen time, and never two for the same payment within
-   three hours - kept where the app cannot write, so rewriting the time cannot
-   turn it into a stream of notifications.
+   four minutes - kept where the app cannot write, so rewriting the time over
+   and over cannot turn it into more than one notification per pass. Short
+   enough that "in 5 minutes", chosen twice running, still reminds twice.
    --------------------------------------------------------------------------- */
 export const LATER_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
-export const LATER_GAP_MS = 3 * 3600 * 1000;
+export const LATER_GAP_MS = 4 * 60 * 1000;
 export const MAX_LATER = 50;
 
 export async function runLater({ trips, users, at, dry, push, db, appUrl }) {

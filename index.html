@@ -9117,11 +9117,12 @@ function arrFace(name, gid, cls){
     ? '<span class="arr-av '+(cls||"")+'"><img src="'+esc(m.photo)+'" alt="" referrerpolicy="no-referrer"></span>'
     : '<span class="arr-av '+(cls||"")+'" style="background:'+esc(bg)+'">'+esc(initials(name))+'</span>';
 }
-/* When "Not yet" can bring the question back: in an hour; this evening - or in
-   three hours once the evening is close - and the next morning. */
+/* When "Not yet" can bring the question back: in five minutes; in an hour;
+   this evening - or in three hours once the evening is close - and the next
+   morning. */
 const arrClock = (ts)=> new Date(ts).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
 function arrTimes(now){
-  const out=[{i:"schedule", t:"In 1 hour", u:now+3600e3}];
+  const out=[{i:"timer", t:"In 5 minutes", u:now+5*60e3}, {i:"schedule", t:"In 1 hour", u:now+3600e3}];
   const eve=new Date(now); eve.setHours(19,0,0,0);
   if(eve.getTime()-now >= 2*3600e3) out.push({i:"wb_twilight", t:"This evening", u:eve.getTime()});
   else out.push({i:"hourglass_top", t:"In 3 hours", u:now+3*3600e3});
@@ -9878,7 +9879,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915180515";
+const APP_BUILD = "20260915181205";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
