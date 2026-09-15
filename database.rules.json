@@ -23,15 +23,54 @@
 // deleting it outright, or wiping it - is refused for anyone else.
 {
   "rules": {
+    // Membership (people/uids), the group's own details (meta) and its
+    // ledger (expenses/payments) each have their own .write rule now,
+    // instead of one blanket rule at $gid covering everything underneath.
+    // Realtime Database always lets an ancestor's grant cascade down and
+    // win, even over a stricter rule closer to the data - which is exactly
+    // why a single membership check at $gid used to let anyone in a group
+    // rewrite any expense or payment with the browser's developer tools.
+    // $gid's own rule is narrowed to only the two things that really are
+    // whole-group operations: creating a brand new group, and the
+    // administrator deleting or managing one.
+    //
+    // expenses/$id and payments/$id: only whoever added a line (byUid) may
+    // change or remove it, or the administrator - except a record from
+    // before byUid was tracked, which stays open to any member exactly as
+    // before. A member renaming themselves, or merging a duplicate, moves
+    // that name across every expense and payment that mentions it - so a
+    // write that leaves the amount (and the mode, or who it went between)
+    // untouched is allowed for anyone in the group; changing what was paid,
+    // or by whom, or how it was split, is not. On a payment, the person it
+    // went to may also answer whether it arrived, or the payer may ask
+    // again - both write only "got"/"later", leaving every other field on
+    // the record exactly as it was.
     "trips": {
       ".read": "auth != null && (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com')",
       "$gid": {
         ".read": "auth != null && (data.child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
-        ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (data.child('uids').child(auth.uid).exists() && newData.exists() && (newData.child('meta').exists() || !data.child('meta').exists())) || (!data.exists() && newData.child('uids').child(auth.uid).exists()))",
+        ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (!data.exists() && newData.child('uids').child(auth.uid).exists()))",
         "meta": {
           ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
+          ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || root.child('trips').child($gid).child('uids').child(auth.uid).exists() || !data.child('name').exists())",
           "currency": {
             ".validate": "newData.isString() && newData.val().matches(/^(CAD|INR)$/)"
+          }
+        },
+        "people": {
+          ".write": "auth != null && (root.child('trips').child($gid).child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
+        },
+        "uids": {
+          ".write": "auth != null && (root.child('trips').child($gid).child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
+        },
+        "expenses": {
+          "$id": {
+            ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (root.child('trips').child($gid).child('uids').child(auth.uid).exists() && ((!data.exists() && newData.exists() && newData.child('byUid').val() == auth.uid) || (data.exists() && data.child('byUid').exists() && data.child('byUid').val() == auth.uid) || (data.exists() && !data.child('byUid').exists()) || (data.exists() && newData.exists() && newData.child('amount').val() == data.child('amount').val() && newData.child('mode').val() == data.child('mode').val()))))"
+          }
+        },
+        "payments": {
+          "$id": {
+            ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (root.child('trips').child($gid).child('uids').child(auth.uid).exists() && ((!data.exists() && newData.exists() && newData.child('byUid').val() == auth.uid) || (data.exists() && data.child('byUid').exists() && data.child('byUid').val() == auth.uid) || (data.exists() && !data.child('byUid').exists()) || (data.exists() && newData.exists() && newData.child('amount').val() == data.child('amount').val() && newData.child('at').val() == data.child('at').val()) || (data.exists() && newData.exists() && newData.child('from').val() == data.child('from').val() && newData.child('to').val() == data.child('to').val() && newData.child('amount').val() == data.child('amount').val() && newData.child('note').val() == data.child('note').val() && newData.child('at').val() == data.child('at').val() && newData.child('by').val() == data.child('by').val() && newData.child('byUid').val() == data.child('byUid').val()))))"
           }
         }
       }
