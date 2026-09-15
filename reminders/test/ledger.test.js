@@ -78,6 +78,25 @@ is(sharesOf(group.expenses.e2), { Abilash: 40, Kalai: 30, Kavya: 20, Kelvin: 10 
 is(sharesOf(group.expenses.e4), { Abilash: 100, Kalai: 100, Kavya: 50, Kelvin: 50 }, "shares");
 is(sharesOf(group.expenses.e5), { Abilash: 50, Kelvin: 150 }, "percent");
 
+console.log("\nsplits always add up to the cent, never a leftover penny");
+// $100 split three ways used to give everyone $33.333...repeating. Now every
+// share is rounded to the cent, and whatever that rounding leaves over or
+// short lands on the payer.
+const hundred = { amount: 100, payer: "Abilash", mode: "equal", between: ["Abilash", "Kalai", "Kavya"] };
+const hs = sharesOf(hundred);
+is(hs, { Abilash: 33.34, Kalai: 33.33, Kavya: 33.33 }, "the payer's seat takes the odd cent");
+is(cents(hs.Abilash + hs.Kalai + hs.Kavya), 100, "and the three shares add back up to exactly $100");
+// The payer is not always in the split - lent out entirely to others - so
+// the correction falls back to the first name instead.
+const lentOut = { amount: 10, payer: "Abilash", mode: "equal", between: ["Kalai", "Kavya", "Kelvin"] };
+const ls = sharesOf(lentOut);
+is(cents(ls.Kalai + ls.Kavya + ls.Kelvin), 10, "still adds up exactly when the payer isn't one of the three");
+is(ls.Kalai, 3.34, "the correction falls to the first name in the split when the payer is not in it");
+// A three-way shares split with an odd total behaves the same way.
+const oddShares = { amount: 10, payer: "Abilash", mode: "shares", between: ["Abilash", "Kalai", "Kavya"],
+                     vals: { Abilash: 1, Kalai: 1, Kavya: 1 } };
+is(cents(Object.values(sharesOf(oddShares)).reduce((a, v) => a + v, 0)), 10, "an uneven three-way shares split also lands on the cent");
+
 console.log("balances");
 const b = balances(group);
 //  Abilash paid 100; share 75+40+100+50 = 265          -> -165

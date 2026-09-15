@@ -662,6 +662,20 @@ function sharesOf(e){
     const per=amt/between.length;
     between.forEach(n=> out[n]=per );
   }
+  // Every share rounded to the cent, then whatever the roundings left over
+  // or short handed to one fixed seat - the payer, when they are part of
+  // the split, otherwise the first name in it - so shares always add up to
+  // the amount exactly. Without this, dividing $100 three ways leaves each
+  // person owing $33.333..., and a "settled" group can still carry a
+  // leftover cent nobody can account for.
+  const cent=(n)=> Math.round((n+Number.EPSILON)*100)/100;
+  let sum=0;
+  between.forEach(n=>{ out[n]=cent(out[n]||0); sum=cent(sum+out[n]); });
+  const diff=cent(amt-sum);
+  if(Math.abs(diff)>=0.005){
+    const who = between.indexOf(e.payer)>-1 ? e.payer : between[0];
+    if(who!=null) out[who]=cent((out[who]||0)+diff);
+  }
   return out;
 }
 // Net position per person: positive = they are owed, negative = they owe
