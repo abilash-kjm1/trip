@@ -2080,6 +2080,63 @@ button, input, select, textarea{ font-family:var(--f); }
 :root[data-theme="purple"] .ix-step-ic{ color:#6D3FBF; }
 :root[data-theme="purple"] .ix-step-line{ background:repeating-linear-gradient(90deg, #6D3FBF 0 4px, transparent 4px 8px); }
 
+/* ---- Interac page, refreshed: headings like Today, soft panels ---- */
+.ix-pill{ flex:none; padding:4px 10px; border-radius:999px; background:var(--fill-1); color:var(--ink-2);
+  font-size:12px; font-weight:700; white-space:nowrap; box-shadow:inset 0 0 0 1px var(--line); }
+.ix-pill.good{ background:color-mix(in srgb, var(--good) 12%, transparent); color:var(--good); box-shadow:none; }
+.ix-panel{ background:var(--surface); border:1px solid var(--line); border-radius:22px; padding:12px 12px 10px;
+  box-shadow:var(--shadow, 0 1px 2px rgba(0,0,0,.04), 0 6px 18px rgba(0,0,0,.05)); }
+
+/* the form */
+.ix-form{ border-radius:22px; padding:16px; }
+.ix-form-h{ display:flex; align-items:center; gap:12px; margin:0 0 14px; }
+.ix-form-h > .ms{ flex:none; width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center;
+  background:var(--apricot-lt); color:var(--apricot-dk); font-size:22px; }
+.ix-form-h b{ display:block; font-size:15.5px; font-weight:700; color:var(--ink); }
+.ix-form-h small{ display:block; margin-top:1px; font-size:12.5px; color:var(--ink-3); }
+.ix-form .etx-actions{ display:flex; gap:8px; }
+.ix-form .etx-actions .btn{ flex:1; }
+
+/* banks: one row of logos */
+.ix-banks, .ix-banks{ display:flex; gap:2px; overflow-x:auto; margin:0 -4px; padding:4px 2px 8px; scrollbar-width:none; }
+@media (min-width:600px){ .ix-banks{ display:flex; } }
+.ix-banks::-webkit-scrollbar{ display:none; }
+.ix-bank{ flex:1 0 62px; min-width:62px; gap:7px; padding:10px 2px 8px; border:0; border-radius:16px; background:transparent; box-shadow:none; }
+.ix-bank:hover{ background:var(--fill-1); }
+@media (hover:hover){ .ix-bank:hover{ transform:none; } }
+.ix-bank.on{ border:0; box-shadow:none; background:color-mix(in srgb, var(--bk) 7%, transparent); }
+.ix-mono{ width:48px; height:48px; border-radius:50%; font-size:12px; box-shadow:0 8px 16px -10px var(--bk);
+  transition:box-shadow .25s ease, transform .25s ease; }
+.ix-bank.on .ix-mono{ transform:scale(1.05); box-shadow:0 0 0 3px var(--surface), 0 0 0 5px var(--bk), 0 10px 20px -10px var(--bk); }
+.ix-bank-n{ font-size:11.5px; white-space:nowrap; }
+.ix-tick{ top:4px; right:calc(50% - 32px); font-size:18px; border-radius:50%; background:var(--surface); }
+.ix-info{ margin:2px 2px 0; padding-top:10px; border-top:1px solid var(--line); }
+.ix-info summary{ list-style:none; display:flex; align-items:center; gap:7px; padding:2px 0; cursor:pointer;
+  font-size:13px; font-weight:600; color:var(--apricot-dk); }
+.ix-info summary::-webkit-details-marker{ display:none; }
+.ix-info summary .ms{ font-size:18px; }
+.ix-info summary .chev{ margin-left:auto; color:var(--ink-3); transition:transform .2s ease; }
+.ix-info[open] summary .chev{ transform:rotate(180deg); }
+.ix-info p{ margin:8px 0 2px; font-size:12.5px; line-height:1.5; color:var(--ink-3); }
+
+/* how paying works */
+.ix-how, :root[data-theme="purple"] .ix-how{ margin:0; padding:8px 0 4px; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.ix-step-ic{ width:48px; height:48px; border-radius:15px; background:var(--apricot-lt); color:var(--apricot-dk); box-shadow:none; }
+.ix-step-ic .ms{ font-size:22px; }
+.ix-step-ic i{ background:var(--ink); color:var(--cream); box-shadow:0 0 0 2px var(--surface); }
+.ix-step b{ margin-top:2px; font-size:13.5px; }
+.ix-step-line{ flex:0 0 16px; height:2px; margin-top:24px; border-radius:2px; opacity:.9;
+  background:repeating-linear-gradient(90deg, var(--apricot) 0 4px, transparent 4px 8px); }
+
+/* people */
+.ix-empty{ display:flex; flex-direction:column; align-items:center; gap:4px; padding:22px 18px 20px; text-align:center; }
+.ix-empty > .ms{ width:54px; height:54px; margin-bottom:8px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--apricot-lt); color:var(--apricot-dk); font-size:27px; }
+.ix-empty b{ font-size:15.5px; font-weight:700; color:var(--ink); }
+.ix-empty p{ max-width:34ch; margin:0; font-size:13px; line-height:1.45; color:var(--ink-3); }
+.ix-list .card{ border-radius:22px; overflow:hidden; }
+.ix-group-lab{ margin:14px 6px 8px; }
+
 /* ---- Interac: my details, my bank, everybody's details, and the Pay box -- */
 .etx-head{ display:flex; gap:12px; align-items:flex-start; margin:0 0 var(--s4); }
 .etx-head > .ms{ flex:0 0 auto; width:40px; height:40px; border-radius:12px; display:flex; align-items:center;
@@ -4579,7 +4636,7 @@ function viewActivity(main){
    opens, how paying works in three steps, and everybody else - those ready
    to be paid first, those not set up yet after. The card and the rows come
    in once per visit, not on every redraw the database causes. */
-let IX_EDIT = false, IX_SEEN = false;
+let IX_EDIT = false, IX_SEEN = false, IX_INFO = false;
 const ETX_TINT = {cibc:"#B5123A", rbc:"#005DAA", td:"#1A8B3C", scotiabank:"#D8141C", bmo:"#0079C1"};
 const ETX_MONO = {cibc:"CIBC", rbc:"RBC", td:"TD", scotiabank:"S", bmo:"BMO"};
 function viewInterac(main){
@@ -4628,6 +4685,9 @@ function viewInterac(main){
   if(editing){
     const f=el("div","card pad ix-form");
     f.innerHTML=
+      '<div class="ix-form-h"><span class="ms" aria-hidden="true">'+(mine ? "edit_note" : "badge")+'</span>'+
+        '<div><b>'+(mine ? "Edit your details" : "Add your Interac details")+'</b>'+
+        '<small>So friends can pay you back in a tap.</small></div></div>'+
       '<div class="field"><label for="ixName">Name on your Interac account</label>'+
         '<input id="ixName" type="text" autocomplete="name" maxlength="60" placeholder="'+esc(USER.name||"")+'"></div>'+
       '<div class="field"><label for="ixHandle">Interac email or phone</label>'+
@@ -4657,8 +4717,17 @@ function viewInterac(main){
     });
   }
 
-  // ---- your bank app ----
-  main.appendChild(el("div","sechead","Your bank app"));
+  // A heading like the ones on Today, with where things stand on the right.
+  const ixHead=(icon, title, pill, pillCls)=>{
+    const h=el("div","th-head");
+    h.innerHTML='<span class="th-ic"><span class="ms" aria-hidden="true">'+icon+'</span></span><h2>'+esc(title)+'</h2>'+
+      (pill ? '<span class="ix-pill'+(pillCls ? ' '+pillCls : '')+'">'+esc(pill)+'</span>' : '');
+    return h;
+  };
+
+  // ---- your bank app: one row of logos, the details folded away ----
+  main.appendChild(ixHead("account_balance", "Your bank app", bank ? bank.name : "Not chosen", bank ? "good" : ""));
+  const bankPanel=el("div","ix-panel");
   const banks=el("div","ix-banks"); banks.id="ixBanks";
   const cur=(PREFS&&PREFS.bank)||"";
   ETX_BANKS.concat([{id:"", name:"None"}]).forEach(b=>{
@@ -4677,19 +4746,28 @@ function viewInterac(main){
     });
     banks.appendChild(t);
   });
-  main.appendChild(banks);
-  main.appendChild(el("p","ix-sub",
-    "Pay copies the email and opens this app. Banks cannot be told who to pay, so you paste the email and "+
-    "amount in. On iPhone the bank’s App Store page opens - tap Open there."));
+  bankPanel.appendChild(banks);
+  const info=el("details","ix-info");
+  info.innerHTML='<summary><span class="ms" aria-hidden="true">info</span>How Pay opens your bank'+
+      '<span class="ms chev" aria-hidden="true">expand_more</span></summary>'+
+    '<p>Pay copies the email and opens this app. Banks can’t be told who to pay, so you paste the email and '+
+    'amount in. On iPhone the bank’s App Store page opens - tap Open there.</p>';
+  info.open=IX_INFO;
+  info.addEventListener("toggle", ()=>{ IX_INFO=info.open; });
+  bankPanel.appendChild(info);
+  main.appendChild(bankPanel);
 
   // ---- how paying works ----
+  main.appendChild(ixHead("route", "How paying works"));
+  const howPanel=el("div","ix-panel");
   const how=el("div","ix-how");
   how.innerHTML=[["payments","Tap Pay","on anything you owe"],
                  ["content_copy","Copy & open","your bank app"],
                  ["task_alt","Record it","back in Settle"]].map((st,i)=>
     '<div class="ix-step"><span class="ix-step-ic"><span class="ms" aria-hidden="true">'+st[0]+'</span><i>'+(i+1)+'</i></span>'+
       '<b>'+st[1]+'</b><small>'+st[2]+'</small></div>').join('<span class="ix-step-line" aria-hidden="true"></span>');
-  main.appendChild(how);
+  howPanel.appendChild(how);
+  main.appendChild(howPanel);
 
   // ---- everybody else ----
   const seen={}, people=[];
@@ -4709,12 +4787,14 @@ function viewInterac(main){
   people.sort((a,c)=> String(a.name).localeCompare(String(c.name)));
   const ready=people.filter(p=> etxFor(p.uid)), pending=people.filter(p=> !etxFor(p.uid));
 
-  const head=el("div","sechead ix-peoplehead");
-  head.innerHTML='<span>'+(isAdmin() ? "Everyone in Settle" : "People in your groups")+'</span>'+
-    (people.length ? '<span class="ix-count">'+ready.length+' of '+people.length+' ready</span>' : '');
-  main.appendChild(head);
+  main.appendChild(ixHead("group", isAdmin() ? "Everyone in Settle" : "People in your groups",
+    people.length ? ready.length+" of "+people.length+" ready" : "",
+    people.length && ready.length===people.length ? "good" : ""));
   if(!people.length){
-    main.appendChild(el("p","fine","Nobody else with a Settle account is in your groups yet."));
+    const e=el("div","ix-panel ix-empty");
+    e.innerHTML='<span class="ms" aria-hidden="true">person_search</span><b>No one to pay here yet</b>'+
+      '<p>When people in your groups add their Interac details, they show up here, ready to copy.</p>';
+    main.appendChild(e);
     return;
   }
 
@@ -8963,7 +9043,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915002458";
+const APP_BUILD = "20260915003557";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
