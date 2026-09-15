@@ -1,0 +1,25 @@
+
+/* ---------- printing (kept last so it wins the cascade) ---------- */
+#printArea{ display:none; }
+@media print{
+  @page{ margin:14mm; }
+  body{ background:#fff; }
+  body.printing > *{ display:none !important; }
+  body.printing #printArea{ display:block !important; }
+  #printArea{ font-size:11pt; color:#000; }
+  #printArea h1{ font-size:19pt; margin:0 0 2px; letter-spacing:-.4px; }
+  #printArea h2{ font-size:12.5pt; margin:22px 0 6px; padding-bottom:4px;
+    border-bottom:1.5px solid #000; page-break-after:avoid; }
+  #printArea .pmeta{ font-size:9.5pt; color:#444; margin:0 0 4px; }
+  #printArea table{ width:100%; border-collapse:collapse; margin:0; font-size:9.5pt; }
+  #printArea th, #printArea td{ border-bottom:1px solid #ccc; padding:5px 6px;
+    text-align:left; vertical-align:top; }
+  #printArea th{ font-size:8pt; text-transform:uppercase; letter-spacing:.05em;
+    color:#333; border-bottom:1px solid #000; }
+  #printArea .r{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  #printArea .who{ font-size:8.5pt; color:#444; }
+  #printArea .note{ font-size:8.5pt; color:#555; font-style:italic; }
+  #printArea ul{ margin:0; padding-left:18px; }
+  #printArea li{ margin-bottom:3px; }
+  #printArea tr{ page-break-inside:avoid; }
+}

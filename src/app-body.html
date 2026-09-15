@@ -1,0 +1,82 @@
+<body>
+<div class="bgmesh" aria-hidden="true"></div>
+<div class="notif-stack" id="notifStack" aria-live="polite"></div>
+
+<!-- The rail is the wide-screen form of the bar at the bottom of a phone.
+     Both carry the same places, so neither is the only way anywhere. -->
+<aside class="side" id="side" aria-label="Sections">
+  <div class="brand">Set<i>tle</i></div>
+  <div class="byline">Created by Abilash</div>
+  <div class="grp">Home</div>
+  <button data-tab="home"><span class="ms" aria-hidden="true">explore</span>Today</button>
+  <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
+  <button data-tab="groups"><span class="ms" aria-hidden="true">group</span>Groups</button>
+  <button data-tab="insights"><span class="ms" aria-hidden="true">hub</span>Visualize</button>
+  <button data-tab="interac"><span class="ms" aria-hidden="true">send_money</span>Pay</button>
+  <div class="foot">
+    <button data-tab="account"><span class="ms" aria-hidden="true">account_circle</span>Account</button>
+  </div>
+</aside>
+
+<div class="shell">
+<div class="panel">
+
+<!-- The top bar: a floating island. Where you are on the left - back, the
+     brand or the screen's name - and everything about the app on the right,
+     in one capsule beside your picture. The title has its own room, so no
+     button can ever sit on top of it. -->
+<header class="bar" id="bar">
+  <div class="bar-in">
+    <div class="bar-lead">
+      <button class="bar-back" id="backBtn" type="button" aria-label="Back" hidden><span class="ms" aria-hidden="true">arrow_back</span></button>
+      <span class="brandwrap" id="barBrand"><span class="brand">Set<i>tle</i></span><span class="byline">Created by Abilash</span></span>
+      <div class="bar-titles"><span class="bar-eyebrow" id="barEyebrow"></span><h1 id="barTitle" hidden>Today</h1></div>
+    </div>
+    <div class="bar-tools">
+      <button class="flagflip" id="sideBtn" type="button" data-side="CAD" hidden>
+        <span class="sf-opt" data-s="CAD"><span class="sf-flag"></span></span>
+        <span class="sf-opt" data-s="INR"><span class="sf-flag"></span></span>
+        <i class="sf-badge" hidden></i>
+      </button>
+      <div class="bar-cap">
+        <button class="netlight" id="netPill" data-net type="button" data-state="wait" aria-label="Connecting to Settle" hidden><i class="net-dot" aria-hidden="true"></i><span class="net-l">Connecting</span></button>
+        <span class="bar-sep" aria-hidden="true"></span>
+        <button class="cap-btn" id="refreshBtn" data-refresh type="button" aria-label="Refresh Settle" title="Refresh"><span class="ms" aria-hidden="true">refresh</span></button>
+        <button class="cap-btn" id="gmenuBtn" type="button" aria-label="Group settings" title="Group settings" hidden><span class="ms" aria-hidden="true">more_horiz</span></button>
+      </div>
+      <button class="me" id="meBtn" type="button" aria-label="Your account"></button>
+    </div>
+  </div>
+</header>
+<div class="sync" id="syncBar" hidden></div>
+
+<main class="wrap" id="main"></main>
+
+</div>
+</div>
+
+<button class="fab" id="fab" hidden><span class="ms" aria-hidden="true">add</span><span id="fabLabel">Add expense</span></button>
+
+<!-- Five equal tabs, and the + floating centred just above them. -->
+<button class="nav-fab" id="navAdd" aria-label="Add an expense"><span class="ms" aria-hidden="true">add</span></button>
+<nav class="nav" id="nav" aria-label="Sections">
+  <button data-tab="home" aria-current="page"><span class="nav-ic"><span class="ms" aria-hidden="true">explore</span></span><span class="nav-l">Today</span></button>
+  <button data-tab="activity"><span class="nav-ic"><span class="ms" aria-hidden="true">receipt_long</span></span><span class="nav-l">Expenses</span></button>
+  <button data-tab="groups"><span class="nav-ic"><span class="ms" aria-hidden="true">group</span></span><span class="nav-l">Groups</span></button>
+  <button data-tab="insights"><span class="nav-ic"><span class="ms" aria-hidden="true">hub</span></span><span class="nav-l">Visualize</span></button>
+  <button data-tab="interac"><span class="nav-ic"><span class="ms" aria-hidden="true">send_money</span></span><span class="nav-l">Pay</span></button>
+</nav>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden>
+  <div class="grab"></div>
+  <div class="shead">
+    <span class="spacer"></span>
+    <h2 id="sheetTitle">…</h2>
+    <span class="spacer"></span>
+    <button class="ibtn" id="sheetClose" aria-label="Close"><span class="ms" aria-hidden="true">close</span></button>
+  </div>
+  <div class="sbody" id="sheetBody"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
