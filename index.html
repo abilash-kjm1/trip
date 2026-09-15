@@ -2926,6 +2926,31 @@ span.af-pill{ cursor:default; padding-right:12px; }
 }
 
 
+/* ---- the live activity feed: a small stack, top right ---- */
+.notif-stack{ position:fixed; top:calc(var(--safe-t) + 76px); right:var(--s3); z-index:60;
+  display:flex; flex-direction:column; gap:8px; width:min(324px, calc(100vw - 24px)); pointer-events:none; }
+.notif-card{ pointer-events:auto; display:flex; align-items:flex-start; gap:10px; padding:11px 10px 11px 12px;
+  border-radius:16px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line), 0 10px 26px -12px rgba(0,0,0,.35);
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  animation:notifIn .35s cubic-bezier(.22,.61,.36,1) backwards; }
+@keyframes notifIn{ from{ opacity:0; transform:translateX(18px) scale(.97); } }
+.notif-ic{ flex:none; width:30px; height:30px; margin-top:1px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; background:var(--apricot-lt); color:var(--apricot-dk); }
+.notif-ic .ms{ font-size:17px; }
+.notif-t{ flex:1; min-width:0; font-size:13px; line-height:1.4; color:var(--ink); }
+.notif-x{ flex:none; width:26px; height:26px; margin-top:-2px; margin-right:-2px; border:0; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; background:transparent; color:var(--ink-3); cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:background .15s, color .15s; }
+.notif-x .ms{ font-size:16px; }
+.notif-x:hover{ background:var(--fill-1); color:var(--ink); }
+.notif-x:active{ transform:scale(.9); }
+.notif-x:focus:not(:focus-visible){ outline:none; }
+.notif-x:focus-visible{ outline:2px solid var(--apricot-dk); outline-offset:1px; }
+@media (hover:hover){ .notif-card:hover{ box-shadow:inset 0 0 0 1px var(--line), 0 14px 30px -12px rgba(0,0,0,.4); } }
+@media (max-width:460px){ .notif-stack{ top:calc(var(--safe-t) + 8px); left:var(--s3); right:var(--s3); width:auto; } }
+@media (prefers-reduced-motion:reduce){ .notif-card{ animation:none; } }
+:root[data-theme="purple"] .notif-ic{ background:rgba(109,63,191,.14); color:#6D3FBF; }
+
 /* ---- currencies: rupee and dollar groups side by side ---- */
 .pf-amt input.long{ width:8.4ch; font-size:40px !important; }
 .pf-amt input.xlong{ width:10.4ch; font-size:32px !important; }
@@ -3093,6 +3118,7 @@ span.af-pill{ cursor:default; padding-right:12px; }
 </head>
 <body>
 <div class="bgmesh" aria-hidden="true"></div>
+<div class="notif-stack" id="notifStack" aria-live="polite"></div>
 
 <!-- The rail is the wide-screen form of the bar at the bottom of a phone.
      Both carry the same places, so neither is the only way anywhere. -->
@@ -3878,18 +3904,22 @@ function totalOf(gid){ let t=0; expensesOf(gid).forEach(e=> t+=Number(e.amount)|
 /* ---------------- writes ---------------- */
 function ref(path){ return remote.ref(remote.db, path); }
 function push(path, val){
+  if(typeof notifSelfGrace==="function") notifSelfGrace();
   if(!remote){ toast("Not signed in yet"); return Promise.resolve(); }
   return remote.push(ref(path), val).catch(e=>toast("Could not save: "+e.message));
 }
 function set(path, val){
+  if(typeof notifSelfGrace==="function") notifSelfGrace();
   if(!remote) return Promise.resolve();
   return remote.set(ref(path), val).catch(e=>toast("Could not save: "+e.message));
 }
 function del(path){
+  if(typeof notifSelfGrace==="function") notifSelfGrace();
   if(!remote) return Promise.resolve();
   return remote.remove(ref(path)).catch(e=>toast("Could not remove: "+e.message));
 }
 function upd(path, obj){
+  if(typeof notifSelfGrace==="function") notifSelfGrace();
   if(!remote) return Promise.resolve();
   return remote.update(ref(path), obj).catch(e=>toast("Could not save: "+e.message));
 }
@@ -3898,6 +3928,7 @@ function upd(path, obj){
    for a form that goes on to say "saved": the screen showed details the
    database had turned down, and a refresh took them away. */
 function updStrict(path, obj){
+  if(typeof notifSelfGrace==="function") notifSelfGrace();
   if(!remote) return Promise.reject(new Error("Not signed in yet"));
   return remote.update(ref(path), obj);
 }
@@ -4187,6 +4218,8 @@ function render(){
   }
   // Payments waiting on me to say they arrived, and answers to mine.
   if(typeof arrivals==="function") arrivals();
+  // What just changed - added, edited, deleted, or being added to a group.
+  if(typeof notifCheck==="function") notifCheck();
 
   // Someone opened a group they have not yet identified themselves in.
   if(USER && CURRENT && loaded(CURRENT) && !ME && autoLink(CURRENT)) return;
@@ -9881,7 +9914,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915190538";
+const APP_BUILD = "20260915192157";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
@@ -10001,6 +10034,111 @@ function buildLabel(){
   const d=new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5]));
   return d.toLocaleDateString(undefined, {day:"numeric", month:"short"})+", "+
          d.toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"});
+}
+
+/* ===========================================================================
+   Live activity feed: a small stack of cards in the top corner that appears
+   the moment something changes - an expense or payment added, edited or
+   deleted, or being added to a group - on either side. Each stays up until
+   tapped away with its own close button; tapping the card itself opens the
+   group it is about.
+
+   Not a log of everything that has ever happened: only real changes while
+   the app is open, found by comparing each group's data against a shadow
+   copy taken as it loads. The first look at anything - the app just opening,
+   a group just being joined - only sets that baseline, so signing in never
+   floods the corner with history, and nothing here duplicates the
+   did-it-arrive slip or the flag badge, which already cover that ground.
+   =========================================================================== */
+let NOTIF_LIST = [];              // {id, icon, text, gid} on screen now, newest first
+let NOTIF_SHADOW = {};            // gid -> {expenses:{k:{sig,label}}, payments:{k:{sig,label}}}
+let NOTIF_KNOWN_GROUPS = null;    // group ids already accounted for, once the baseline is set
+let NOTIF_SELF_UNTIL = 0;         // Date.now() until which my own writes are not news
+const NOTIF_CAP = 5;
+
+/* Every local write goes through push/set/del/upd/updStrict in app-js.js,
+   each of which calls this first - so whatever I just did, on either side,
+   is folded into the next baseline rather than read back to me as news. */
+function notifSelfGrace(){ NOTIF_SELF_UNTIL = Date.now() + 2500; }
+
+function notifPush(icon, text, gid){
+  NOTIF_LIST.unshift({id:"n"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), icon, text, gid});
+  if(NOTIF_LIST.length > NOTIF_CAP) NOTIF_LIST.length = NOTIF_CAP;
+  notifRender();
+}
+function notifDismiss(id){
+  NOTIF_LIST = NOTIF_LIST.filter(n=>n.id!==id);
+  notifRender();
+}
+function notifRender(){
+  const host=$("notifStack"); if(!host) return;
+  host.innerHTML = NOTIF_LIST.map(n=>
+    '<div class="notif-card" data-id="'+n.id+'" role="status">'+
+      '<span class="notif-ic"><span class="ms" aria-hidden="true">'+n.icon+'</span></span>'+
+      '<span class="notif-t">'+esc(n.text)+'</span>'+
+      '<button class="notif-x" type="button" aria-label="Dismiss">'+
+        '<span class="ms" aria-hidden="true">close</span></button>'+
+    '</div>').join("");
+  [].forEach.call(host.querySelectorAll(".notif-card"), card=>{
+    const id=card.dataset.id;
+    card.querySelector(".notif-x").addEventListener("click", e=>{ e.stopPropagation(); notifDismiss(id); });
+    card.addEventListener("click", ()=>{
+      const n=NOTIF_LIST.find(x=>x.id===id);
+      notifDismiss(id);
+      if(n && n.gid) openGroup(n.gid);   // follows the group's own side, same as a notification tap
+    });
+  });
+}
+
+/* Whoever's name is on a record, not me. Old records with no byUid fall back
+   to the name, the same rule the flag badge uses. */
+function notifOther(x, me){ return x.byUid ? x.byUid!==USER.uid : (!me || x.by!==me); }
+
+function notifCheck(){
+  if(!USER || !mayUse()) return;
+  const grace = Date.now() < NOTIF_SELF_UNTIL;
+
+  if(NOTIF_KNOWN_GROUPS===null){
+    NOTIF_KNOWN_GROUPS = new Set(JOINED.map(g=>g.id));
+  } else if(!grace){
+    JOINED.forEach(g=>{
+      if(!NOTIF_KNOWN_GROUPS.has(g.id)) notifPush("group_add", "You were added to "+groupName(g.id), g.id);
+    });
+  }
+  JOINED.forEach(g=> NOTIF_KNOWN_GROUPS.add(g.id));
+
+  JOINED.forEach(g=>{
+    const gid=g.id;
+    if(!loaded(gid)) return;
+    const me=meIn(gid), first=!NOTIF_SHADOW[gid];
+    const shadow = NOTIF_SHADOW[gid] = NOTIF_SHADOW[gid] || {expenses:{}, payments:{}};
+
+    [["expenses", expensesOf(gid), "add_circle",
+      (e)=> (e.by||"Someone")+" added "+(e.desc||"an expense")+(e.amount ? " · "+money(e.amount, gid) : "")+" in "+groupName(gid),
+      (e)=> (e.by||"Someone")+" changed "+(e.desc||"an expense")+" in "+groupName(gid)],
+     ["payments", paymentsOf(gid), "payments",
+      (p)=> (p.by||p.from||"Someone")+" recorded "+(p.from||"?")+" paid "+(p.to||"?")+
+            (p.amount ? " · "+money(p.amount, gid) : "")+" in "+groupName(gid),
+      (p)=> "A payment was changed in "+groupName(gid)]
+    ].forEach(([kind, list, addIcon, addText, editText])=>{
+      const now={};
+      list.forEach(item=>{
+        const sig=JSON.stringify([item.desc, item.amount, item.payer, item.between, item.vals, item.from, item.to, item.note]);
+        const label=item.desc || ((item.from||"?")+" paid "+(item.to||"?"));
+        now[item.k]={sig, label};
+        if(first || grace) return;
+        const was=shadow[kind][item.k];
+        if(!was){ if(notifOther(item, me)) notifPush(addIcon, addText(item), gid); }
+        else if(was.sig!==sig){ if(notifOther(item, me)) notifPush("edit", editText(item), gid); }
+      });
+      if(!first && !grace){
+        Object.keys(shadow[kind]).forEach(k=>{
+          if(!(k in now)) notifPush("delete", "“"+shadow[kind][k].label+"” was removed from "+groupName(gid), gid);
+        });
+      }
+      shadow[kind]=now;
+    });
+  });
 }
 
 /* =========================== PRINT =========================== */
