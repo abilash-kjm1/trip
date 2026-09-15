@@ -16,7 +16,7 @@
 // UPI details for India sit beside them at directory/{uid}/upi, under the same
 // arrangement: a name and a UPI ID shaped like name@bank.
 //
-// A group's currency (meta/currency) can only be CAD, INR or USD.
+// A group's currency (meta/currency) can only be CAD or INR.
 //
 // Only the administrator can delete a group. Members can still change what is
 // inside it, but a write that would leave the group without its details -
@@ -31,7 +31,7 @@
         "meta": {
           ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
           "currency": {
-            ".validate": "newData.isString() && newData.val().matches(/^(CAD|INR|USD)$/)"
+            ".validate": "newData.isString() && newData.val().matches(/^(CAD|INR)$/)"
           }
         }
       }

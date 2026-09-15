@@ -2948,17 +2948,6 @@ span.af-pill{ cursor:default; padding-right:12px; }
 .vz-curtag{ display:inline-block; margin:0 0 10px; padding:3px 10px; border-radius:999px; background:var(--fill-1);
   font-size:12px; font-weight:700; color:var(--ink-2); }
 
-/* ---- Pay page: the Interac / UPI switch ---- */
-.ix-modes{ display:flex; gap:4px; max-width:420px; margin:0 auto var(--s4); padding:4px; border-radius:18px;
-  background:var(--fill-1); box-shadow:inset 0 0 0 1px var(--line); }
-.ix-mode{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:1px; min-height:48px; padding:6px 8px;
-  border:0; border-radius:14px; background:transparent; font:inherit; color:var(--ink-2); cursor:pointer;
-  -webkit-tap-highlight-color:transparent; transition:background .2s, color .2s, box-shadow .2s; }
-.ix-mode b{ font-size:14.5px; font-weight:700; }
-.ix-mode small{ font-size:11px; color:var(--ink-3); }
-.ix-mode.on{ background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.06), 0 6px 14px -8px rgba(0,0,0,.28); }
-.ix-mode:focus:not(:focus-visible){ outline:none; }
-
 /* the UPI card: deep green with a saffron glow, in either theme */
 .ix-card.upi-card, :root[data-theme="purple"] .ix-card.upi-card{
   background:radial-gradient(120% 90% at var(--gx, 22%) 0%, rgba(255,164,72,.34), transparent 56%),
@@ -3002,6 +2991,63 @@ span.af-pill{ cursor:default; padding-right:12px; }
 .upi-qr-wait .ms{ font-size:46px; opacity:.3; animation:upiPulse 1.1s ease-in-out infinite alternate; }
 @keyframes upiPulse{ from{ opacity:.18; } to{ opacity:.45; } }
 @media (prefers-reduced-motion:reduce){ .upi-qr-wait .ms{ animation:none; } }
+
+/* ---- the flag switch: Canada or India ---- */
+.flagflip{ position:relative; flex:none; display:flex; align-items:center; gap:2px; height:38px; margin:0; padding:3px; border:0;
+  border-radius:999px; background:color-mix(in srgb, var(--surface) 88%, transparent); cursor:pointer;
+  box-shadow:inset 0 0 0 1px var(--line), 0 6px 16px -12px rgba(0,0,0,.35); -webkit-tap-highlight-color:transparent;
+  transition:transform .15s; }
+.flagflip[hidden]{ display:none; }
+.flagflip::before{ content:""; position:absolute; top:3px; left:3px; width:32px; height:32px; border-radius:50%;
+  background:var(--ink); box-shadow:0 4px 10px -4px rgba(0,0,0,.45); transition:transform .42s cubic-bezier(.34,1.45,.64,1); }
+.flagflip[data-side="INR"]::before{ transform:translateX(34px); }
+.sf-opt{ position:relative; width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
+.sf-flag{ display:block; width:22px; height:22px; border-radius:50%; overflow:hidden; background:#fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.14); transition:transform .42s cubic-bezier(.34,1.45,.64,1), opacity .3s, filter .3s; }
+.sf-flag svg{ display:block; width:100%; height:100%; }
+.flagflip[data-side="CAD"] [data-s="INR"] .sf-flag, .flagflip[data-side="INR"] [data-s="CAD"] .sf-flag{ transform:scale(.8); opacity:.62; filter:saturate(.55); }
+.flagflip[data-side="CAD"] [data-s="CAD"] .sf-flag, .flagflip[data-side="INR"] [data-s="INR"] .sf-flag{ box-shadow:0 0 0 2px rgba(255,255,255,.9); }
+@media (hover:hover){ .flagflip:hover .sf-flag{ opacity:1; filter:none; } }
+.flagflip:active{ transform:scale(.95); }
+.flagflip:focus:not(:focus-visible){ outline:none; }
+.flagflip:focus-visible{ outline:2px solid var(--apricot-dk); outline-offset:2px; }
+.sf-badge{ position:absolute; top:-4px; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:#E0443E; color:#fff;
+  font-style:normal; font-size:10.5px; font-weight:800; line-height:18px; text-align:center; box-shadow:0 0 0 2px var(--surface);
+  animation:sfPop .5s cubic-bezier(.34,1.6,.64,1); pointer-events:none; }
+.sf-badge[hidden]{ display:none; }
+.sf-badge[data-on="INR"]{ right:-5px; }
+.sf-badge[data-on="CAD"]{ left:-5px; }
+@keyframes sfPop{ from{ transform:scale(0); } }
+@media (max-width:370px){
+  .flagflip{ height:34px; padding:2px; }
+  .flagflip::before{ top:2px; left:2px; width:30px; height:30px; }
+  .flagflip[data-side="INR"]::before{ transform:translateX(32px); }
+  .sf-opt{ width:30px; height:30px; }
+  .sf-flag{ width:20px; height:20px; }
+}
+/* On a phone the flags need room in the bar: the connection shows as its
+   coloured dot alone, and the byline stays on one line. */
+@media (max-width:420px){
+  .bar:has(.flagflip:not([hidden])) .bar-cap .netlight{ width:30px; padding:0; justify-content:center; }
+  .bar:has(.flagflip:not([hidden])) .bar-cap .net-l{ display:none; }
+  .bar .brandwrap .byline{ white-space:nowrap; }
+}
+/* The screen turns over when the side changes. */
+#main.side-in-in{ animation:sideInR .5s cubic-bezier(.22,.61,.36,1); transform-origin:50% 0; }
+#main.side-in-ca{ animation:sideInL .5s cubic-bezier(.22,.61,.36,1); transform-origin:50% 0; }
+@keyframes sideInR{ from{ opacity:0; transform:perspective(1200px) rotateY(-16deg) translateX(28px); } }
+@keyframes sideInL{ from{ opacity:0; transform:perspective(1200px) rotateY(16deg) translateX(-28px); } }
+@media (prefers-reduced-motion:reduce){
+  #main.side-in-in, #main.side-in-ca, .sf-badge{ animation:none; }
+  .flagflip::before, .sf-flag{ transition:none; }
+}
+.sidenote{ display:flex; align-items:center; gap:12px; margin:0 0 var(--s4); padding:10px 12px; border-radius:14px;
+  background:var(--fill-1); box-shadow:inset 0 0 0 1px var(--line); }
+.sidenote .sf-flag{ flex:none; width:30px; height:30px; }
+.sidenote b{ display:block; font-size:14px; font-weight:700; color:var(--ink); }
+.sidenote small{ display:block; margin-top:1px; font-size:12.5px; color:var(--ink-3); }
+.cur-flag{ background:transparent !important; }
+.cur-flag .sf-flag{ width:28px; height:28px; }
 
 /* ---------- printing (kept last so it wins the cascade) ---------- */
 #printArea{ display:none; }
@@ -3063,6 +3109,11 @@ span.af-pill{ cursor:default; padding-right:12px; }
       <div class="bar-titles"><span class="bar-eyebrow" id="barEyebrow"></span><h1 id="barTitle" hidden>Today</h1></div>
     </div>
     <div class="bar-tools">
+      <button class="flagflip" id="sideBtn" type="button" data-side="CAD" hidden>
+        <span class="sf-opt" data-s="CAD"><span class="sf-flag"></span></span>
+        <span class="sf-opt" data-s="INR"><span class="sf-flag"></span></span>
+        <i class="sf-badge" hidden></i>
+      </button>
       <div class="bar-cap">
         <button class="netlight" id="netPill" data-net type="button" data-state="wait" aria-label="Connecting to Settle" hidden><i class="net-dot" aria-hidden="true"></i><span class="net-l">Connecting</span></button>
         <span class="bar-sep" aria-hidden="true"></span>
@@ -3234,14 +3285,13 @@ function requestAccess(){
 /* ---------------- helpers ---------------- */
 /* ---------------- currency ----------------
    Each group keeps its own currency: Canadian dollars unless it says
-   otherwise, Indian rupees, or US dollars. Nothing is ever converted. A rupee
+   otherwise, or Indian rupees. Nothing is ever converted. A rupee
    group and a dollar group are separate ledgers, so a figure that spans
    groups is shown once per currency - "$120.00 + ₹4,500.00" - rather than
    added up into a number that means nothing. */
 const CURRENCIES = {
   CAD: {code:"CAD", sym:"$",   name:"Canadian dollar", pay:"Interac e-Transfer"},
-  INR: {code:"INR", sym:"₹",   name:"Indian rupee",    pay:"UPI · GPay, PhonePe, Paytm"},
-  USD: {code:"USD", sym:"US$", name:"US dollar",       pay:"Interac e-Transfer"}
+  INR: {code:"INR", sym:"₹",   name:"Indian rupee",    pay:"UPI · GPay, PhonePe, Paytm"}
 };
 const CUR_DEFAULT = "CAD";
 function curOf(gid){
@@ -3269,14 +3319,112 @@ function money(n, c){
 /* Amounts that span groups, kept apart by currency: {CAD:120, INR:4500}. */
 function curAdd(bag, gid, n){ const c=curOf(gid); bag[c]=(bag[c]||0)+(Number(n)||0); return bag; }
 function curKeys(bag){ return Object.keys(CURRENCIES).filter(c=> Math.abs((bag&&bag[c])||0)>0.004); }
-function cursInUse(){ const s={}; JOINED.forEach(g=>{ s[curOf(g.id)]=1; }); return Object.keys(CURRENCIES).filter(c=>s[c]); }
-// The currency most of my groups use: what a new group starts in.
-function curUsual(){
-  const n={}; JOINED.forEach(g=>{ const c=curOf(g.id); n[c]=(n[c]||0)+1; });
-  return Object.keys(n).sort((a,b)=> n[b]-n[a] || (a===CUR_DEFAULT?-1:b===CUR_DEFAULT?1:0))[0] || CUR_DEFAULT;
+function cursInUse(){ const s={}; joinedHere().forEach(g=>{ s[curOf(g.id)]=1; }); return Object.keys(CURRENCIES).filter(c=>s[c]); }
+/* ---------------- the two sides: Canada and India ----------------
+   Settle is two apps in one. The flag switch in the top bar picks a side, and
+   every screen - Today, expenses, groups, Pay, Visualize - shows only that
+   side's groups: dollar groups paid back by Interac on one, rupee groups paid
+   back by UPI on the other. A group is on the side of its currency. Whatever
+   happens on the side not on screen shows as a count on its flag. */
+const SIDES = {
+  CAD: {name:"Canada", flag:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" fill="#fff"/>'+
+    '<rect width="6" height="24" fill="#D52B1E"/><rect x="18" width="6" height="24" fill="#D52B1E"/>'+
+    '<path fill="#D52B1E" transform="translate(12 11) scale(.82) translate(-12 -11)" d="M12 5.2l1 2 1.3-.6-.4 3 1.7-1.6.4 1 1.8-.4-.6 1.9.8.4-2.9 2.3.3 1-2.8-.4.1 2.6h-1.4l.1-2.6-2.8.4.3-1-2.9-2.3.8-.4-.6-1.9 1.8.4.4-1 1.7 1.6-.4-3 1.3.6z"/></svg>'},
+  INR: {name:"India", flag:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" fill="#fff"/>'+
+    '<rect width="24" height="8" fill="#FF9933"/><rect y="16" width="24" height="8" fill="#138808"/>'+
+    '<circle cx="12" cy="12" r="2.9" fill="none" stroke="#000080" stroke-width=".8"/><circle cx="12" cy="12" r=".8" fill="#000080"/></svg>'}
+};
+const LS_SIDE = "settle.side.v1", LS_SIDE_SEEN = "settle.sideseen.v1", LS_SIDE_MAP = "settle.sidemap.v1";
+let SIDE_PICKED = lsGet(LS_SIDE, null);
+let SIDE = SIDES.hasOwnProperty(SIDE_PICKED) ? SIDE_PICKED : CUR_DEFAULT;
+let SIDE_SEEN = lsGet(LS_SIDE_SEEN, {}) || {};   // side -> when it was last on screen
+let SIDE_MAP  = lsGet(LS_SIDE_MAP, {}) || {};    // gid -> currency, for before a group has loaded
+const otherSide = (s)=> (s||SIDE)==="INR" ? "CAD" : "INR";
+function sideOf(gid){
+  if(DATA[gid] && DATA[gid].meta) return curOf(gid);
+  const c=SIDE_MAP[gid];
+  return CURRENCIES.hasOwnProperty(c) ? c : CUR_DEFAULT;
+}
+// My groups on the side on screen. Every view starts from this, never JOINED.
+function joinedHere(){ return JOINED.filter(g=> sideOf(g.id)===SIDE); }
+// What a new group starts in: the side it is made on.
+function curUsual(){ return SIDE; }
+function setSide(side){
+  if(!SIDES.hasOwnProperty(side)) return false;
+  const now=Date.now(), moved = side!==SIDE;
+  SIDE_SEEN[SIDE]=now; SIDE_SEEN[side]=now;
+  SIDE=side; SIDE_PICKED=side;
+  lsSet(LS_SIDE, side); lsSet(LS_SIDE_SEEN, SIDE_SEEN);
+  return moved;
+}
+/* Before every draw: remember each group's side, follow an open group to its
+   side (a notification about a rupee group opens India), and mark this side
+   as seen. */
+let SIDE_SAVED = 0;
+function sideSync(){
+  let changed=false;
+  JOINED.forEach(g=>{
+    if(DATA[g.id] && DATA[g.id].meta){ const c=curOf(g.id); if(SIDE_MAP[g.id]!==c){ SIDE_MAP[g.id]=c; changed=true; } }
+  });
+  if(changed) lsSet(LS_SIDE_MAP, SIDE_MAP);
+  // Until somebody picks, the side most of their groups are on.
+  if(!SIDES.hasOwnProperty(SIDE_PICKED)){
+    let inr=0; JOINED.forEach(g=>{ if(sideOf(g.id)==="INR") inr++; });
+    SIDE = inr*2 > JOINED.length ? "INR" : "CAD";
+  }
+  if(CURRENT && DATA[CURRENT] && DATA[CURRENT].meta && curOf(CURRENT)!==SIDE) setSide(curOf(CURRENT));
+  const now=Date.now();
+  // News counts from the first time Settle has sides, not from the beginning.
+  Object.keys(SIDES).forEach(s=>{ if(!SIDE_SEEN[s]) SIDE_SEEN[s]=now; });
+  SIDE_SEEN[SIDE]=now;
+  if(now-SIDE_SAVED > 4000){ SIDE_SAVED=now; lsSet(LS_SIDE_SEEN, SIDE_SEEN); }
+}
+/* What is new on a side since it was last on screen: expenses and payments
+   somebody else added, answers about my payments, and payments still waiting
+   for me to say whether they arrived. */
+function sideNews(side){
+  if(!USER) return 0;
+  const since=Number(SIDE_SEEN[side])||Date.now(), hit={};
+  JOINED.forEach(g=>{
+    if(sideOf(g.id)!==side) return;
+    const me=meIn(g.id);
+    const byOther=(x)=> x.byUid ? x.byUid!==USER.uid : (!me || x.by!==me);
+    expensesOf(g.id).forEach(e=>{ if((Number(e.at)||0)>since && byOther(e)) hit["e/"+g.id+"/"+e.k]=1; });
+    paymentsOf(g.id).forEach(p=>{
+      const id="p/"+g.id+"/"+p.k;
+      if((Number(p.at)||0)>since && byOther(p)) hit[id]=1;
+      if(me && p.ask && !p.netted && !p.got && p.to===me && p.from!==me && p.byUid!==USER.uid) hit[id]=1;
+      if(p.got && p.byUid===USER.uid && (Number(p.got.at)||0)>since) hit[id+"/got"]=1;
+    });
+  });
+  return Object.keys(hit).length;
+}
+function sideShow(){
+  const b=$("sideBtn"); if(!b) return;
+  b.hidden = !USER || !mayUse();
+  if(b.hidden) return;
+  if(!b.dataset.drawn){
+    b.querySelector('[data-s="CAD"] .sf-flag').innerHTML=SIDES.CAD.flag;
+    b.querySelector('[data-s="INR"] .sf-flag').innerHTML=SIDES.INR.flag;
+    b.dataset.drawn="1";
+  }
+  const other=otherSide(), n=sideNews(other);
+  b.dataset.side=SIDE;
+  b.title="Switch to "+SIDES[other].name;
+  b.setAttribute("aria-label", SIDES[SIDE].name+" side. Switch to "+SIDES[other].name+(n ? ", "+n+" new there" : ""));
+  const badge=b.querySelector(".sf-badge");
+  badge.hidden=!n; badge.textContent = n>9 ? "9+" : String(n); badge.dataset.on=other;
+}
+// The empty screen for a side with no groups yet.
+function sideEmptyHTML(icon){
+  return '<span class="ms" aria-hidden="true">'+icon+'</span><h3>No '+SIDES[SIDE].name+' groups yet</h3>'+
+    '<p>'+(SIDE==="INR" ? 'Rupee groups live here, paid back by UPI.' : 'Dollar groups live here, paid back by Interac.')+
+    ' Create one for a trip, a flat or family - or tap the flag at the top for the '+SIDES[otherSide()].name+' side.</p>';
 }
 // Nothing, in the one currency my groups use - or in dollars when they differ.
-function moneyZero(){ const u=cursInUse(); return money(0, u.length===1 ? u[0] : CUR_DEFAULT); }
+function moneyZero(){ return money(0, SIDE); }
 function moneyMulti(bag){
   const k=curKeys(bag);
   return k.length ? k.map(c=> money(Math.abs(bag[c]), c)).join(" + ") : moneyZero();
@@ -3958,6 +4106,9 @@ function render(){
   const main=$("main"); main.innerHTML="";
   $("fab").hidden=true; $("backBtn").hidden=true; $("gmenuBtn").hidden=true;
   $("nav").hidden = !USER;
+  // Canada or India - and a count on the other flag for what is new there.
+  if(USER) sideSync();
+  sideShow();
 
   // The avatar in the corner is both a signpost and the way to your account.
   const mb = $("meBtn");
@@ -3999,8 +4150,8 @@ function render(){
     bar.classList.toggle("is-home", !CURRENT && !ADMIN_VIEW && TAB==="home" && !!USER && mayUse());
     const eb=$("barEyebrow");
     if(eb) eb.textContent = CURRENT ? "Group" : ADMIN_VIEW ? "Administrator"
-      : TAB==="home" && USER ? new Date().toLocaleDateString(undefined, {weekday:"long", month:"long", day:"numeric"})
-      : "Settle";
+      : TAB==="home" && USER ? SIDES[SIDE].name+" · "+new Date().toLocaleDateString(undefined, {weekday:"long", month:"long", day:"numeric"})
+      : USER ? SIDES[SIDE].name : "Settle";
   }
   // Payments waiting on me to say they arrived, and answers to mine.
   if(typeof arrivals==="function") arrivals();
@@ -4012,6 +4163,26 @@ function render(){
     setTimeout(()=>{ if(CURRENT && !meIn(CURRENT)) sheetClaim(CURRENT); }, 400);
   }
 }
+
+/* The flag switch. The whole app turns over to the other side: any open
+   group closes, and the screen flips in. */
+function flipSide(){
+  const to=otherSide();
+  if(!setSide(to)) return;
+  if(CURRENT){ CURRENT=null; lsSet(LS.cur, null); if(location.hash) location.hash=""; }
+  ADMIN_VIEW=false; HERO_I=0; VZ_GROUP=null;
+  IX_SEEN=false; GROUPS_SEEN=false; TH_SEEN=false; IX_EDIT=false; UPI_EDIT=false;
+  window.scrollTo(0,0);
+  const main=$("main");
+  main.classList.remove("side-in-in", "side-in-ca"); void main.offsetWidth;
+  main.classList.add(to==="INR" ? "side-in-in" : "side-in-ca");
+  render();
+  toast(to==="INR" ? "India · rupee groups, paid by UPI" : "Canada · dollar groups, paid by Interac");
+}
+document.addEventListener("click", (e)=>{
+  const b=e.target && e.target.closest && e.target.closest("#sideBtn");
+  if(b) flipSide();
+});
 
 /* ---------- sign in ---------- */
 function viewSignIn(main){
@@ -4112,14 +4283,13 @@ function viewGroups(main){
   act.appendChild(nb);
   main.appendChild(act);
 
-  if(!JOINED.length){
+  if(!joinedHere().length){
     const e=el("div","empty");
-    e.innerHTML='<span class="ms" aria-hidden="true">groups</span><h3>No groups yet</h3>'+
-      '<p>Create one for a trip, a flat or a couple — then add the people you split with.</p>';
+    e.innerHTML=sideEmptyHTML("groups");
     const b=el("button","btn p","Create a group"); b.addEventListener("click", sheetGroupNew);
     e.appendChild(b);
     main.appendChild(e);
-    if(LEGACY_OK){
+    if(LEGACY_OK && SIDE==="CAD"){
       main.appendChild(el("div","sechead","Were you on this trip?"));
       const c=el("div","card");
       const r=el("button","row");
@@ -4141,14 +4311,14 @@ function viewGroups(main){
   // ---- where you stand, across every group ----
   // Each currency on its own - rupees and dollars are never added together.
   const owedB={}, oweB={};
-  JOINED.forEach(g=>{ const v=myBalance(g.id); if(v>0.004) curAdd(owedB, g.id, v); else if(v<-0.004) curAdd(oweB, g.id, -v); });
+  joinedHere().forEach(g=>{ const v=myBalance(g.id); if(v>0.004) curAdd(owedB, g.id, v); else if(v<-0.004) curAdd(oweB, g.id, -v); });
   const netB=bagNet(owedB, oweB), netTone=bagTone(netB);
   const moving=Object.keys(CURRENCIES).filter(c=> (owedB[c]||0)+(oweB[c]||0) > 0.004);
   // How much of what is moving comes to me, averaged over the currencies.
   const pct = moving.length ? Math.round(moving.reduce((s,c)=> s+(owedB[c]||0)/((owedB[c]||0)+(oweB[c]||0)), 0)/moving.length*100) : 0;
   const bal=el("div","gx-bal"+(enter?" enter":""));
   bal.innerHTML=
-    '<div class="gx-bal-top"><span class="gx-bal-lab">Across '+JOINED.length+' group'+(JOINED.length===1?'':'s')+'</span>'+
+    '<div class="gx-bal-top"><span class="gx-bal-lab">Across '+joinedHere().length+' group'+(joinedHere().length===1?'':'s')+'</span>'+
       '<span class="gx-net '+(netTone==="mix" ? "zero" : netTone)+(curKeys(netB).length>1 ? " multi" : "")+'">'+
         (netTone==="zero" ? "All square" : esc(moneySigned(netB)))+'</span></div>'+
     '<div class="gx-meter'+(moving.length?'':' empty')+'" role="img" aria-label="'+
@@ -4165,8 +4335,8 @@ function viewGroups(main){
     return t;
   };
   // A group keeps the colour it has everywhere else, which is picked by name.
-  const byName=JOINED.slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).map(g=>g.id);
-  const order=JOINED.slice().sort((a,b)=> lastAt(b.id)-lastAt(a.id) || groupName(a.id).localeCompare(groupName(b.id)));
+  const byName=joinedHere().slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).map(g=>g.id);
+  const order=joinedHere().slice().sort((a,b)=> lastAt(b.id)-lastAt(a.id) || groupName(a.id).localeCompare(groupName(b.id)));
   const grid=el("div","gx-grid"+(enter?" enter":""));
   order.forEach((g,i)=>{
     const gid=g.id, v=myBalance(gid), mem=membersOf(gid), tot=totalOf(gid), at=lastAt(gid);
@@ -4278,7 +4448,7 @@ function sectionTotal(main, gid){
   const s=el("div","gtop");
   let html=
     '<div class="gt-row"><span class="gt-lab">Total spent'+
-      (curOf(gid)!==CUR_DEFAULT || cursInUse().length>1 ? '<span class="gt-cur">'+esc(CURRENCIES[curOf(gid)].sym+" "+curOf(gid))+'</span>' : '')+'</span>'+
+      '</span>'+
       '<span class="gt-meta">'+exps.length+' expense'+(exps.length===1?'':'s')+' &middot; '+
         people+' '+(people===1?'person':'people')+'</span></div>'+
     '<div class="gt-big">'+money(tot)+'</div>';
@@ -4762,7 +4932,7 @@ function groupActivity(main, gid){
 function viewActivity(main){
   setTitle(main, "Activity");
   const items=[];
-  JOINED.forEach(g=>{
+  joinedHere().forEach(g=>{
     expensesOf(g.id).forEach(e=> items.push({t:"e", at:Number(e.at)||0, e, gid:g.id}) );
     paymentsOf(g.id).forEach(p=> items.push({t:"p", at:Number(p.at)||0, p, gid:g.id}) );
   });
@@ -4779,7 +4949,7 @@ function viewActivity(main){
      last Tuesday" means scanning a handful of headings, not two hundred rows. */
 
   // A group's icon takes the same colour it has on the Groups screen.
-  const order = JOINED.slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).map(g=>g.id);
+  const order = joinedHere().slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).map(g=>g.id);
   const tint = (gid)=> "gc"+(Math.max(0, order.indexOf(gid)) % 6);
   const monthKey = (ts)=>{ const d=new Date(ts||0); return d.getFullYear()+"-"+d.getMonth(); };
   const monthName = (ts)=> ts ? new Date(ts).toLocaleDateString(undefined,{month:"long", year:"numeric"}) : "Undated";
@@ -4866,18 +5036,8 @@ const ETX_MONO = {cibc:"CIBC", rbc:"RBC", td:"TD", scotiabank:"S", bmo:"BMO"};
 function viewInterac(main){
   setTitle(main, "Pay");
   const enter = !IX_SEEN; IX_SEEN = true;
-  // Interac for Canada, UPI for India: one switch at the top, remembered.
-  const mode = payMode();
-  const sw=el("div","ix-modes"); sw.setAttribute("role","tablist"); sw.setAttribute("aria-label","How you pay");
-  [["interac","Interac","Canada"],["upi","UPI","India"]].forEach(m=>{
-    const b=el("button","ix-mode"+(m[0]===mode?" on":"")); b.type="button";
-    b.setAttribute("role","tab"); b.setAttribute("aria-selected", m[0]===mode?"true":"false");
-    b.innerHTML='<b>'+m[1]+'</b><small>'+m[2]+'</small>';
-    b.addEventListener("click", ()=>{ if(m[0]===mode) return; lsSet(LS_PAYMODE, m[0]); IX_EDIT=false; UPI_EDIT=false; IX_SEEN=false; render(); });
-    sw.appendChild(b);
-  });
-  main.appendChild(sw);
-  if(mode==="upi") return viewUpi(main, enter);
+  // Canada pays back by Interac, India by UPI: the side decides.
+  if(SIDE==="INR") return viewUpi(main, enter);
   const mine = etxFor(USER.uid);
   const raw = (DIRECTORY[USER.uid] && DIRECTORY[USER.uid].pay) || {};
   const bank = myBank();
@@ -5061,17 +5221,6 @@ function ixHead(icon, title, pill, pillCls){
     (pill ? '<span class="ix-pill'+(pillCls ? ' '+pillCls : '')+'">'+esc(pill)+'</span>' : '');
   return h;
 }
-const LS_PAYMODE = "settle.paymode.v1";
-// Which half of the Pay page shows: what was picked last, or on a first visit
-// UPI for somebody whose groups are all in rupees or who only has a UPI ID.
-function payMode(){
-  const saved=lsGet(LS_PAYMODE, null);
-  if(saved==="upi" || saved==="interac") return saved;
-  const cur=cursInUse();
-  if(cur.length && cur.every(c=>c==="INR")) return "upi";
-  if(USER && upiFor(USER.uid) && !etxFor(USER.uid)) return "upi";
-  return "interac";
-}
 // The card leans toward the pointer, and its glow follows.
 function ixTilt(card){
   card.addEventListener("pointermove", e=>{
@@ -5087,7 +5236,7 @@ function ixTilt(card){
    the administrator - those ready to be paid first, then those not set up. */
 function ixPeople(main, enter, o){
   const seen={}, people=[];
-  JOINED.forEach(g=> membersOf(g.id).forEach(m=>{
+  joinedHere().forEach(g=> membersOf(g.id).forEach(m=>{
     if(!m.uid || m.uid===USER.uid || seen[m.uid]) return;
     seen[m.uid]=true;
     people.push({uid:m.uid, name:(DIRECTORY[m.uid]&&DIRECTORY[m.uid].name)||m.name, color:m.color, photo:m.photo});
@@ -5369,10 +5518,10 @@ function viewAccount(main){
   c.appendChild(me);
   main.appendChild(c);
 
-  main.appendChild(el("div","sechead","Totals across all groups"));
+  main.appendChild(el("div","sechead","Totals on the "+SIDES[SIDE].name+" side"));
   // Per currency, never added across rupees and dollars.
   const netB={}, spentB={};
-  JOINED.forEach(g=>{
+  joinedHere().forEach(g=>{
     const v=myBalance(g.id); if(Math.abs(v)>0.004) curAdd(netB, g.id, v);
     const n=meIn(g.id);
     if(n) expensesOf(g.id).forEach(e=>{ const sh=sharesOf(e); if(sh[n]) curAdd(spentB, g.id, sh[n]); });
@@ -5540,7 +5689,7 @@ function viewAdmin(main){
    today. */
 function toDoNext(){
   const out = [];
-  JOINED.forEach(g=>{
+  joinedHere().forEach(g=>{
     const me = meIn(g.id);
     if(!me) return;
     settlements(g.id).forEach(t=>{
@@ -5554,7 +5703,7 @@ function toDoNext(){
 /* The most recent expenses anywhere, with what each one means for me. */
 function latestMoments(n){
   const out = [];
-  JOINED.forEach(g=>{
+  joinedHere().forEach(g=>{
     const me = meIn(g.id);
     expensesOf(g.id).forEach(e=>{
       const share = sharesOf(e)[me] || 0;
@@ -5569,7 +5718,7 @@ function latestMoments(n){
 /* Everyone I share anything with, and where we stand across every group. */
 function friendsAcross(){
   const by = {};
-  JOINED.forEach(g=>{
+  joinedHere().forEach(g=>{
     const me = meIn(g.id);
     if(!me) return;
     const seat = (n)=> membersOf(g.id).find(x=>x.name===n);
@@ -5816,8 +5965,8 @@ function heroHoney(){
 }
 
 function addExpenseAnywhere(){
-  if(!JOINED.length) return sheetGroupNew();
-  if(JOINED.length===1){ openGroup(JOINED[0].id); setTimeout(()=>sheetExpense(null), 260); return; }
+  if(!joinedHere().length) return sheetGroupNew();
+  if(joinedHere().length===1){ openGroup(joinedHere()[0].id); setTimeout(()=>sheetExpense(null), 260); return; }
   sheetPickGroup();
 }
 
@@ -5841,10 +5990,9 @@ function viewHome(main){
   head.appendChild(addBtn);
   main.appendChild(head);
 
-  if(!JOINED.length){
+  if(!joinedHere().length){
     const e=el("div","empty");
-    e.innerHTML='<span class="ms" aria-hidden="true">group</span><h3>No groups yet</h3>'+
-      '<p>Create one for a trip, a flat or a couple — then add the people you split with.</p>';
+    e.innerHTML=sideEmptyHTML("group");
     const b=el("button","btn p","Create a group"); b.addEventListener("click", sheetGroupNew);
     e.appendChild(b);
     e.style.marginTop="var(--s5)";
@@ -5854,7 +6002,7 @@ function viewHome(main){
 
   // Kept per currency: a rupee group and a dollar group are never added up.
   const owedB={}, oweB={}, sharedB={};
-  JOINED.forEach(g=>{
+  joinedHere().forEach(g=>{
     const v=myBalance(g.id);
     if(v>0.004) curAdd(owedB, g.id, v); else if(v<-0.004) curAdd(oweB, g.id, -v);
     curAdd(sharedB, g.id, totalOf(g.id));
@@ -6046,7 +6194,7 @@ function viewHome(main){
       '<span class="s">'+(nOwe ? "Across "+nOwe+" "+(nOwe===1?"person":"people") : "Nobody, right now")+'</span></div>'+
     '<div class="sum"><span class="k">Shared so far</span>'+
       '<span class="v'+multi(sharedB)+'">'+esc(moneyMulti(sharedB))+'</span>'+
-      '<span class="s">Across '+JOINED.length+' group'+(JOINED.length===1?"":"s")+'</span></div>';
+      '<span class="s">Across '+joinedHere().length+' group'+(joinedHere().length===1?"":"s")+'</span></div>';
   main.appendChild(sums);
 
   /* ---- latest moments, friends and your groups ----
@@ -6117,7 +6265,7 @@ function viewHome(main){
   // on the Groups screen, with who is in it and where you stand.
   main.appendChild(secHead("group_work", "Your groups", ["All groups", goTab("groups")]));
   const grid = el("div","th-groups");
-  JOINED.slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).forEach((g,i)=>{
+  joinedHere().slice().sort((a,b)=>groupName(a.id).localeCompare(groupName(b.id))).forEach((g,i)=>{
     const v = myBalance(g.id), ppl = membersOf(g.id), total = totalOf(g.id);
     const tone = v>0.004 ? "pos" : v<-0.004 ? "neg" : "zero";
     const t = el("button","th-group gc"+(i%6)); t.type = "button"; rise(t, i);
@@ -6135,7 +6283,7 @@ function viewHome(main){
     t.addEventListener("click", ()=> openGroup(g.id) );
     grid.appendChild(t);
   });
-  const add = el("button","th-group th-add"); add.type = "button"; rise(add, JOINED.length);
+  const add = el("button","th-group th-add"); add.type = "button"; rise(add, joinedHere().length);
   add.innerHTML = '<span class="ms" aria-hidden="true">add</span><span>New group</span>';
   add.addEventListener("click", sheetGroupNew);
   grid.appendChild(add);
@@ -6147,7 +6295,7 @@ function sheetPickGroup(){
   openSheet("Add to which group?", (b)=>{
     b.innerHTML = '<p class="lead">Pick the group this expense belongs to.</p><div class="card" id="pgList"></div>';
     const host=$("pgList");
-    JOINED.slice().sort((x,y)=>groupName(x.id).localeCompare(groupName(y.id))).forEach(g=>{
+    joinedHere().slice().sort((x,y)=>groupName(x.id).localeCompare(groupName(y.id))).forEach(g=>{
       const r=el("button","row");
       r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+groupIcon(g.id)+'</span></span>'+
         '<span class="body"><span class="t1">'+esc(groupName(g.id))+'</span>'+
@@ -6165,7 +6313,7 @@ function sheetFriend(name){
     b.innerHTML = '<p class="lead">Everything you and '+esc(name)+' share.</p><div class="card" id="frList"></div>';
     const host=$("frList");
     const rows=[];
-    JOINED.forEach(g=>{
+    joinedHere().forEach(g=>{
       const me=meIn(g.id);
       if(!me || everyoneIn(g.id).indexOf(name)<0) return;
       let net=0;
@@ -7783,8 +7931,8 @@ function sheetGroupNew(){
       '<div class="field"><label for="gName">Group name</label>'+
       '<input id="gName" type="text" placeholder="Montréal trip, Flat 4B, Sunday football…"></div>'+
       '<div class="field"><label>What is it for?</label><div class="chips" id="gType"></div></div>'+
-      '<div class="field"><label>Currency</label><div class="chips" id="gCur"></div>'+
-        '<div class="help" id="gCurHelp"></div></div>'+
+      '<div class="sidenote"><span class="sf-flag">'+SIDES[SIDE].flag+'</span><span><b>'+SIDES[SIDE].name+' group</b>'+
+        '<small>'+(SIDE==="INR" ? 'In ₹ rupees, paid back by UPI' : 'In $ dollars, paid back by Interac')+'</small></span></div>'+
       (pool.length ? '<div class="field"><label>Already in Settle — tap to include</label>'+
         '<div class="chips" id="gPick"></div></div>' : '')+
       '<div class="field"><label for="gPeople">'+(pool.length ? "Anyone else" : "Everyone else")+' (one name per line)</label>'+
@@ -7802,20 +7950,8 @@ function sheetGroupNew(){
         ch.setAttribute("aria-pressed","true"); });
       $("gType").appendChild(ch);
     });
-    // Everything in the group is in this one currency. Nothing is converted.
-    let cur=curUsual();
-    const curHelp=()=>{ $("gCurHelp").textContent = CURRENCIES[cur].name+"s, paid by "+CURRENCIES[cur].pay+". Amounts are never converted."; };
-    Object.keys(CURRENCIES).forEach(c=>{
-      const ch=el("button","chip cur-chip"); ch.type="button";
-      ch.innerHTML='<b aria-hidden="true">'+esc(CURRENCIES[c].sym)+'</b>'+c;
-      ch.setAttribute("aria-label", CURRENCIES[c].name);
-      ch.setAttribute("aria-pressed", c===cur?"true":"false");
-      ch.addEventListener("click",()=>{ cur=c; curHelp();
-        [].forEach.call($("gCur").children,x=>x.setAttribute("aria-pressed","false"));
-        ch.setAttribute("aria-pressed","true"); });
-      $("gCur").appendChild(ch);
-    });
-    curHelp();
+    // A group is made on the side on screen, in that side's currency.
+    const cur=SIDE;
     $("gGo").addEventListener("click", ()=>{
       const nm=$("gName").value.trim();
       if(!nm) return toast("Give the group a name");
@@ -7980,7 +8116,7 @@ function sheetGroupMenu(){
       ["People in this group","Add or remove members","group", sheetMembers],
       ["Settle up","Record a cash or transfer payment","payments", function(){ sheetSettle(); }],
       ["Rename group","","edit", sheetGroupRename],
-      ["Currency", esc(CURRENCIES[curOf(gid)].name+" · "+CURRENCIES[curOf(gid)].sym), "currency_exchange", sheetGroupCurrency],
+      ["Side", SIDES[curOf(gid)].name+(curOf(gid)==="INR" ? " · ₹ rupees, UPI" : " · $ dollars, Interac"), "flag", sheetGroupCurrency],
       ["Invite people","Share the link or code","person_add", sheetShare],
       ["Print / save as PDF","A full statement of this group","print", doPrint],
       ["Leave group","Your name and balances stay in it for everyone else.","logout", function(){
@@ -8024,8 +8160,8 @@ function sheetGroupMenu(){
    started in the wrong one. */
 function sheetGroupCurrency(){
   const gid=CURRENT, now=curOf(gid), n=expensesOf(gid).length+paymentsOf(gid).length;
-  openSheet("Currency", (b)=>{
-    b.innerHTML='<p class="lead">Everything in '+esc(groupName(gid))+' is counted in one currency.</p>'+
+  openSheet("Side", (b)=>{
+    b.innerHTML='<p class="lead">Which side '+esc(groupName(gid))+' is on. Canada groups are in dollars, India groups in rupees.</p>'+
       '<div class="card cur-list" id="curList"></div>'+
       (n ? '<p class="fine cur-warn"><span class="ms" aria-hidden="true">warning</span><span>Amounts are not converted. '+
            (n===1 ? 'The entry already here keeps its number and only changes symbol.'
@@ -8033,17 +8169,17 @@ function sheetGroupCurrency(){
     Object.keys(CURRENCIES).forEach(c=>{
       const r=el("button","row cur-row"+(c===now?" on":"")); r.type="button";
       r.setAttribute("aria-pressed", c===now?"true":"false");
-      r.innerHTML='<span class="cat cur-sym">'+esc(CURRENCIES[c].sym)+'</span>'+
-        '<span class="body"><span class="t1">'+esc(CURRENCIES[c].name)+'<span class="cur-code">'+c+'</span></span>'+
+      r.innerHTML='<span class="cat cur-flag"><span class="sf-flag">'+SIDES[c].flag+'</span></span>'+
+        '<span class="body"><span class="t1">'+esc(SIDES[c].name)+'<span class="cur-code">'+esc(CURRENCIES[c].sym+" "+c)+'</span></span>'+
         '<span class="t2">Paid by '+esc(CURRENCIES[c].pay)+'</span></span>'+
         '<span class="right">'+(c===now ? '<span class="ms" aria-hidden="true" style="color:var(--good)">check_circle</span>' : '')+'</span>';
       r.addEventListener("click", ()=>{
         if(c===now){ closeSheet(); return; }
-        if(n && !confirm("Change "+groupName(gid)+" to "+CURRENCIES[c].name+"s? Amounts keep their numbers: "+
+        if(n && !confirm("Move "+groupName(gid)+" to the "+SIDES[c].name+" side? Amounts keep their numbers: "+
                          money(1234.5, now)+" becomes "+money(1234.5, c)+".")) return;
         updStrict("trips/"+gid+"/meta", {currency:c}).then(()=>{
           if(DATA[gid] && DATA[gid].meta) DATA[gid].meta.currency=c;
-          closeSheet(); toast(groupName(gid)+" is now in "+CURRENCIES[c].name+"s"); render();
+          setSide(c); closeSheet(); toast(groupName(gid)+" moved to the "+SIDES[c].name+" side"); render();
         }, e=> toast(writeError(e)));
       });
       $("curList").appendChild(r);
@@ -8079,8 +8215,8 @@ function qaPeople(gid){ return [...new Set(names(gid))]; }
 function sheetQuickAdd(){
   if(!USER || !remote) return;
   let gid = CURRENT || QA_LAST || null;
-  if(gid && !JOINED.some(g=>g.id===gid)) gid = null;
-  if(!gid && JOINED.length===1) gid = JOINED[0].id;
+  if(gid && !joinedHere().some(g=>g.id===gid)) gid = null;
+  if(!gid && joinedHere().length===1) gid = joinedHere()[0].id;
   let payer = null;
   let picked = {};
   let pickedFor = null;      // which group `picked` was filled for
@@ -8104,7 +8240,7 @@ function sheetQuickAdd(){
       // The symbol by the amount follows the group: ₹ for a rupee group.
       if($("qaCur")) $("qaCur").textContent = curSym(gid || curUsual());
       const host=$("qaGroups"); host.innerHTML="";
-      JOINED.slice().sort((a,c)=>groupName(a.id).localeCompare(groupName(c.id))).forEach(g=>{
+      joinedHere().slice().sort((a,c)=>groupName(a.id).localeCompare(groupName(c.id))).forEach(g=>{
         const ch=el("button","chip"); ch.type="button";
         ch.textContent=groupName(g.id);
         ch.setAttribute("aria-pressed", g.id===gid ? "true" : "false");
@@ -8322,7 +8458,7 @@ const vzColor = (c)=> /^#[0-9a-f]{3,8}$/i.test(String(c||"")) ? c : "#8E99A6";
 function viewInsights(main){
   setTitle(main, "Visualize");
   VZ_ENTER = !VZ_SEEN; VZ_SEEN = true; VZ_N = 0;
-  if(!JOINED.length){
+  if(!joinedHere().length){
     const e=el("div","empty");
     e.innerHTML='<span class="ms" aria-hidden="true">hub</span><h3>Nothing to show yet</h3>'+
       '<p>Join or start a group and add a few expenses - this fills in on its own.</p>';
@@ -8392,7 +8528,7 @@ function vzLedger(){
     return people[key];
   };
   const edges=[];
-  JOINED.forEach(g=>{
+  joinedHere().forEach(g=>{
     if(!loaded(g.id)) return;
     settlements(g.id).forEach(s=>{
       const a=touch(g.id, s.from), b=touch(g.id, s.to);
@@ -8577,7 +8713,7 @@ function sheetNetSettle(t, L){
 /* ---------- 2. who should pay next ---------- */
 function vzWhoNext(main){
   const sec=vzSection(main, "autorenew", "Who should pay next", "Whoever has paid least compared with their share.");
-  const groups=JOINED.filter(g=> loaded(g.id) && expensesOf(g.id).length && names(g.id).length>1)
+  const groups=joinedHere().filter(g=> loaded(g.id) && expensesOf(g.id).length && names(g.id).length>1)
     .sort((a,b)=> vzLastAt(b.id)-vzLastAt(a.id));
   if(!groups.length){
     sec.appendChild(el("p","vz-note","Add a couple of expenses to a group of two or more to see whose turn it is."));
@@ -8674,7 +8810,7 @@ function vzRealCost(main){
   // One card per currency: a share in rupees and a share in dollars are never
   // added together.
   const by={};
-  JOINED.forEach(g=>{
+  joinedHere().forEach(g=>{
     if(!loaded(g.id)) return;
     const me=meIn(g.id); if(!me) return;
     const c=curOf(g.id);
@@ -8770,7 +8906,7 @@ function vzOldDebts(main, L){
 /* ---------- 5. leave clean ---------- */
 function vzLeaveClean(main, L){
   const sec=vzSection(main, "door_open", "Leave clean", "What stands between you and walking away from each group owing nothing.");
-  const gs=JOINED.filter(g=> loaded(g.id) && meIn(g.id)).map(g=>({
+  const gs=joinedHere().filter(g=> loaded(g.id) && meIn(g.id)).map(g=>({
     gid:g.id, mine:L.edges.filter(e=> e.gid===g.id && (e.from===L.meKey || e.to===L.meKey))
   })).sort((a,b)=> b.mine.length-a.mine.length || groupName(a.gid).localeCompare(groupName(b.gid)));
   if(!gs.length){ sec.appendChild(el("p","vz-note","Say which name is yours in a group to see this.")); return; }
@@ -8864,7 +9000,7 @@ function payStateHTML(p, gid){
 function arrivalsDue(){
   if(!USER) return [];
   const snooze=arrMap(ARR_SNOOZE_KEY), now=Date.now(), out=[];
-  JOINED.forEach(g=>{
+  joinedHere().forEach(g=>{
     const me=meIn(g.id); if(!me) return;
     paymentsOf(g.id).forEach(p=>{
       if(!p.ask || p.netted || p.got || p.to!==me || p.from===me) return;
@@ -8881,7 +9017,7 @@ function arrivalsDue(){
 function arrivalsNews(){
   if(!USER) return [];
   const seen=arrMap(ARR_SEEN_KEY), now=Date.now(), out=[];
-  JOINED.forEach(g=> paymentsOf(g.id).forEach(p=>{
+  joinedHere().forEach(g=> paymentsOf(g.id).forEach(p=>{
     if(!p.got || p.netted || p.byUid!==USER.uid) return;
     const at=Number(p.got.at)||0;
     if(now - at > ARR_NEWS_DAYS*864e5) return;
@@ -9650,7 +9786,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915012301";
+const APP_BUILD = "20260915020547";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";

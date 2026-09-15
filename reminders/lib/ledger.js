@@ -13,7 +13,7 @@ export const cents = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 /* Each group has its own currency - Canadian dollars unless it says otherwise.
    Nothing is ever converted. The same list, written the same way, as the app:
    rupees grouped in lakhs and crores, "₹1,23,456.00". */
-export const CURRENCIES = { CAD: "$", INR: "₹", USD: "US$" };
+export const CURRENCIES = { CAD: "$", INR: "₹" };
 const isCurrency = (c) => typeof c === "string" && Object.prototype.hasOwnProperty.call(CURRENCIES, c);
 
 /** The group's currency code, or CAD for anything missing or unexpected. */

@@ -46,7 +46,7 @@ is(money(1234567.891, "INR"), "₹12,34,567.89", "rupees, in lakhs");
 is(money(123456789, "INR"), "₹12,34,56,789.00", "rupees, in crores");
 is(money(999, "INR"), "₹999.00", "rupees under a thousand");
 is(money(-100000, "INR"), "-₹1,00,000.00", "negative rupees");
-is(money(20, "USD"), "US$20.00", "US dollars");
+is(money(20, "USD"), "$20.00", "US dollars are not a currency here");
 is(money(20, "EUR"), "$20.00", "anything unexpected is dollars");
 is(currencyOf({ meta: { currency: "INR" } }), "INR", "a rupee group");
 is(currencyOf({ meta: {} }), "CAD", "no currency means Canadian dollars");
