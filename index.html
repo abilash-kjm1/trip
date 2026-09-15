@@ -2929,7 +2929,7 @@ span.af-pill{ cursor:default; padding-right:12px; }
 /* ---- the live activity feed: small, top right, one line each ---- */
 .notif-stack{ position:fixed; top:calc(var(--safe-t) + 76px); right:var(--s3); z-index:60;
   display:flex; flex-direction:column; align-items:flex-end; gap:6px;
-  max-width:min(210px, calc(100vw - 24px)); pointer-events:none; }
+  max-width:min(272px, calc(100vw - 24px)); pointer-events:none; }
 .notif-card{ pointer-events:auto; display:flex; align-items:center; gap:6px; max-width:100%;
   padding:6px 6px 6px 9px; border-radius:999px; background:var(--surface);
   box-shadow:inset 0 0 0 1px var(--line), 0 8px 20px -12px rgba(0,0,0,.35);
@@ -4111,6 +4111,12 @@ function forgetPreviousAccount(uid){
   JOINED = []; CURRENT = null; DATA = {};
   try{ localStorage.removeItem(LS.grp); localStorage.removeItem(LS.cur); }catch(e){}
   forgetCachedGroups();     // the last account's groups are not this one's to see
+  // The activity feed's own memory of what it has already seen - an admin
+  // switching between accounts on one device, without signing all the way
+  // out, must not have the new account's long-standing groups read as
+  // freshly joined, or its existing expenses compared against what the
+  // last account happened to have loaded.
+  if(typeof notifForget==="function") notifForget();
   if(typeof location !== "undefined" && location.hash) location.hash = "";
   lsSet(LS.who, uid);
   return true;
@@ -9923,7 +9929,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915193703";
+const APP_BUILD = "20260915194022";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
@@ -10087,6 +10093,13 @@ function notifDismiss(id){
   NOTIF_LIST = NOTIF_LIST.filter(n=>n.id!==id);
   notifRender();
 }
+/* An admin switching to a different account on the same device, without
+   signing all the way out first, gets a fresh baseline here too - called
+   from forgetPreviousAccount() in app-js.js, alongside its own reset. */
+function notifForget(){
+  NOTIF_LIST = []; NOTIF_SHADOW = {}; NOTIF_KNOWN_GROUPS = null; NOTIF_SELF_UNTIL = 0;
+  notifRender();
+}
 function notifRender(){
   const host=$("notifStack"); if(!host) return;
   host.innerHTML = NOTIF_LIST.map(n=>
@@ -10126,19 +10139,20 @@ function notifCheck(){
     const first=!NOTIF_SHADOW[gid];
     const shadow = NOTIF_SHADOW[gid] = NOTIF_SHADOW[gid] || {expenses:{}, payments:{}};
 
+    const tail=" · "+groupName(gid);
     [["expenses", expensesOf(gid), "add_circle",
-      (e)=> (e.by||"Someone")+" added "+(e.desc||"an expense"),
-      (e)=> (e.by||"Someone")+" edited "+(e.desc||"an expense")],
+      (e)=> (e.by||"Someone")+" added "+(e.desc||"an expense")+" · "+money(e.amount, gid)+tail,
+      (e)=> (e.by||"Someone")+" edited "+(e.desc||"an expense")+" · "+money(e.amount, gid)+tail],
      ["payments", paymentsOf(gid), "payments",
-      (p)=> (p.by||p.from||"Someone")+" paid "+(p.to||"?")+(p.amount ? " "+money(p.amount, gid) : ""),
-      ()=> "A payment was edited"]
+      (p)=> (p.by||p.from||"Someone")+" paid "+(p.to||"?")+" · "+money(p.amount, gid)+tail,
+      (p)=> "Payment edited · "+money(p.amount, gid)+tail]
     ].forEach(([kind, list, addIcon, addText, editText])=>{
       const now={};
       const addKind = kind==="payments" ? "pay" : "add";
       list.forEach(item=>{
         const sig=JSON.stringify([item.desc, item.amount, item.payer, item.between, item.vals, item.from, item.to, item.note]);
         const label=item.desc || ((item.from||"?")+" → "+(item.to||"?"));
-        now[item.k]={sig, label};
+        now[item.k]={sig, label, amount:item.amount};
         if(first || grace) return;
         const was=shadow[kind][item.k];
         if(!was){ notifPush(addKind, addIcon, addText(item), gid); }
@@ -10146,7 +10160,10 @@ function notifCheck(){
       });
       if(!first && !grace){
         Object.keys(shadow[kind]).forEach(k=>{
-          if(!(k in now)) notifPush("del", "delete", "“"+shadow[kind][k].label+"” removed", gid);
+          if(!(k in now)){
+            const was=shadow[kind][k];
+            notifPush("del", "delete", "“"+was.label+"” removed · "+money(was.amount, gid)+tail, gid);
+          }
         });
       }
       shadow[kind]=now;
