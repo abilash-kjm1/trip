@@ -2926,6 +2926,83 @@ span.af-pill{ cursor:default; padding-right:12px; }
 }
 
 
+/* ---- currencies: rupee and dollar groups side by side ---- */
+.pf-amt input.long{ width:8.4ch; font-size:40px !important; }
+.pf-amt input.xlong{ width:10.4ch; font-size:32px !important; }
+.gx-net.multi{ font-size:19px; line-height:1.25; text-align:right; }
+.sum .v.multi{ font-size:15.5px; line-height:1.3; }
+.hero .hc-foot .net.multi b{ font-size:12.5px; }
+.th-fa.multi{ font-size:11.5px; line-height:1.3; text-align:center; }
+.th-friend.mix .th-fa{ color:var(--ink-2); }
+.split.multi .v{ font-size:15.5px; line-height:1.3; }
+.gt-cur{ display:inline-block; margin-left:8px; padding:1px 8px; border-radius:999px; background:rgba(252,250,245,.14);
+  color:rgba(252,250,245,.9); letter-spacing:.06em; }
+.cur-chip b{ margin-right:5px; font-weight:800; }
+.cur-list{ margin:0; }
+.cur-row.on{ background:var(--fill-1); }
+.cur-sym{ font-size:15px; font-weight:800; font-style:normal; letter-spacing:-.02em; }
+.cur-code{ margin-left:6px; font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3); }
+.cur-warn{ display:flex; gap:6px; align-items:flex-start; margin:14px 2px 0; text-align:left; }
+.cur-warn .ms{ flex:none; font-size:17px; color:var(--apricot-dk); }
+.vz-card + .vz-card{ margin-top:var(--s3); }
+.vz-curtag{ display:inline-block; margin:0 0 10px; padding:3px 10px; border-radius:999px; background:var(--fill-1);
+  font-size:12px; font-weight:700; color:var(--ink-2); }
+
+/* ---- Pay page: the Interac / UPI switch ---- */
+.ix-modes{ display:flex; gap:4px; max-width:420px; margin:0 auto var(--s4); padding:4px; border-radius:18px;
+  background:var(--fill-1); box-shadow:inset 0 0 0 1px var(--line); }
+.ix-mode{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:1px; min-height:48px; padding:6px 8px;
+  border:0; border-radius:14px; background:transparent; font:inherit; color:var(--ink-2); cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:background .2s, color .2s, box-shadow .2s; }
+.ix-mode b{ font-size:14.5px; font-weight:700; }
+.ix-mode small{ font-size:11px; color:var(--ink-3); }
+.ix-mode.on{ background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.06), 0 6px 14px -8px rgba(0,0,0,.28); }
+.ix-mode:focus:not(:focus-visible){ outline:none; }
+
+/* the UPI card: deep green with a saffron glow, in either theme */
+.ix-card.upi-card, :root[data-theme="purple"] .ix-card.upi-card{
+  background:radial-gradient(120% 90% at var(--gx, 22%) 0%, rgba(255,164,72,.34), transparent 56%),
+             linear-gradient(135deg, #133A30 0%, #1E5244 55%, #0E2A23 100%);
+  box-shadow:0 26px 44px -26px rgba(14,42,35,.8), inset 0 1px 0 rgba(255,255,255,.12); }
+.ix-card.upi-card .ix-bankname, :root[data-theme="purple"] .ix-card.upi-card .ix-bankname{ color:#FFC37A; }
+.upi-rupee{ width:42px; height:32px; border-radius:7px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, #FFD08F, #EE8A2A 60%, #FFBE6E); color:#3B1F05; font-size:19px; font-weight:800;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.18); }
+
+/* paying in a rupee group */
+.etx.upi{ background:color-mix(in srgb, #1E5244 8%, var(--surface)); border-color:color-mix(in srgb, #1E5244 22%, transparent); }
+.etx.upi .etx-line{ border-top-color:color-mix(in srgb, #1E5244 14%, transparent); }
+:root[data-theme="purple"] .etx.upi{ border-color:color-mix(in srgb, #1E5244 22%, transparent); }
+:root[data-theme="purple"] .etx.upi .etx-line{ border-top-color:color-mix(in srgb, #1E5244 14%, transparent); }
+.upi-mark{ display:inline-flex; align-items:center; height:22px; padding:0 7px; border-radius:6px; background:#1E5244;
+  color:#fff; font-size:11px; font-weight:800; letter-spacing:.06em; }
+.upi-apps{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; margin:12px 0 0; }
+.upi-app{ min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 2px 8px; border-radius:14px;
+  background:var(--surface); color:var(--ink); text-decoration:none; box-shadow:inset 0 0 0 1px var(--line);
+  -webkit-tap-highlight-color:transparent; transition:transform .15s; }
+.upi-app:active{ transform:scale(.96); }
+.upi-app.on{ box-shadow:inset 0 0 0 2px var(--bk); }
+.upi-mono{ width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--bk); color:#fff; font-size:13px; font-weight:800; box-shadow:0 8px 14px -10px var(--bk); }
+.upi-mono .ms{ font-size:20px; }
+.upi-app-n{ max-width:100%; font-size:11.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.upi-qr-toggle{ display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin:10px 0 0; padding:8px;
+  border:0; border-radius:12px; background:transparent; font:inherit; font-size:13px; font-weight:600; color:var(--ink-2); cursor:pointer; }
+.upi-qr-toggle .ms{ font-size:18px; }
+.upi-qr{ display:flex; flex-direction:column; align-items:center; gap:8px; margin:12px 0 0; }
+.upi-qr[hidden]{ display:none; }
+.upi-qr-code{ width:188px; max-width:100%; aspect-ratio:1; padding:6px; border-radius:16px; background:#fff;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 10px 24px -14px rgba(0,0,0,.45); }
+.upi-qr-code svg{ display:block; width:100%; height:100%; }
+.upi-qr.big{ margin:4px 0 8px; }
+.upi-qr.big .upi-qr-code{ width:240px; }
+.upi-qr p{ margin:0; font-size:12.5px; color:var(--ink-3); text-align:center; }
+.upi-qr.big p b{ font-size:15px; color:var(--ink); }
+.upi-qr-wait{ display:flex; align-items:center; justify-content:center; padding:10px; color:#6B7280; font-size:12px; line-height:1.4; text-align:center; }
+.upi-qr-wait .ms{ font-size:46px; opacity:.3; animation:upiPulse 1.1s ease-in-out infinite alternate; }
+@keyframes upiPulse{ from{ opacity:.18; } to{ opacity:.45; } }
+@media (prefers-reduced-motion:reduce){ .upi-qr-wait .ms{ animation:none; } }
+
 /* ---------- printing (kept last so it wins the cascade) ---------- */
 #printArea{ display:none; }
 @media print{
@@ -2965,7 +3042,7 @@ span.af-pill{ cursor:default; padding-right:12px; }
   <button data-tab="activity"><span class="ms" aria-hidden="true">receipt_long</span>Expenses</button>
   <button data-tab="groups"><span class="ms" aria-hidden="true">group</span>Groups</button>
   <button data-tab="insights"><span class="ms" aria-hidden="true">hub</span>Visualize</button>
-  <button data-tab="interac"><span class="ms" aria-hidden="true">send_money</span>Interac</button>
+  <button data-tab="interac"><span class="ms" aria-hidden="true">send_money</span>Pay</button>
   <div class="foot">
     <button data-tab="account"><span class="ms" aria-hidden="true">account_circle</span>Account</button>
   </div>
@@ -3012,7 +3089,7 @@ span.af-pill{ cursor:default; padding-right:12px; }
   <button data-tab="activity"><span class="nav-ic"><span class="ms" aria-hidden="true">receipt_long</span></span><span class="nav-l">Expenses</span></button>
   <button data-tab="groups"><span class="nav-ic"><span class="ms" aria-hidden="true">group</span></span><span class="nav-l">Groups</span></button>
   <button data-tab="insights"><span class="nav-ic"><span class="ms" aria-hidden="true">hub</span></span><span class="nav-l">Visualize</span></button>
-  <button data-tab="interac"><span class="nav-ic"><span class="ms" aria-hidden="true">send_money</span></span><span class="nav-l">Interac</span></button>
+  <button data-tab="interac"><span class="nav-ic"><span class="ms" aria-hidden="true">send_money</span></span><span class="nav-l">Pay</span></button>
 </nav>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -3155,7 +3232,72 @@ function requestAccess(){
 }
 
 /* ---------------- helpers ---------------- */
-function money(n){ const v=Math.round((n+Number.EPSILON)*100)/100; return (v<0?"-$":"$")+Math.abs(v).toFixed(2); }
+/* ---------------- currency ----------------
+   Each group keeps its own currency: Canadian dollars unless it says
+   otherwise, Indian rupees, or US dollars. Nothing is ever converted. A rupee
+   group and a dollar group are separate ledgers, so a figure that spans
+   groups is shown once per currency - "$120.00 + ₹4,500.00" - rather than
+   added up into a number that means nothing. */
+const CURRENCIES = {
+  CAD: {code:"CAD", sym:"$",   name:"Canadian dollar", pay:"Interac e-Transfer"},
+  INR: {code:"INR", sym:"₹",   name:"Indian rupee",    pay:"UPI · GPay, PhonePe, Paytm"},
+  USD: {code:"USD", sym:"US$", name:"US dollar",       pay:"Interac e-Transfer"}
+};
+const CUR_DEFAULT = "CAD";
+function curOf(gid){
+  const c = gid && DATA[gid] && DATA[gid].meta && DATA[gid].meta.currency;
+  return (typeof c==="string" && CURRENCIES.hasOwnProperty(c)) ? c : CUR_DEFAULT;
+}
+// A currency code, a group id, or nothing at all for the group that is open.
+function curCode(c){
+  if(typeof c==="string" && CURRENCIES.hasOwnProperty(c)) return c;
+  if(typeof c==="string" && c) return curOf(c);
+  return CURRENT ? curOf(CURRENT) : CUR_DEFAULT;
+}
+const curSym = (c)=> CURRENCIES[curCode(c)].sym;
+// "1234567" -> "12,34,567": rupees are grouped in lakhs and crores.
+function groupIN(s){
+  const last=s.slice(-3), rest=s.slice(0,-3);
+  return rest ? rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",")+","+last : last;
+}
+function money(n, c){
+  const code=curCode(c), v=Math.round(((Number(n)||0)+Number.EPSILON)*100)/100;
+  const abs=Math.abs(v).toFixed(2), sign=v<0?"-":"";
+  if(code==="INR"){ const p=abs.split("."); return sign+"₹"+groupIN(p[0])+"."+p[1]; }
+  return sign+CURRENCIES[code].sym+abs;
+}
+/* Amounts that span groups, kept apart by currency: {CAD:120, INR:4500}. */
+function curAdd(bag, gid, n){ const c=curOf(gid); bag[c]=(bag[c]||0)+(Number(n)||0); return bag; }
+function curKeys(bag){ return Object.keys(CURRENCIES).filter(c=> Math.abs((bag&&bag[c])||0)>0.004); }
+function cursInUse(){ const s={}; JOINED.forEach(g=>{ s[curOf(g.id)]=1; }); return Object.keys(CURRENCIES).filter(c=>s[c]); }
+// The currency most of my groups use: what a new group starts in.
+function curUsual(){
+  const n={}; JOINED.forEach(g=>{ const c=curOf(g.id); n[c]=(n[c]||0)+1; });
+  return Object.keys(n).sort((a,b)=> n[b]-n[a] || (a===CUR_DEFAULT?-1:b===CUR_DEFAULT?1:0))[0] || CUR_DEFAULT;
+}
+// Nothing, in the one currency my groups use - or in dollars when they differ.
+function moneyZero(){ const u=cursInUse(); return money(0, u.length===1 ? u[0] : CUR_DEFAULT); }
+function moneyMulti(bag){
+  const k=curKeys(bag);
+  return k.length ? k.map(c=> money(Math.abs(bag[c]), c)).join(" + ") : moneyZero();
+}
+// With the sign that says which way it goes: "+$20.00 · −₹300.00".
+function moneySigned(bag){
+  const k=curKeys(bag);
+  return k.length ? k.map(c=> (bag[c]>0?"+":"−")+money(Math.abs(bag[c]), c)).join(" · ") : moneyZero();
+}
+// pos, neg or zero - or mix, when I am up in one currency and down in another.
+function bagTone(bag){
+  const k=curKeys(bag);
+  if(!k.length) return "zero";
+  const up=k.some(c=>bag[c]>0), down=k.some(c=>bag[c]<0);
+  return up && down ? "mix" : up ? "pos" : "neg";
+}
+function bagNet(a, b){
+  const o={};
+  Object.keys(CURRENCIES).forEach(c=>{ const v=((a&&a[c])||0)-((b&&b[c])||0); if(v) o[c]=v; });
+  return o;
+}
 function plain(n){ return (Math.round((n+Number.EPSILON)*100)/100).toFixed(2); }
 function trim(n){ return String(Math.round((n+Number.EPSILON)*100)/100); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -3328,6 +3470,83 @@ function etxCopy(text, label){
   else fallback();
 }
 
+/* ---------------- UPI (India) ----------------
+   Beside Interac, on the same directory entry and under the same rules: the
+   name on the account and a UPI ID (name@bank). Checked on the way in and on
+   the way out. A UPI link can carry the amount, so GPay, PhonePe or Paytm
+   opens with it filled in - the person still checks the name and enters their
+   UPI PIN in that app. Settle never moves money and never sees a PIN. */
+const UPI_APPS = [
+  {id:"gpay",    name:"GPay",    tint:"#1A73E8", mono:"G",  pkg:"com.google.android.apps.nbu.paisa.user", ios:"tez://upi/pay"},
+  {id:"phonepe", name:"PhonePe", tint:"#5F259F", mono:"Pe", pkg:"com.phonepe.app",  ios:"phonepe://pay"},
+  {id:"paytm",   name:"Paytm",   tint:"#00A0E3", mono:"Pt", pkg:"net.one97.paytm",  ios:"paytmmp://pay"}
+];
+const upiIdOk = (s)=> { const v=String(s||"").trim(); return v.length<=120 && /^[a-z0-9][a-z0-9._-]+@[a-z][a-z0-9]+$/i.test(v); };
+function upiClean(p){
+  if(!p || typeof p!=="object") return null;
+  const name=tidyName(p.name).slice(0,60), vpa=String(p.vpa||"").trim().toLowerCase();
+  return name && upiIdOk(vpa) ? {name, vpa} : null;
+}
+function upiRecord(name, vpa){
+  const n=tidyName(name).slice(0,60), v=String(vpa||"").trim().toLowerCase();
+  if(!n) return "Enter the name on the UPI account";
+  if(!upiIdOk(v)) return "Enter a UPI ID like yourname@okaxis";
+  return {name:n, vpa:v, at:Date.now()};
+}
+function upiFor(uid){ return uid && DIRECTORY && DIRECTORY[uid] ? upiClean(DIRECTORY[uid].upi) : null; }
+function myUpiApp(){ const id=(PREFS&&PREFS.upiApp)||""; return UPI_APPS.find(a=>a.id===id) || null; }
+const etxIsAndroid = ()=> /Android/i.test(navigator.userAgent||"");
+/* The request itself: whose UPI ID, their name, how much, and a short note.
+   Nothing about the person paying goes in it. */
+function upiQuery(d, amount, note){
+  const q=["pa="+encodeURIComponent(d.vpa), "pn="+encodeURIComponent(d.name)];
+  if(amount>0) q.push("am="+(Math.round(amount*100)/100).toFixed(2));
+  q.push("cu=INR");
+  const tn=String(note||"").replace(/[^A-Za-z0-9 .,&'-]/g,"").replace(/\s+/g," ").trim().slice(0,50);
+  if(tn) q.push("tn="+encodeURIComponent(tn));
+  return q.join("&");
+}
+/* Android hands a upi:// link to the app named in an intent, or offers every
+   UPI app when none is named. iPhone has no such chooser, so each app is
+   opened by its own address. A computer has neither: it gets the QR code. */
+function upiLink(d, amount, note, app){
+  const q=upiQuery(d, amount, note);
+  if(app && etxIsAndroid()) return "intent://pay?"+q+"#Intent;scheme=upi;package="+app.pkg+";end";
+  if(app && etxIsIOS()) return app.ios+"?"+q;
+  return "upi://pay?"+q;
+}
+/* QR codes are drawn by a small library, fetched only the first time one is
+   needed. Pinned to one version and checked against its published hash, so a
+   changed copy is refused rather than run. */
+const QR_SRC = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
+const QR_SRI = "sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==";
+let qrLoading = null;
+function qrLib(){
+  if(typeof window.qrcode==="function") return Promise.resolve(window.qrcode);
+  if(qrLoading) return qrLoading;
+  qrLoading = new Promise((ok, no)=>{
+    const s=document.createElement("script");
+    s.src=QR_SRC; s.integrity=QR_SRI; s.crossOrigin="anonymous"; s.referrerPolicy="no-referrer";
+    s.onload=()=> typeof window.qrcode==="function" ? ok(window.qrcode) : no(new Error("no QR"));
+    s.onerror=()=>{ qrLoading=null; s.remove(); no(new Error("no QR")); };
+    document.head.appendChild(s);
+  });
+  return qrLoading;
+}
+function qrSvg(text){
+  return qrLib().then(qrcode=>{
+    const qr=qrcode(0, "M"); qr.addData(text); qr.make();
+    return qr.createSvgTag({cellSize:4, margin:3, scalable:true});
+  });
+}
+/* Draw a QR into `host`, saying so plainly if it cannot be drawn. */
+function qrInto(host, text){
+  if(!host) return;
+  host.innerHTML='<span class="upi-qr-wait"><span class="ms" aria-hidden="true">qr_code_2</span></span>';
+  qrSvg(text).then(svg=>{ if(host.isConnected) host.innerHTML=svg; })
+    .catch(()=>{ if(host.isConnected) host.innerHTML='<span class="upi-qr-wait off">The QR code needs a connection the first time. The UPI ID works without it.</span>'; });
+}
+
 function settleAccountFor(name, email){
   const people = Object.keys(DIRECTORY||{}).map(u=> Object.assign({uid:u}, DIRECTORY[u]||{}));
   const mail = normMail(email);
@@ -3469,7 +3688,7 @@ function suggestSettle(gid, from, to){
   const net=pairNet(gid, from, to);
   if(net>0.004)  return {amt:net, why:(from===ME?"You owe":from+" owes")+" "+to+" this much between the two of them."};
   if(net<-0.004) return {amt:0,   why:"The other way round \u2014 "+to+" owes "+
-                                      (from===ME?"you":from)+" "+money(-net)+"."};
+                                      (from===ME?"you":from)+" "+money(-net, gid)+"."};
   return {amt:0, why:"Nothing outstanding between these two."};
 }
 
@@ -3920,19 +4139,22 @@ function viewGroups(main){
   const enter = !GROUPS_SEEN; GROUPS_SEEN = true;
 
   // ---- where you stand, across every group ----
-  let owed=0, owe=0;
-  JOINED.forEach(g=>{ const v=myBalance(g.id); if(v>0.004) owed+=v; else if(v<-0.004) owe+=-v; });
-  const net=owed-owe, both=owed+owe;
-  const netTone = net>0.004 ? "pos" : net<-0.004 ? "neg" : "zero";
-  const pct = both>0.004 ? Math.round(owed/both*100) : 0;
+  // Each currency on its own - rupees and dollars are never added together.
+  const owedB={}, oweB={};
+  JOINED.forEach(g=>{ const v=myBalance(g.id); if(v>0.004) curAdd(owedB, g.id, v); else if(v<-0.004) curAdd(oweB, g.id, -v); });
+  const netB=bagNet(owedB, oweB), netTone=bagTone(netB);
+  const moving=Object.keys(CURRENCIES).filter(c=> (owedB[c]||0)+(oweB[c]||0) > 0.004);
+  // How much of what is moving comes to me, averaged over the currencies.
+  const pct = moving.length ? Math.round(moving.reduce((s,c)=> s+(owedB[c]||0)/((owedB[c]||0)+(oweB[c]||0)), 0)/moving.length*100) : 0;
   const bal=el("div","gx-bal"+(enter?" enter":""));
   bal.innerHTML=
     '<div class="gx-bal-top"><span class="gx-bal-lab">Across '+JOINED.length+' group'+(JOINED.length===1?'':'s')+'</span>'+
-      '<span class="gx-net '+netTone+'">'+(netTone==="pos" ? "+"+money(net) : netTone==="neg" ? "−"+money(-net) : "All square")+'</span></div>'+
-    '<div class="gx-meter'+(both>0.004?'':' empty')+'" role="img" aria-label="'+
-      esc("Owed "+money(owed)+", owing "+money(owe))+'"><span class="gx-in" style="--w:'+pct+'%"></span></div>'+
-    '<div class="gx-bal-foot"><span><i class="dot in"></i>You’re owed <b>'+money(owed)+'</b></span>'+
-      '<span><i class="dot out"></i>You owe <b>'+money(owe)+'</b></span></div>';
+      '<span class="gx-net '+(netTone==="mix" ? "zero" : netTone)+(curKeys(netB).length>1 ? " multi" : "")+'">'+
+        (netTone==="zero" ? "All square" : esc(moneySigned(netB)))+'</span></div>'+
+    '<div class="gx-meter'+(moving.length?'':' empty')+'" role="img" aria-label="'+
+      esc("Owed "+moneyMulti(owedB)+", owing "+moneyMulti(oweB))+'"><span class="gx-in" style="--w:'+pct+'%"></span></div>'+
+    '<div class="gx-bal-foot"><span><i class="dot in"></i>You’re owed <b>'+esc(moneyMulti(owedB))+'</b></span>'+
+      '<span><i class="dot out"></i>You owe <b>'+esc(moneyMulti(oweB))+'</b></span></div>';
   main.appendChild(bal);
 
   // ---- a tile per group ----
@@ -3950,7 +4172,7 @@ function viewGroups(main){
     const gid=g.id, v=myBalance(gid), mem=membersOf(gid), tot=totalOf(gid), at=lastAt(gid);
     const tone = v>0.004 ? "pos" : v<-0.004 ? "neg" : "zero";
     // Sign and colour say which way it goes, so it fits half a phone's width.
-    const chip = tone==="pos" ? "+"+money(v) : tone==="neg" ? "−"+money(-v) : "Settled";
+    const chip = tone==="pos" ? "+"+money(v, gid) : tone==="neg" ? "−"+money(-v, gid) : "Settled";
     const faces = mem.slice(0,4).map(m=>
       '<span class="gx-face" style="background:'+esc(m.color||"")+'">'+
         (m.photo ? '<img src="'+esc(m.photo)+'" alt="" referrerpolicy="no-referrer">' : esc(initials(m.name)))+'</span>').join("")+
@@ -3963,7 +4185,7 @@ function viewGroups(main){
       '<span class="gx-top"><span class="gx-ic"><span class="ms" aria-hidden="true">'+groupIcon(gid)+'</span></span>'+
         '<span class="gx-chip '+tone+'">'+chip+'</span></span>'+
       '<span class="gx-name">'+esc(groupName(gid))+'</span>'+
-      '<span class="gx-meta">'+money(tot)+' spent'+(when ? ' · '+esc(when) : '')+'</span>'+
+      '<span class="gx-meta">'+money(tot, gid)+' spent'+(when ? ' · '+esc(when) : '')+'</span>'+
       '<span class="gx-foot"><span class="gx-faces">'+faces+'</span>'+
         '<span class="gx-count">'+mem.length+' '+(mem.length===1?'person':'people')+'</span></span>';
     t.addEventListener("click", ()=>openGroup(gid));
@@ -4055,7 +4277,8 @@ function sectionTotal(main, gid){
   const tot=totalOf(gid), exps=expensesOf(gid), people=names(gid).length;
   const s=el("div","gtop");
   let html=
-    '<div class="gt-row"><span class="gt-lab">Total spent</span>'+
+    '<div class="gt-row"><span class="gt-lab">Total spent'+
+      (curOf(gid)!==CUR_DEFAULT || cursInUse().length>1 ? '<span class="gt-cur">'+esc(CURRENCIES[curOf(gid)].sym+" "+curOf(gid))+'</span>' : '')+'</span>'+
       '<span class="gt-meta">'+exps.length+' expense'+(exps.length===1?'':'s')+' &middot; '+
         people+' '+(people===1?'person':'people')+'</span></div>'+
     '<div class="gt-big">'+money(tot)+'</div>';
@@ -4124,9 +4347,9 @@ function sectionAdd(main, gid){
     '<div class="af-head"><h2 class="ah">Add an expense</h2>'+
       '<button class="af-more" id="afMore" type="button">More options</button></div>'+
     '<div class="af-main">'+
-      '<label class="af-amt"><span class="af-cur" aria-hidden="true">$</span>'+
+      '<label class="af-amt"><span class="af-cur" aria-hidden="true">'+esc(curSym(gid))+'</span>'+
         '<input id="afAmt" type="number" inputmode="decimal" step="0.01" min="0" '+
-        'placeholder="0.00" aria-label="Amount in CAD"></label>'+
+        'placeholder="0.00" aria-label="Amount in '+curOf(gid)+'"></label>'+
       '<input id="afDesc" class="af-desc" type="text" autocomplete="off" '+
         'placeholder="What was it for?" aria-label="What was it for?">'+
     '</div>'+
@@ -4560,22 +4783,23 @@ function viewActivity(main){
   const tint = (gid)=> "gc"+(Math.max(0, order.indexOf(gid)) % 6);
   const monthKey = (ts)=>{ const d=new Date(ts||0); return d.getFullYear()+"-"+d.getMonth(); };
   const monthName = (ts)=> ts ? new Date(ts).toLocaleDateString(undefined,{month:"long", year:"numeric"}) : "Undated";
-  const spent = (n)=> money(n)+" spent";
+  // Totals per currency: a day in a rupee group and a dollar group shows both.
+  const spent = (bag)=> moneyMulti(bag)+" spent";
 
   const shown = items.slice(0,200);
-  let month=null, day=null, card=null, dayTotal=0, dayOut=null, monthTotal=0, monthOut=null;
+  let month=null, day=null, card=null, dayTotal={}, dayOut=null, monthTotal={}, monthOut=null;
 
   shown.forEach(it=>{
     const mk=monthKey(it.at), dk=dayKey(it.at);
     if(mk!==month){
-      month=mk; monthTotal=0; day=null;
+      month=mk; monthTotal={}; day=null;
       const mh=el("div","act-month");
       mh.innerHTML='<h2>'+esc(monthName(it.at))+'</h2><span class="act-mtotal"></span>';
       main.appendChild(mh);
       monthOut=mh.querySelector(".act-mtotal");
     }
     if(dk!==day){
-      day=dk; dayTotal=0;
+      day=dk; dayTotal={};
       const dh=el("div","act-day");
       dh.innerHTML='<span>'+esc(dayLabel(it.at))+'</span><span class="act-dtotal"></span>';
       main.appendChild(dh);
@@ -4593,24 +4817,24 @@ function viewActivity(main){
       const iPaid = !!me && e.payer===me;
       let figure, tone, what;
       // What this expense means for me, said plainly.
-      if(iPaid && amt-mine > 0.004){ figure="+"+money(amt-mine); tone="pos"; what="you get back"; }
-      else if(iPaid){                figure=money(amt);          tone="zero"; what="you paid"; }
-      else if(mine > 0.004){         figure="−"+money(mine); tone="neg"; what="your share"; }
-      else {                         figure=money(amt);          tone="zero"; what="not yours"; }
+      if(iPaid && amt-mine > 0.004){ figure="+"+money(amt-mine, it.gid); tone="pos"; what="you get back"; }
+      else if(iPaid){                figure=money(amt, it.gid);  tone="zero"; what="you paid"; }
+      else if(mine > 0.004){         figure="−"+money(mine, it.gid); tone="neg"; what="your share"; }
+      else {                         figure=money(amt, it.gid);  tone="zero"; what="not yours"; }
       r.innerHTML=
         '<span class="act-ic"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="act-b"><span class="act-t">'+esc(e.desc)+'</span>'+
           '<span class="act-m">'+esc(iPaid ? "You" : e.payer)+' paid · '+esc(groupName(it.gid))+'</span></span>'+
         '<span class="act-r"><span class="act-amt '+tone+'">'+figure+'</span>'+
           '<span class="act-cap">'+what+'</span></span>';
-      dayTotal+=amt; monthTotal+=amt;
-      dayOut.textContent=money(dayTotal);
+      curAdd(dayTotal, it.gid, amt); curAdd(monthTotal, it.gid, amt);
+      dayOut.textContent=moneyMulti(dayTotal);
       monthOut.textContent=spent(monthTotal);
     } else {
       const p=it.p, amt=Number(p.amount)||0;
       const fromMe = !!me && p.from===me, toMe = !!me && p.to===me;
       r.classList.add("pay");
-      const figure = toMe ? "+"+money(amt) : money(amt);
+      const figure = toMe ? "+"+money(amt, it.gid) : money(amt, it.gid);
       const tone   = toMe ? "pos" : "zero";
       const what   = toMe ? "paid to you" : fromMe ? "you paid" : "payment";
       r.innerHTML=
@@ -4640,8 +4864,20 @@ let IX_EDIT = false, IX_SEEN = false, IX_INFO = false;
 const ETX_TINT = {cibc:"#B5123A", rbc:"#005DAA", td:"#1A8B3C", scotiabank:"#D8141C", bmo:"#0079C1"};
 const ETX_MONO = {cibc:"CIBC", rbc:"RBC", td:"TD", scotiabank:"S", bmo:"BMO"};
 function viewInterac(main){
-  setTitle(main, "Interac");
+  setTitle(main, "Pay");
   const enter = !IX_SEEN; IX_SEEN = true;
+  // Interac for Canada, UPI for India: one switch at the top, remembered.
+  const mode = payMode();
+  const sw=el("div","ix-modes"); sw.setAttribute("role","tablist"); sw.setAttribute("aria-label","How you pay");
+  [["interac","Interac","Canada"],["upi","UPI","India"]].forEach(m=>{
+    const b=el("button","ix-mode"+(m[0]===mode?" on":"")); b.type="button";
+    b.setAttribute("role","tab"); b.setAttribute("aria-selected", m[0]===mode?"true":"false");
+    b.innerHTML='<b>'+m[1]+'</b><small>'+m[2]+'</small>';
+    b.addEventListener("click", ()=>{ if(m[0]===mode) return; lsSet(LS_PAYMODE, m[0]); IX_EDIT=false; UPI_EDIT=false; IX_SEEN=false; render(); });
+    sw.appendChild(b);
+  });
+  main.appendChild(sw);
+  if(mode==="upi") return viewUpi(main, enter);
   const mine = etxFor(USER.uid);
   const raw = (DIRECTORY[USER.uid] && DIRECTORY[USER.uid].pay) || {};
   const bank = myBank();
@@ -4717,13 +4953,6 @@ function viewInterac(main){
     });
   }
 
-  // A heading like the ones on Today, with where things stand on the right.
-  const ixHead=(icon, title, pill, pillCls)=>{
-    const h=el("div","th-head");
-    h.innerHTML='<span class="th-ic"><span class="ms" aria-hidden="true">'+icon+'</span></span><h2>'+esc(title)+'</h2>'+
-      (pill ? '<span class="ix-pill'+(pillCls ? ' '+pillCls : '')+'">'+esc(pill)+'</span>' : '');
-    return h;
-  };
 
   // ---- your bank app: one row of logos, the details folded away ----
   main.appendChild(ixHead("account_balance", "Your bank app", bank ? bank.name : "Not chosen", bank ? "good" : ""));
@@ -4770,99 +4999,18 @@ function viewInterac(main){
   main.appendChild(howPanel);
 
   // ---- everybody else ----
-  const seen={}, people=[];
-  JOINED.forEach(g=> membersOf(g.id).forEach(m=>{
-    if(!m.uid || m.uid===USER.uid || seen[m.uid]) return;
-    seen[m.uid]=true;
-    people.push({uid:m.uid, name:(DIRECTORY[m.uid]&&DIRECTORY[m.uid].name)||m.name, color:m.color, photo:m.photo});
-  }));
-  // The administrator looks after everybody's details, so sees everybody in
-  // Settle, not only the people in their own groups.
-  if(isAdmin()) Object.keys(DIRECTORY||{}).forEach(u=>{
-    const e=DIRECTORY[u]||{};
-    if(u===USER.uid || seen[u] || !e.name) return;
-    seen[u]=true;
-    people.push({uid:u, name:e.name, color:null, photo:e.photo||null});
+  // An address is copied exactly as saved; a phone number as digits only.
+  ixPeople(main, enter, {
+    what: "Interac details", none: "No Interac details yet",
+    empty: "When people in your groups add their Interac details, they show up here, ready to copy.",
+    edit: sheetEtxFor,
+    detail: (uid)=>{
+      const d=etxFor(uid); if(!d) return null;
+      const email=/@/.test(d.handle);
+      return {id:d.handle, name:d.name, what:"Interac "+(email?"email":"phone"),
+              copy: ()=> email ? etxCopy(d.handle, "Email") : etxCopy(d.handle.replace(/[^\d]/g,""), "Phone")};
+    }
   });
-  people.sort((a,c)=> String(a.name).localeCompare(String(c.name)));
-  const ready=people.filter(p=> etxFor(p.uid)), pending=people.filter(p=> !etxFor(p.uid));
-
-  main.appendChild(ixHead("group", isAdmin() ? "Everyone in Settle" : "People in your groups",
-    people.length ? ready.length+" of "+people.length+" ready" : "",
-    people.length && ready.length===people.length ? "good" : ""));
-  if(!people.length){
-    const e=el("div","ix-panel ix-empty");
-    e.innerHTML='<span class="ms" aria-hidden="true">person_search</span><b>No one to pay here yet</b>'+
-      '<p>When people in your groups add their Interac details, they show up here, ready to copy.</p>';
-    main.appendChild(e);
-    return;
-  }
-
-  const wrap=el("div","ix-list"+(enter?" enter":""));
-  let find=null;
-  if(people.length>6){
-    find=el("label","ix-search");
-    find.innerHTML='<span class="ms" aria-hidden="true">search</span>'+
-      '<input id="ixFind" type="search" placeholder="Find someone" aria-label="Find someone" autocomplete="off">';
-    wrap.appendChild(find);
-  }
-  let n=0;
-  const row=(p, d)=>{
-    const r=el("div","etx-person ix-person"+(d?"":" off"));
-    r.style.setProperty("--i", n++);
-    r.dataset.q=(p.name+" "+(d ? d.handle+" "+d.name : "")).toLowerCase();
-    r.innerHTML=avatarHTML("", p.name, p.color, p.photo)+
-      '<span class="etx-b"><span class="etx-n">'+esc(p.name)+'</span>'+
-        (d ? '<span class="etx-h">'+esc(d.handle)+(d.name!==p.name ? ' &middot; '+esc(d.name) : '')+'</span>'
-           : '<span class="etx-h none">No Interac details yet</span>')+'</span>';
-    if(d){
-      const b=el("button","etx-copy"); b.type="button";
-      b.innerHTML='<span class="ms" aria-hidden="true">content_copy</span>Copy';
-      b.setAttribute("aria-label","Copy "+p.name+"'s Interac "+(/@/.test(d.handle)?"email":"phone"));
-      // An address is copied exactly as saved; a phone number as digits only.
-      b.addEventListener("click", ()=>{
-        if(/@/.test(d.handle)) etxCopy(d.handle, "Email"); else etxCopy(d.handle.replace(/[^\d]/g,""), "Phone");
-        b.classList.add("done"); b.querySelector(".ms").textContent="check";
-        setTimeout(()=>{ b.classList.remove("done"); b.querySelector(".ms").textContent="content_copy"; }, 1400);
-      });
-      r.appendChild(b);
-    }
-    if(isAdmin()){
-      const e=el("button","etx-copy"); e.type="button";
-      e.innerHTML='<span class="ms" aria-hidden="true">'+(d?"edit":"add")+'</span>'+(d?"Edit":"Add");
-      e.setAttribute("aria-label",(d?"Edit ":"Add ")+p.name+"'s Interac details");
-      e.addEventListener("click", ()=> sheetEtxFor(p.uid, p.name) );
-      r.appendChild(e);
-    }
-    return r;
-  };
-  const section=(label, list, cls)=>{
-    if(!list.length) return null;
-    const box=el("div","ix-section");
-    box.appendChild(el("div","ix-group-lab", label));
-    const c=el("div","card etxlist "+cls);
-    list.forEach(p=> c.appendChild(row(p, etxFor(p.uid))) );
-    box.appendChild(c);
-    wrap.appendChild(box);
-    return box;
-  };
-  section("Ready to pay", ready, "ix-ready");
-  section("Not set up yet", pending, "ix-pending");
-  main.appendChild(wrap);
-
-  if(find){
-    const input=find.querySelector("input");
-    input.addEventListener("input", ()=>{
-      const q=input.value.trim().toLowerCase();
-      [].forEach.call(wrap.querySelectorAll(".ix-section"), sec=>{
-        let shown=0;
-        [].forEach.call(sec.querySelectorAll(".ix-person"), r=>{
-          const hit=!q || r.dataset.q.indexOf(q)>-1; r.hidden=!hit; if(hit) shown++;
-        });
-        sec.hidden = !shown;
-      });
-    });
-  }
 }
 
 /* The administrator filling in somebody else's Interac details. The database
@@ -4905,6 +5053,311 @@ function sheetEtxFor(uid, name){
   });
 }
 
+/* ---------- shared by Interac and UPI ---------- */
+// A heading like the ones on Today, with where things stand on the right.
+function ixHead(icon, title, pill, pillCls){
+  const h=el("div","th-head");
+  h.innerHTML='<span class="th-ic"><span class="ms" aria-hidden="true">'+icon+'</span></span><h2>'+esc(title)+'</h2>'+
+    (pill ? '<span class="ix-pill'+(pillCls ? ' '+pillCls : '')+'">'+esc(pill)+'</span>' : '');
+  return h;
+}
+const LS_PAYMODE = "settle.paymode.v1";
+// Which half of the Pay page shows: what was picked last, or on a first visit
+// UPI for somebody whose groups are all in rupees or who only has a UPI ID.
+function payMode(){
+  const saved=lsGet(LS_PAYMODE, null);
+  if(saved==="upi" || saved==="interac") return saved;
+  const cur=cursInUse();
+  if(cur.length && cur.every(c=>c==="INR")) return "upi";
+  if(USER && upiFor(USER.uid) && !etxFor(USER.uid)) return "upi";
+  return "interac";
+}
+// The card leans toward the pointer, and its glow follows.
+function ixTilt(card){
+  card.addEventListener("pointermove", e=>{
+    const r=card.getBoundingClientRect();
+    const x=(e.clientX-r.left)/r.width-.5, y=(e.clientY-r.top)/r.height-.5;
+    card.style.setProperty("--ry", (x*10).toFixed(2)+"deg");
+    card.style.setProperty("--rx", (-y*8).toFixed(2)+"deg");
+    card.style.setProperty("--gx", Math.round((x+.5)*100)+"%");
+  });
+  card.addEventListener("pointerleave", ()=>{ card.style.setProperty("--rx","0deg"); card.style.setProperty("--ry","0deg"); });
+}
+/* Everybody I might pay - the people in my groups, or everyone in Settle for
+   the administrator - those ready to be paid first, then those not set up. */
+function ixPeople(main, enter, o){
+  const seen={}, people=[];
+  JOINED.forEach(g=> membersOf(g.id).forEach(m=>{
+    if(!m.uid || m.uid===USER.uid || seen[m.uid]) return;
+    seen[m.uid]=true;
+    people.push({uid:m.uid, name:(DIRECTORY[m.uid]&&DIRECTORY[m.uid].name)||m.name, color:m.color, photo:m.photo});
+  }));
+  // The administrator looks after everybody's details, so sees everybody in
+  // Settle, not only the people in their own groups.
+  if(isAdmin()) Object.keys(DIRECTORY||{}).forEach(u=>{
+    const e=DIRECTORY[u]||{};
+    if(u===USER.uid || seen[u] || !e.name) return;
+    seen[u]=true;
+    people.push({uid:u, name:e.name, color:null, photo:e.photo||null});
+  });
+  people.sort((a,c)=> String(a.name).localeCompare(String(c.name)));
+  const ready=people.filter(p=> o.detail(p.uid)), pending=people.filter(p=> !o.detail(p.uid));
+
+  main.appendChild(ixHead("group", isAdmin() ? "Everyone in Settle" : "People in your groups",
+    people.length ? ready.length+" of "+people.length+" ready" : "",
+    people.length && ready.length===people.length ? "good" : ""));
+  if(!people.length){
+    const e=el("div","ix-panel ix-empty");
+    e.innerHTML='<span class="ms" aria-hidden="true">person_search</span><b>No one to pay here yet</b>'+
+      '<p>'+esc(o.empty)+'</p>';
+    main.appendChild(e);
+    return;
+  }
+
+  const wrap=el("div","ix-list"+(enter?" enter":""));
+  let find=null;
+  if(people.length>6){
+    find=el("label","ix-search");
+    find.innerHTML='<span class="ms" aria-hidden="true">search</span>'+
+      '<input id="ixFind" type="search" placeholder="Find someone" aria-label="Find someone" autocomplete="off">';
+    wrap.appendChild(find);
+  }
+  let n=0;
+  const row=(p, d)=>{
+    const r=el("div","etx-person ix-person"+(d?"":" off"));
+    r.style.setProperty("--i", n++);
+    r.dataset.q=(p.name+" "+(d ? d.id+" "+d.name : "")).toLowerCase();
+    r.innerHTML=avatarHTML("", p.name, p.color, p.photo)+
+      '<span class="etx-b"><span class="etx-n">'+esc(p.name)+'</span>'+
+        (d ? '<span class="etx-h">'+esc(d.id)+(d.name!==p.name ? ' &middot; '+esc(d.name) : '')+'</span>'
+           : '<span class="etx-h none">'+esc(o.none)+'</span>')+'</span>';
+    if(d){
+      const b=el("button","etx-copy"); b.type="button";
+      b.innerHTML='<span class="ms" aria-hidden="true">content_copy</span>Copy';
+      b.setAttribute("aria-label","Copy "+p.name+"'s "+d.what);
+      b.addEventListener("click", ()=>{
+        d.copy();
+        b.classList.add("done"); b.querySelector(".ms").textContent="check";
+        setTimeout(()=>{ b.classList.remove("done"); b.querySelector(".ms").textContent="content_copy"; }, 1400);
+      });
+      r.appendChild(b);
+    }
+    if(isAdmin()){
+      const e=el("button","etx-copy"); e.type="button";
+      e.innerHTML='<span class="ms" aria-hidden="true">'+(d?"edit":"add")+'</span>'+(d?"Edit":"Add");
+      e.setAttribute("aria-label",(d?"Edit ":"Add ")+p.name+"'s "+o.what);
+      e.addEventListener("click", ()=> o.edit(p.uid, p.name) );
+      r.appendChild(e);
+    }
+    return r;
+  };
+  const section=(label, list, cls)=>{
+    if(!list.length) return;
+    const box=el("div","ix-section");
+    box.appendChild(el("div","ix-group-lab", label));
+    const c=el("div","card etxlist "+cls);
+    list.forEach(p=> c.appendChild(row(p, o.detail(p.uid))) );
+    box.appendChild(c);
+    wrap.appendChild(box);
+  };
+  section("Ready to pay", ready, "ix-ready");
+  section("Not set up yet", pending, "ix-pending");
+  main.appendChild(wrap);
+
+  if(find){
+    const input=find.querySelector("input");
+    input.addEventListener("input", ()=>{
+      const q=input.value.trim().toLowerCase();
+      [].forEach.call(wrap.querySelectorAll(".ix-section"), sec=>{
+        let shown=0;
+        [].forEach.call(sec.querySelectorAll(".ix-person"), r=>{
+          const hit=!q || r.dataset.q.indexOf(q)>-1; r.hidden=!hit; if(hit) shown++;
+        });
+        sec.hidden = !shown;
+      });
+    });
+  }
+}
+
+/* ---------- UPI ----------
+   The Pay page for India: your UPI ID on a card, the app Pay opens, how
+   paying works, and everybody else's UPI ID ready to copy. */
+let UPI_EDIT = false, UPI_INFO = false;
+function viewUpi(main, enter){
+  const mine = upiFor(USER.uid);
+  const raw = (DIRECTORY[USER.uid] && DIRECTORY[USER.uid].upi) || {};
+  const app = myUpiApp();
+  const editing = UPI_EDIT || !mine;
+
+  // ---- your card ----
+  const hero=el("div","ix-hero"+(enter?" enter":""));
+  const card=el("div","ix-card upi-card"+(mine?"":" blank"));
+  card.innerHTML=
+    '<div class="ix-card-top"><span class="ix-brand">UPI · India</span>'+
+      '<span class="ms" aria-hidden="true">qr_code_2</span></div>'+
+    '<div class="ix-chipset"><span class="upi-rupee" aria-hidden="true">₹</span>'+
+      (app ? '<span class="ix-bankname">'+esc(app.name)+'</span>' : '')+'</div>'+
+    (mine
+      ? '<div class="ix-handle">'+esc(mine.vpa)+'</div><div class="ix-holder">'+esc(mine.name)+'</div>'
+      : '<div class="ix-handle ph">yourname@okaxis</div>'+
+        '<div class="ix-holder">Add your UPI ID so people can pay you back</div>');
+  hero.appendChild(card);
+  if(mine){
+    const acts=el("div","ix-card-acts");
+    acts.innerHTML=
+      '<button class="ix-act" id="upCopy" type="button"><span class="ms" aria-hidden="true">content_copy</span>Copy</button>'+
+      '<button class="ix-act" id="upQr" type="button"><span class="ms" aria-hidden="true">qr_code_2</span>My QR</button>'+
+      '<button class="ix-act" id="upEdit" type="button"><span class="ms" aria-hidden="true">'+(UPI_EDIT?"close":"edit")+'</span>'+
+        (UPI_EDIT?"Close":"Edit")+'</button>';
+    hero.appendChild(acts);
+  }
+  main.appendChild(hero);
+  ixTilt(card);
+  if($("upCopy")) $("upCopy").addEventListener("click", ()=> etxCopy(mine.vpa, "Your UPI ID") );
+  if($("upQr")) $("upQr").addEventListener("click", ()=> sheetMyUpiQr(mine) );
+  if($("upEdit")) $("upEdit").addEventListener("click", ()=>{ UPI_EDIT=!UPI_EDIT; render(); });
+
+  // ---- the form, only while editing or before anything is saved ----
+  if(editing){
+    const f=el("div","card pad ix-form");
+    f.innerHTML=
+      '<div class="ix-form-h"><span class="ms" aria-hidden="true">'+(mine ? "edit_note" : "badge")+'</span>'+
+        '<div><b>'+(mine ? "Edit your UPI details" : "Add your UPI ID")+'</b>'+
+        '<small>So friends can pay you back in rupees, in a tap.</small></div></div>'+
+      '<div class="field"><label for="upName">Name on your bank account</label>'+
+        '<input id="upName" type="text" autocomplete="name" maxlength="60" placeholder="'+esc(USER.name||"")+'"></div>'+
+      '<div class="field"><label for="upVpa">UPI ID</label>'+
+        '<input id="upVpa" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="120" '+
+        'placeholder="yourname@okaxis"></div>'+
+      '<p class="ix-note"><span class="ms" aria-hidden="true">info</span>It’s on your profile in GPay, PhonePe or Paytm, shaped like name@bank.</p>'+
+      '<p class="ix-note"><span class="ms" aria-hidden="true">lock</span>Only people approved into Settle can see it. Never share your UPI PIN.</p>'+
+      '<div class="etx-actions"><button class="btn p" id="upSave" type="button">'+(mine?"Save changes":"Save UPI ID")+'</button>'+
+        (mine ? '<button class="btn s" id="upClear" type="button">Remove</button>' : '')+'</div>';
+    main.appendChild(f);
+    $("upName").value = (mine&&mine.name) || tidyName(raw.name||"") || "";
+    $("upVpa").value = (mine&&mine.vpa) || String(raw.vpa||"");
+    $("upSave").addEventListener("click", ()=>{
+      const rec=upiRecord($("upName").value, $("upVpa").value);
+      if(typeof rec==="string") return toast(rec);
+      $("upSave").disabled=true;
+      updStrict("directory/"+USER.uid, {upi:rec}).then(()=>{
+        DIRECTORY[USER.uid]=Object.assign({}, DIRECTORY[USER.uid]||{}, {upi:rec});
+        UPI_EDIT=false; IX_SEEN=false;          // let the card sweep in with the new details
+        toast("UPI ID saved"); render();
+      }, e=>{ $("upSave").disabled=false; toast(writeError(e)); });
+    });
+    if($("upClear")) $("upClear").addEventListener("click", ()=>{
+      updStrict("directory/"+USER.uid, {upi:null}).then(()=>{
+        if(DIRECTORY[USER.uid]) delete DIRECTORY[USER.uid].upi;
+        UPI_EDIT=false; toast("UPI ID removed"); render();
+      }, e=> toast(writeError(e)) );
+    });
+  }
+
+  // ---- your UPI app ----
+  main.appendChild(ixHead("smartphone", "Your UPI app", app ? app.name : "Any app", app ? "good" : ""));
+  const panel=el("div","ix-panel");
+  const apps=el("div","ix-banks");
+  const cur=(PREFS&&PREFS.upiApp)||"";
+  UPI_APPS.concat([{id:"", name:"Any app"}]).forEach(a=>{
+    const on=a.id===cur;
+    const t=el("button","ix-bank"+(on?" on":"")); t.type="button";
+    t.style.setProperty("--bk", a.tint || "var(--ink-3)");
+    t.setAttribute("aria-pressed", on ? "true" : "false");
+    t.innerHTML=
+      '<span class="ix-mono">'+(a.id ? esc(a.mono) : '<span class="ms" aria-hidden="true">apps</span>')+'</span>'+
+      '<span class="ix-bank-n">'+esc(a.name)+'</span>'+
+      (on ? '<span class="ix-tick ms" aria-hidden="true">check_circle</span>' : '');
+    t.addEventListener("click", ()=>{
+      PREFS=PREFS||{}; PREFS.upiApp=a.id;
+      set("users/"+USER.uid+"/prefs/upiApp", a.id||null);
+      render();
+    });
+    apps.appendChild(t);
+  });
+  panel.appendChild(apps);
+  const info=el("details","ix-info");
+  info.innerHTML='<summary><span class="ms" aria-hidden="true">info</span>How Pay opens your UPI app'+
+      '<span class="ms chev" aria-hidden="true">expand_more</span></summary>'+
+    '<p>Pay opens this app with the UPI ID, name and amount already filled in. You check them and enter your UPI PIN '+
+    'there - Settle never sees it. Some apps limit link payments to personal UPI IDs; if yours does, scan the QR code '+
+    'or copy the UPI ID instead. On a computer, scan the QR code with your phone.</p>';
+  info.open=UPI_INFO;
+  info.addEventListener("toggle", ()=>{ UPI_INFO=info.open; });
+  panel.appendChild(info);
+  main.appendChild(panel);
+
+  // ---- how paying works ----
+  main.appendChild(ixHead("route", "How paying works"));
+  const howPanel=el("div","ix-panel");
+  const how=el("div","ix-how");
+  how.innerHTML=[["payments","Tap Pay","on anything you owe"],
+                 ["bolt","Pay in your app","amount filled in"],
+                 ["task_alt","Record it","back in Settle"]].map((st,i)=>
+    '<div class="ix-step"><span class="ix-step-ic"><span class="ms" aria-hidden="true">'+st[0]+'</span><i>'+(i+1)+'</i></span>'+
+      '<b>'+st[1]+'</b><small>'+st[2]+'</small></div>').join('<span class="ix-step-line" aria-hidden="true"></span>');
+  howPanel.appendChild(how);
+  main.appendChild(howPanel);
+
+  // ---- everybody else ----
+  ixPeople(main, enter, {
+    what: "UPI ID", none: "No UPI ID yet",
+    empty: "When people in your groups add their UPI ID, they show up here, ready to copy.",
+    edit: sheetUpiFor,
+    detail: (uid)=>{ const d=upiFor(uid); return d && {id:d.vpa, name:d.name, what:"UPI ID", copy: ()=> etxCopy(d.vpa, "UPI ID")}; }
+  });
+}
+
+/* My own UPI QR, with no amount in it, for somebody standing beside me. */
+function sheetMyUpiQr(d){
+  openSheet("Your UPI QR code", (b)=>{
+    b.innerHTML='<p class="lead">Anyone can scan this with GPay, PhonePe, Paytm or any UPI app to pay '+esc(d.name)+'.</p>'+
+      '<div class="upi-qr big"><div class="upi-qr-code" id="myUpiQr" role="img" aria-label="Your UPI QR code"></div>'+
+      '<p><b>'+esc(d.vpa)+'</b></p></div>';
+    qrInto($("myUpiQr"), "upi://pay?"+upiQuery(d, 0, ""));
+  });
+}
+
+/* The administrator filling in somebody else's UPI ID - the same arrangement
+   as Interac: the rules let the administrator write only this part of
+   another person's entry, and check its shape. */
+function sheetUpiFor(uid, name){
+  if(!isAdmin() || !uid) return;
+  const raw=(DIRECTORY[uid]&&DIRECTORY[uid].upi)||{};
+  const cur=upiClean(raw);
+  openSheet("UPI for "+name, (b)=>{
+    b.innerHTML=
+      '<p class="lead">As the administrator you can fill this in for '+esc(name)+
+        '. They can still change it in their own Pay tab.</p>'+
+      '<div class="field"><label for="auName">Name on their bank account</label>'+
+        '<input id="auName" type="text" maxlength="60" autocomplete="off"></div>'+
+      '<div class="field"><label for="auVpa">Their UPI ID</label>'+
+        '<input id="auVpa" type="text" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="120" '+
+        'autocomplete="off" placeholder="name@okaxis"></div>'+
+      '<button class="btn p wide" id="auSave" type="button">Save UPI ID</button>'+
+      (cur ? '<button class="btn s wide" id="auDel" type="button" style="margin-top:10px">Remove their UPI ID</button>' : '');
+    $("auName").value = (cur&&cur.name) || tidyName(raw.name||"") || name;
+    $("auVpa").value = (cur&&cur.vpa) || String(raw.vpa||"");
+    const failed = (e)=> toast(writeError(e));
+    $("auSave").addEventListener("click", ()=>{
+      const rec=upiRecord($("auName").value, $("auVpa").value);
+      if(typeof rec==="string") return toast(rec);
+      rec.by=USER.uid;
+      $("auSave").disabled=true;
+      updStrict("directory/"+uid, {upi:rec}).then(()=>{
+        DIRECTORY[uid]=Object.assign({}, DIRECTORY[uid]||{}, {upi:rec});
+        closeSheet(); toast(name+"'s UPI ID saved"); render();
+      }, (e)=>{ $("auSave").disabled=false; failed(e); });
+    });
+    if($("auDel")) $("auDel").addEventListener("click", ()=>{
+      updStrict("directory/"+uid, {upi:null}).then(()=>{
+        if(DIRECTORY[uid]) delete DIRECTORY[uid].upi;
+        closeSheet(); toast(name+"'s UPI ID removed"); render();
+      }, failed);
+    });
+  });
+}
+
 function viewAccount(main){
   setTitle(main, "Account");
   const c=el("div","card");
@@ -4917,18 +5370,19 @@ function viewAccount(main){
   main.appendChild(c);
 
   main.appendChild(el("div","sechead","Totals across all groups"));
-  let owed=0, owe=0, spent=0;
+  // Per currency, never added across rupees and dollars.
+  const netB={}, spentB={};
   JOINED.forEach(g=>{
-    const v=myBalance(g.id); if(v>0.004) owed+=v; else if(v<-0.004) owe+=-v;
+    const v=myBalance(g.id); if(Math.abs(v)>0.004) curAdd(netB, g.id, v);
     const n=meIn(g.id);
-    if(n) expensesOf(g.id).forEach(e=>{ const sh=sharesOf(e); if(sh[n]) spent+=sh[n]; });
+    if(n) expensesOf(g.id).forEach(e=>{ const sh=sharesOf(e); if(sh[n]) curAdd(spentB, g.id, sh[n]); });
   });
   const t=el("div","card pad");
-  const net=owed-owe;
-  t.innerHTML='<div class="split" style="margin:0"><div><div class="k">Your share of everything</div>'+
-    '<div class="v">'+money(spent)+'</div></div>'+
-    '<div><div class="k">'+(net>0.004?"You are owed":net<-0.004?"You owe":"All square")+'</div>'+
-    '<div class="v '+(net>0.004?"pos":net<-0.004?"neg":"")+'">'+money(Math.abs(net))+'</div></div></div>';
+  const tone=bagTone(netB), many=curKeys(netB).length>1 || curKeys(spentB).length>1;
+  t.innerHTML='<div class="split'+(many?' multi':'')+'" style="margin:0"><div><div class="k">Your share of everything</div>'+
+    '<div class="v">'+esc(moneyMulti(spentB))+'</div></div>'+
+    '<div><div class="k">'+(tone==="pos"?"You are owed":tone==="neg"?"You owe":tone==="mix"?"Where you stand":"All square")+'</div>'+
+    '<div class="v '+(tone==="pos"||tone==="neg"?tone:"")+'">'+esc(tone==="mix" ? moneySigned(netB) : moneyMulti(netB))+'</div></div></div>';
   main.appendChild(t);
 
   if(isAdmin()){
@@ -5122,19 +5576,22 @@ function friendsAcross(){
     everyoneIn(g.id).forEach(n=>{
       if(n===me) return;
       const m = seat(n);
-      by[n] = by[n] || {name:n, bills:0, net:0, colour:(m&&m.colour)||"#A0A398", photo:(m&&m.photo)||null};
+      // `net` is per currency: owing someone rupees in one group does not
+      // cancel dollars they owe me in another.
+      by[n] = by[n] || {name:n, bills:0, net:{}, colour:(m&&m.colour)||"#A0A398", photo:(m&&m.photo)||null};
     });
     expensesOf(g.id).forEach(e=>{
       const sh = sharesOf(e);
       Object.keys(sh).forEach(n=>{ if(n!==me && by[n]) by[n].bills++; });
     });
     settlements(g.id).forEach(t=>{
-      if(t.from===me && by[t.to])      by[t.to].net   -= t.amt;
-      else if(t.to===me && by[t.from]) by[t.from].net += t.amt;
+      if(t.from===me && by[t.to])      curAdd(by[t.to].net, g.id, -t.amt);
+      else if(t.to===me && by[t.from]) curAdd(by[t.from].net, g.id, t.amt);
     });
   });
+  const size = (p)=> curKeys(p.net).reduce((s,c)=> Math.max(s, Math.abs(p.net[c])), 0);
   return Object.keys(by).map(k=>by[k])
-    .sort((a,b)=> Math.abs(b.net)-Math.abs(a.net) || a.name.localeCompare(b.name));
+    .sort((a,b)=> size(b)-size(a) || a.name.localeCompare(b.name));
 }
 
 /* What am I paying them for? The newest thing we both share, so the panel can
@@ -5395,12 +5852,17 @@ function viewHome(main){
     return;
   }
 
-  let owed=0, owe=0;
-  JOINED.forEach(g=>{ const v=myBalance(g.id); if(v>0.004) owed+=v; else if(v<-0.004) owe+=-v; });
+  // Kept per currency: a rupee group and a dollar group are never added up.
+  const owedB={}, oweB={}, sharedB={};
+  JOINED.forEach(g=>{
+    const v=myBalance(g.id);
+    if(v>0.004) curAdd(owedB, g.id, v); else if(v<-0.004) curAdd(oweB, g.id, -v);
+    curAdd(sharedB, g.id, totalOf(g.id));
+  });
   const plan = toDoNext();
   const oweWho = {}, owedWho = {};
   plan.forEach(t=> (t.dir==="pay" ? oweWho : owedWho)[t.who]=true );
-  const net = owed-owe;
+  const netB = bagNet(owedB, oweB);
 
   /* ---- the feature panel: everything to settle, one card at a time ----
      The amount is the point of each card, so it is the biggest thing on it;
@@ -5450,12 +5912,12 @@ function viewHome(main){
         '<span class="hc-chip">'+(pay ? "You owe" : "Owed to you")+'<i aria-hidden="true"></i>'+esc(groupName(t.gid))+'</span>'+
       '</div>'+
       '<p class="hc-line">'+(pay ? 'You owe <b>'+esc(t.who)+'</b>' : '<b>'+esc(t.who)+'</b> owes you')+'</p>'+
-      '<h2 class="hc-amt">'+money(t.amt)+'</h2>'+
+      '<h2 class="hc-amt">'+money(t.amt, t.gid)+'</h2>'+
       '<p class="hc-for">'+(forWhat ? 'for '+esc(forWhat) : 'in '+esc(groupName(t.gid)))+'</p>'+
       '<div class="act"></div>';
     const b = el("button","btn dark hc-btn");
     const label = (pay ? "Pay " : "Remind ")+t.who;
-    b.setAttribute("aria-label", label+" "+money(t.amt));
+    b.setAttribute("aria-label", label+" "+money(t.amt, t.gid));
     if(!pay && NUDGED[key]){
       b.innerHTML = face("done","Reminder sent"); b.disabled = true;
       b.setAttribute("aria-label","Reminder sent to "+t.who);
@@ -5487,10 +5949,11 @@ function viewHome(main){
   foot.appendChild(segs);
   // One quiet line: the words, then the figure with its sign and colour, so it
   // reads "you are up" or "you are down" at a glance.
-  const tone = net > 0.004 ? "pos" : net < -0.004 ? "neg" : "zero";
-  const figure = tone==="pos" ? "+"+money(net) : tone==="neg" ? "\u2212"+money(-net) : money(0);
+  // Up in one currency and down in another shows both, without a colour.
+  const tone = bagTone(netB);
   foot.insertAdjacentHTML("beforeend",
-    '<span class="net '+tone+'"><small>Overall balance</small><b>'+figure+'</b></span>');
+    '<span class="net '+(tone==="mix" ? "zero" : tone)+(curKeys(netB).length>1 ? " multi" : "")+'"><small>Overall balance</small><b>'+
+      esc(moneySigned(netB))+'</b></span>');
   hero.appendChild(foot);
   // The card sits in a wrapper so the sky and Bora can go behind and in front
   // of it. The decoration shows in the purple theme only.
@@ -5572,16 +6035,17 @@ function viewHome(main){
 
   /* ---- summary cards ---- */
   const nOwed=Object.keys(owedWho).length, nOwe=Object.keys(oweWho).length;
+  const multi = (bag)=> curKeys(bag).length>1 ? " multi" : "";
   const sums = el("div","sums");
   sums.innerHTML =
     '<div class="sum"><span class="k">Friends owe you</span>'+
-      '<span class="v pos">'+money(owed)+'</span>'+
+      '<span class="v pos'+multi(owedB)+'">'+esc(moneyMulti(owedB))+'</span>'+
       '<span class="s">'+(nOwed ? "Across "+nOwed+" "+(nOwed===1?"person":"people") : "Nobody, right now")+'</span></div>'+
     '<div class="sum"><span class="k">You need to pay</span>'+
-      '<span class="v neg">'+money(owe)+'</span>'+
+      '<span class="v neg'+multi(oweB)+'">'+esc(moneyMulti(oweB))+'</span>'+
       '<span class="s">'+(nOwe ? "Across "+nOwe+" "+(nOwe===1?"person":"people") : "Nobody, right now")+'</span></div>'+
     '<div class="sum"><span class="k">Shared so far</span>'+
-      '<span class="v">'+money(JOINED.reduce((t,g)=>t+totalOf(g.id),0))+'</span>'+
+      '<span class="v'+multi(sharedB)+'">'+esc(moneyMulti(sharedB))+'</span>'+
       '<span class="s">Across '+JOINED.length+' group'+(JOINED.length===1?"":"s")+'</span></div>';
   main.appendChild(sums);
 
@@ -5619,8 +6083,8 @@ function viewHome(main){
       '<span class="th-node"><span class="ms" aria-hidden="true">'+catOf(x.cat).i+'</span></span>'+
       '<span class="th-b"><span class="th-t">'+esc(x.desc)+'</span>'+
         '<span class="th-m">'+esc(dayLabel(x.at))+' · '+esc(groupName(x.gid))+'</span></span>'+
-      '<span class="th-amt"><b>'+money(x.amount)+'</b>'+
-        '<span class="th-pill '+tone+'">'+(tone==="pos" ? "You get "+money(x.mine) : tone==="neg" ? "You pay "+money(-x.mine) : "Not yours")+'</span></span>';
+      '<span class="th-amt"><b>'+money(x.amount, x.gid)+'</b>'+
+        '<span class="th-pill '+tone+'">'+(tone==="pos" ? "You get "+money(x.mine, x.gid) : tone==="neg" ? "You pay "+money(-x.mine, x.gid) : "Not yours")+'</span></span>';
     b.addEventListener("click", ()=> openGroup(x.gid) );
     tl.appendChild(b);
   });
@@ -5634,13 +6098,14 @@ function viewHome(main){
   const friends = friendsAcross();
   if(!friends.length) fr.innerHTML = '<p class="th-empty th-card">Nobody else yet. Add people to a group and they show up here.</p>';
   friends.slice(0,10).forEach((p,i)=>{
-    const tone = p.net>0.004 ? "pos" : p.net<-0.004 ? "neg" : "zero";
+    const tone = bagTone(p.net);
     const b = el("button","th-friend "+tone); b.type = "button"; rise(b, i);
     b.innerHTML =
       '<span class="th-fav">'+avatarHTML("", p.name, p.colour, p.photo)+'<i class="th-fdot" aria-hidden="true"></i></span>'+
       '<span class="th-fn">'+esc(p.name)+'</span>'+
-      '<span class="th-fs">'+(tone==="pos" ? "Owes you" : tone==="neg" ? "You owe" : "All square")+'</span>'+
-      (tone==="zero" ? '<span class="th-fa zero"><span class="ms" aria-hidden="true">check</span></span>' : '<b class="th-fa">'+money(Math.abs(p.net))+'</b>');
+      '<span class="th-fs">'+(tone==="pos" ? "Owes you" : tone==="neg" ? "You owe" : tone==="mix" ? "Both ways" : "All square")+'</span>'+
+      (tone==="zero" ? '<span class="th-fa zero"><span class="ms" aria-hidden="true">check</span></span>'
+        : '<b class="th-fa'+(curKeys(p.net).length>1 ? ' multi' : '')+'">'+esc(tone==="mix" ? moneySigned(p.net) : moneyMulti(p.net))+'</b>');
     b.addEventListener("click", ()=> sheetFriend(p.name) );
     fr.appendChild(b);
   });
@@ -5664,9 +6129,9 @@ function viewHome(main){
       '<span class="th-gtop"><span class="th-gic"><span class="ms" aria-hidden="true">'+groupIcon(g.id)+'</span></span>'+
         '<span class="th-faces" aria-hidden="true">'+faces+'</span></span>'+
       '<span class="th-gn">'+esc(groupName(g.id))+'</span>'+
-      '<span class="th-gm">'+ppl.length+' '+(ppl.length===1 ? "member" : "members")+' · '+money(total)+' spent</span>'+
+      '<span class="th-gm">'+ppl.length+' '+(ppl.length===1 ? "member" : "members")+' · '+money(total, g.id)+' spent</span>'+
       '<span class="th-gb '+tone+'">'+(tone==="zero" ? '<span class="ms" aria-hidden="true">check_circle</span>Settled'
-        : tone==="pos" ? "You get "+money(v) : "You owe "+money(-v))+'</span>';
+        : tone==="pos" ? "You get "+money(v, g.id) : "You owe "+money(-v, g.id))+'</span>';
     t.addEventListener("click", ()=> openGroup(g.id) );
     grid.appendChild(t);
   });
@@ -5716,7 +6181,7 @@ function sheetFriend(name){
       r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+groupIcon(x.gid)+'</span></span>'+
         '<span class="body"><span class="t1">'+esc(groupName(x.gid))+'</span></span>'+
         '<span class="right"><span class="amt '+(x.net>0.004?"pos":x.net<-0.004?"neg":"zero")+'">'+
-        (Math.abs(x.net)<0.005 ? "settled" : x.net>0 ? "gets you "+money(x.net) : "you pay "+money(-x.net))+
+        (Math.abs(x.net)<0.005 ? "settled" : x.net>0 ? "gets you "+money(x.net, x.gid) : "you pay "+money(-x.net, x.gid))+
         '</span></span>';
       r.addEventListener("click", ()=>{ closeSheet(); openGroup(x.gid); setTimeout(()=>sheetPerson(name),260); });
       host.appendChild(r);
@@ -5839,6 +6304,8 @@ function sheetClaim(gid){
 }
 function drawEtx(host, gid, from, to, amount, existing){
   if(!host) return;
+  // A rupee group is paid over UPI, not Interac.
+  if(curOf(gid)==="INR") return drawUpi(host, gid, from, to, amount, existing);
   host.innerHTML="";
   if(existing || !USER || from!==meIn(gid)) return;
   const seat=membersOf(gid).find(m=>m.name===to);
@@ -5856,7 +6323,7 @@ function drawEtx(host, gid, from, to, amount, existing){
     '<div class="etx-line"><span class="k">To</span><span class="v">'+esc(d.name)+'</span></div>'+
     '<div class="etx-line"><span class="k">'+(/@/.test(d.handle)?"Email":"Phone")+'</span><span class="v">'+esc(d.handle)+'</span>'+
       '<button class="etx-copy" type="button" data-c="h"><span class="ms" aria-hidden="true">content_copy</span>Copy</button></div>'+
-    '<div class="etx-line"><span class="k">Amount</span><span class="v">'+(amt ? "$"+amt : "&mdash;")+'</span>'+
+    '<div class="etx-line"><span class="k">Amount</span><span class="v">'+(amt ? esc(money(amount, gid)) : "&mdash;")+'</span>'+
       (amt ? '<button class="etx-copy" type="button" data-c="a"><span class="ms" aria-hidden="true">content_copy</span>Copy</button>' : '')+'</div>'+
     (bank ? '<a class="btn dark wide etx-open" target="_blank" rel="noopener" href="'+esc(etxBankLink(bank))+'">Open '+esc(bank.name)+'</a>'
           : '<button class="etx-pick" type="button">Choose your bank app</button>')+
@@ -5871,6 +6338,69 @@ function drawEtx(host, gid, from, to, amount, existing){
   if(ob) ob.addEventListener("click", ()=>{ etxCopy(/@/.test(d.handle) ? d.handle : d.handle.replace(/[^\d]/g,""), /@/.test(d.handle) ? "Email" : "Phone"); });
   const pk=box.querySelector(".etx-pick");
   if(pk) pk.addEventListener("click", ()=>{ closeSheet(); CURRENT=null; TAB="interac"; window.scrollTo(0,0); render(); });
+}
+/* Paying somebody in a rupee group: their UPI ID and the amount, one tap into
+   GPay, PhonePe or Paytm with both filled in, and a QR code any UPI app can
+   scan. The app is only opened - whoever is paying checks the name and enters
+   their PIN there, then records the payment here. */
+let UPI_QR_OPEN = false;
+function drawUpi(host, gid, from, to, amount, existing){
+  host.innerHTML="";
+  if(existing || !USER || from!==meIn(gid)) return;
+  const seat=membersOf(gid).find(m=>m.name===to);
+  const d=seat && upiFor(seat.uid);
+  if(!d){
+    host.appendChild(el("p","etx-missing",
+      '<span class="ms" aria-hidden="true">info</span>'+esc(to)+' has not added a UPI ID yet.'));
+    return;
+  }
+  const amt = amount>0 ? Math.round(amount*100)/100 : 0;
+  const note = "Settle "+groupName(gid);
+  const phone = etxIsAndroid() || etxIsIOS();
+  const pref = myUpiApp();
+  const apps = pref ? [pref].concat(UPI_APPS.filter(a=>a!==pref)) : UPI_APPS;
+  const box=el("div","etx upi");
+  box.innerHTML=
+    '<div class="etx-title"><span class="upi-mark" aria-hidden="true">UPI</span>Pay with UPI</div>'+
+    '<div class="etx-line"><span class="k">To</span><span class="v">'+esc(d.name)+'</span></div>'+
+    '<div class="etx-line"><span class="k">UPI ID</span><span class="v">'+esc(d.vpa)+'</span>'+
+      '<button class="etx-copy" type="button" data-c="h"><span class="ms" aria-hidden="true">content_copy</span>Copy</button></div>'+
+    '<div class="etx-line"><span class="k">Amount</span><span class="v">'+(amt ? esc(money(amt, "INR")) : "&mdash;")+'</span>'+
+      (amt ? '<button class="etx-copy" type="button" data-c="a"><span class="ms" aria-hidden="true">content_copy</span>Copy</button>' : '')+'</div>'+
+    (phone
+      ? '<div class="upi-apps">'+apps.map(a=>
+          '<a class="upi-app'+(pref===a?' on':'')+'" style="--bk:'+a.tint+'" href="'+esc(upiLink(d, amt, note, a))+'">'+
+            '<span class="upi-mono">'+esc(a.mono)+'</span><span class="upi-app-n">'+esc(a.name)+'</span></a>').join("")+
+          '<a class="upi-app" style="--bk:#5B6270" href="'+esc(upiLink(d, amt, note, null))+'">'+
+            '<span class="upi-mono"><span class="ms" aria-hidden="true">apps</span></span><span class="upi-app-n">Other app</span></a>'+
+        '</div>'+
+        '<button class="upi-qr-toggle" type="button" aria-expanded="'+(UPI_QR_OPEN?"true":"false")+'"></button>'
+      : '')+
+    '<div class="upi-qr"'+(phone && !UPI_QR_OPEN ? ' hidden' : '')+'>'+
+      '<div class="upi-qr-code" role="img" aria-label="UPI QR code to pay '+esc(d.name)+'"></div>'+
+      '<p>'+(phone ? 'Scan from another phone' : 'Scan with GPay, PhonePe, Paytm or any UPI app')+
+        (amt ? ' · '+esc(money(amt, "INR"))+' filled in' : '')+'</p></div>'+
+    '<p class="etx-then">Enter your UPI PIN in the app, then come back and record the payment below. '+
+      'If an app won’t take the link, scan the QR code or pay the UPI ID.</p>';
+  host.appendChild(box);
+  box.querySelector('[data-c="h"]').addEventListener("click", ()=> etxCopy(d.vpa, "UPI ID"));
+  const ac=box.querySelector('[data-c="a"]');
+  if(ac) ac.addEventListener("click", ()=> etxCopy(amt.toFixed(2), "Amount"));
+  // The link opens the app. The UPI ID goes on the clipboard on the way, in
+  // case the app asks for it rather than taking it from the link.
+  [].forEach.call(box.querySelectorAll(".upi-app"), a=> a.addEventListener("click", ()=>{
+    try{ if(navigator.clipboard) navigator.clipboard.writeText(d.vpa).catch(()=>{}); }catch(e){}
+  }));
+  const qrBox=box.querySelector(".upi-qr");
+  const draw=()=> qrInto(box.querySelector(".upi-qr-code"), "upi://pay?"+upiQuery(d, amt, note));
+  if(!qrBox.hidden) draw();
+  const tg=box.querySelector(".upi-qr-toggle");
+  const label=()=>{ tg.innerHTML='<span class="ms" aria-hidden="true">qr_code_2</span>'+(UPI_QR_OPEN ? "Hide QR code" : "Show QR code");
+                    tg.setAttribute("aria-expanded", UPI_QR_OPEN?"true":"false"); };
+  if(tg){
+    label();
+    tg.addEventListener("click", ()=>{ UPI_QR_OPEN=!UPI_QR_OPEN; qrBox.hidden=!UPI_QR_OPEN; label(); if(UPI_QR_OPEN) draw(); });
+  }
 }
 function freeColour(gid){
   const used={}; membersOf(gid).forEach(m=>{ used[m.color.toLowerCase()]=1; });
@@ -5907,7 +6437,7 @@ function sheetExpense(existing){
     b.innerHTML =
       '<div class="field"><label for="exDesc">What was it for?</label>'+
       '<input id="exDesc" type="text" placeholder="Dinner, fuel, groceries…" value="'+esc(existing?existing.desc:"")+'"></div>'+
-      '<div class="field"><label for="exAmt">Amount</label><div class="amtbig"><span class="cur">$</span>'+
+      '<div class="field"><label for="exAmt">Amount</label><div class="amtbig"><span class="cur">'+esc(curSym(gid))+'</span>'+
       '<input id="exAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" value="'+
         (existing?esc(plain(Number(existing.amount)||0)):"")+'"></div></div>'+
       '<div class="field"><label for="exPayer">Paid by</label><select id="exPayer"'+(payerLocked?' disabled':'')+'>'+
@@ -6010,7 +6540,7 @@ function sheetExpense(existing){
           '<span class="calc" data-calc></span>'+
           '<input type="number" inputmode="decimal" step="'+(mode==="shares"?"1":"0.01")+'" min="0" '+
             'value="'+(on&&vals[n]!=null?esc(String(vals[n])):"")+'" aria-label="'+esc(n)+'">'+
-          '<span class="unit">'+(mode==="percent"?"%":mode==="shares"?"sh":"$")+'</span>';
+          '<span class="unit">'+(mode==="percent"?"%":mode==="shares"?"sh":curSym(gid))+'</span>';
         const inp=r.querySelector("input");
         inp.addEventListener("input", ()=>{
           const v=inp.value.trim();
@@ -6152,7 +6682,7 @@ const SFX = (()=>{
    ripple out with a small burst in the app's own colours, then the amount and
    who it went to. Goes by itself after a couple of seconds; a tap closes it
    sooner. */
-function celebratePayment(amount, to){
+function celebratePayment(amount, to, cur){
   const who = to===ME ? "you" : to;
   const tints = ["var(--apricot)", "var(--good)", "var(--apricot-dk)"];
   const pop = el("div","paid-pop");
@@ -6166,7 +6696,7 @@ function celebratePayment(amount, to){
         Array.from({length:14}, (_, i)=> '<i style="--a:'+Math.round(i*360/14)+'deg;--d:'+(58 + (i%3)*18)+'px;--c:'+tints[i%3]+'"></i>').join("")+
       '</div>'+
       '<div class="paid-lab">Payment recorded</div>'+
-      '<div class="paid-amt">'+esc(money(amount))+'</div>'+
+      '<div class="paid-amt">'+esc(money(amount, cur))+'</div>'+
       '<div class="paid-to">to '+esc(who)+'</div>'+
     '</div>';
   document.body.appendChild(pop);
@@ -6281,14 +6811,14 @@ function sheetSettle(from, to, amt, existing){
           '<span class="ms" aria-hidden="true">expand_more</span></label></div>'+
       '</div>'+
       '<div class="pf-amount"><label class="pf-lab" for="stAmt">Amount</label>'+
-        '<div class="pf-amt"><span class="cur">$</span><input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" '+
+        '<div class="pf-amt"><span class="cur">'+esc(curSym(gid))+'</span><input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" '+
           'placeholder="0.00" value="'+(amt?esc(plain(amt)):"")+'"></div>'+
         '<div class="pf-why" id="stWhy"></div><div class="pf-quick" id="stQuick"></div></div>'+
       '<div id="stEtx"></div>'+
       '<div class="pf-details">'+
         fieldHTML("stDate","Date","date", dateVal(existing?existing.at:null))+
         '<div class="field"><label for="stNote">Note</label>'+
-        '<input id="stNote" type="text" placeholder="e-Transfer, cash…" value="'+
+        '<input id="stNote" type="text" placeholder="'+(curOf(gid)==="INR" ? "UPI, cash…" : "e-Transfer, cash…")+'" value="'+
           esc(existing?(existing.note||""):"")+'"></div>'+
       '</div>'+
       (fromLocked && !existing && mayEdit ? '<p class="pf-help">You can only record a payment you made. If someone paid you, they record it.</p>' : '')+
@@ -6318,6 +6848,10 @@ function sheetSettle(from, to, amt, existing){
     };
     const refresh=()=>{
       face("pfFromAv", $("stFrom").value); face("pfToAv", $("stTo").value);
+      // Rupee amounts run long - 62500.00 - so the figure shrinks to stay whole.
+      const len=String($("stAmt").value||"").length;
+      $("stAmt").classList.toggle("long", len>6 && len<=8);
+      $("stAmt").classList.toggle("xlong", len>8);
       if(!$("stSaveLbl")) return;
       const a=Math.round((Number($("stAmt").value)||0)*100)/100, t=$("stTo").value;
       $("stSaveLbl").textContent = existing ? "Save changes"
@@ -7249,6 +7783,8 @@ function sheetGroupNew(){
       '<div class="field"><label for="gName">Group name</label>'+
       '<input id="gName" type="text" placeholder="Montréal trip, Flat 4B, Sunday football…"></div>'+
       '<div class="field"><label>What is it for?</label><div class="chips" id="gType"></div></div>'+
+      '<div class="field"><label>Currency</label><div class="chips" id="gCur"></div>'+
+        '<div class="help" id="gCurHelp"></div></div>'+
       (pool.length ? '<div class="field"><label>Already in Settle — tap to include</label>'+
         '<div class="chips" id="gPick"></div></div>' : '')+
       '<div class="field"><label for="gPeople">'+(pool.length ? "Anyone else" : "Everyone else")+' (one name per line)</label>'+
@@ -7266,6 +7802,20 @@ function sheetGroupNew(){
         ch.setAttribute("aria-pressed","true"); });
       $("gType").appendChild(ch);
     });
+    // Everything in the group is in this one currency. Nothing is converted.
+    let cur=curUsual();
+    const curHelp=()=>{ $("gCurHelp").textContent = CURRENCIES[cur].name+"s, paid by "+CURRENCIES[cur].pay+". Amounts are never converted."; };
+    Object.keys(CURRENCIES).forEach(c=>{
+      const ch=el("button","chip cur-chip"); ch.type="button";
+      ch.innerHTML='<b aria-hidden="true">'+esc(CURRENCIES[c].sym)+'</b>'+c;
+      ch.setAttribute("aria-label", CURRENCIES[c].name);
+      ch.setAttribute("aria-pressed", c===cur?"true":"false");
+      ch.addEventListener("click",()=>{ cur=c; curHelp();
+        [].forEach.call($("gCur").children,x=>x.setAttribute("aria-pressed","false"));
+        ch.setAttribute("aria-pressed","true"); });
+      $("gCur").appendChild(ch);
+    });
+    curHelp();
     $("gGo").addEventListener("click", ()=>{
       const nm=$("gName").value.trim();
       if(!nm) return toast("Give the group a name");
@@ -7297,7 +7847,7 @@ function sheetGroupNew(){
       // The person creating it is its first member, in the index the rules read
       // as well as in the people list - otherwise they cannot open what they
       // have just made.
-      set("trips/"+gid, {meta:{name:nm, type:type, at:Date.now(), by:USER.name, byUid:USER.uid},
+      set("trips/"+gid, {meta:{name:nm, type:type, currency:cur, at:Date.now(), by:USER.name, byUid:USER.uid},
                          people:people, uids:uids}).then(()=>{
         rememberGroup(gid, nm); watchGroup(gid); claimAsked[gid]=true; closeSheet();
         invite.forEach(m=> inviteByEmail(gid, m) );
@@ -7430,6 +7980,7 @@ function sheetGroupMenu(){
       ["People in this group","Add or remove members","group", sheetMembers],
       ["Settle up","Record a cash or transfer payment","payments", function(){ sheetSettle(); }],
       ["Rename group","","edit", sheetGroupRename],
+      ["Currency", esc(CURRENCIES[curOf(gid)].name+" · "+CURRENCIES[curOf(gid)].sym), "currency_exchange", sheetGroupCurrency],
       ["Invite people","Share the link or code","person_add", sheetShare],
       ["Print / save as PDF","A full statement of this group","print", doPrint],
       ["Leave group","Your name and balances stay in it for everyone else.","logout", function(){
@@ -7466,6 +8017,37 @@ function sheetGroupMenu(){
       f.textContent = "Only you can delete this, because you are the administrator.";
       b.appendChild(f);
     }
+  });
+}
+/* The group's currency. Changing it changes the symbol and how people pay -
+   it never converts an amount - so it is for putting right a group that was
+   started in the wrong one. */
+function sheetGroupCurrency(){
+  const gid=CURRENT, now=curOf(gid), n=expensesOf(gid).length+paymentsOf(gid).length;
+  openSheet("Currency", (b)=>{
+    b.innerHTML='<p class="lead">Everything in '+esc(groupName(gid))+' is counted in one currency.</p>'+
+      '<div class="card cur-list" id="curList"></div>'+
+      (n ? '<p class="fine cur-warn"><span class="ms" aria-hidden="true">warning</span><span>Amounts are not converted. '+
+           (n===1 ? 'The entry already here keeps its number and only changes symbol.'
+                  : 'The '+n+' entries already here keep their numbers and only change symbol.')+'</span></p>' : '');
+    Object.keys(CURRENCIES).forEach(c=>{
+      const r=el("button","row cur-row"+(c===now?" on":"")); r.type="button";
+      r.setAttribute("aria-pressed", c===now?"true":"false");
+      r.innerHTML='<span class="cat cur-sym">'+esc(CURRENCIES[c].sym)+'</span>'+
+        '<span class="body"><span class="t1">'+esc(CURRENCIES[c].name)+'<span class="cur-code">'+c+'</span></span>'+
+        '<span class="t2">Paid by '+esc(CURRENCIES[c].pay)+'</span></span>'+
+        '<span class="right">'+(c===now ? '<span class="ms" aria-hidden="true" style="color:var(--good)">check_circle</span>' : '')+'</span>';
+      r.addEventListener("click", ()=>{
+        if(c===now){ closeSheet(); return; }
+        if(n && !confirm("Change "+groupName(gid)+" to "+CURRENCIES[c].name+"s? Amounts keep their numbers: "+
+                         money(1234.5, now)+" becomes "+money(1234.5, c)+".")) return;
+        updStrict("trips/"+gid+"/meta", {currency:c}).then(()=>{
+          if(DATA[gid] && DATA[gid].meta) DATA[gid].meta.currency=c;
+          closeSheet(); toast(groupName(gid)+" is now in "+CURRENCIES[c].name+"s"); render();
+        }, e=> toast(writeError(e)));
+      });
+      $("curList").appendChild(r);
+    });
   });
 }
 function sheetGroupRename(){
@@ -7507,7 +8089,7 @@ function sheetQuickAdd(){
   openSheet("Quick add", (b)=>{
     b.innerHTML =
       '<div class="field"><label for="qaAmt">Amount</label>'+
-        '<div class="qa-money"><span aria-hidden="true">$</span>'+
+        '<div class="qa-money"><span aria-hidden="true" id="qaCur">'+esc(curSym(gid || curUsual()))+'</span>'+
         '<input id="qaAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div></div>'+
       '<div class="field"><label for="qaDesc">What was it for?</label>'+
         '<input id="qaDesc" type="text" autocomplete="off" placeholder="Dinner, petrol, tickets…"></div>'+
@@ -7519,6 +8101,8 @@ function sheetQuickAdd(){
       '<button class="btn p wide" id="qaSave" type="button">Add expense</button>';
 
     function drawGroups(){
+      // The symbol by the amount follows the group: ₹ for a rupee group.
+      if($("qaCur")) $("qaCur").textContent = curSym(gid || curUsual());
       const host=$("qaGroups"); host.innerHTML="";
       JOINED.slice().sort((a,c)=>groupName(a.id).localeCompare(groupName(c.id))).forEach(g=>{
         const ch=el("button","chip"); ch.type="button";
@@ -7636,7 +8220,7 @@ function sheetQuickAdd(){
       const out=$("qaEach"); if(!out) return;
       const amt=Number($("qaAmt").value)||0;
       const n=Object.keys(picked).filter(k=>picked[k]).length;
-      out.textContent = n && amt>0 ? money(Math.round(amt/n*100)/100)+" each, split between "+n
+      out.textContent = n && amt>0 ? money(Math.round(amt/n*100)/100, gid)+" each, split between "+n
                       : n ? "Split between "+n : "Pick at least one person";
     }
 
@@ -7679,7 +8263,7 @@ function sheetQuickAdd(){
       const id=slug(nm)+"-"+Math.random().toString(36).slice(2,6);
       const people={};
       people["m0"+uid().slice(-4)]={n:USER.name, c:PALETTE[0], uid:USER.uid, email:USER.email, photo:USER.photo||null};
-      const meta={name:nm, type:"other", at:Date.now(), by:USER.name, byUid:USER.uid};
+      const meta={name:nm, type:"other", currency:curUsual(), at:Date.now(), by:USER.name, byUid:USER.uid};
       // The creator goes on the membership list the rules read, or they could
       // not open the group they have just made.
       set("trips/"+id, {meta:meta, people:people, uids:{[USER.uid]:true}}).then(()=>{
@@ -7814,20 +8398,22 @@ function vzLedger(){
       const a=touch(g.id, s.from), b=touch(g.id, s.to);
       if(a.key===b.key) return;
       a.net-=s.amt; b.net+=s.amt;
-      edges.push({gid:g.id, from:a.key, to:b.key, fromName:s.from, toName:s.to, amt:s.amt});
+      edges.push({gid:g.id, cur:curOf(g.id), from:a.key, to:b.key, fromName:s.from, toName:s.to, amt:s.amt});
     });
   });
+  // Netted within one currency only. Rupees owed never cancel dollars owed:
+  // nothing is converted, so the two stay two payments.
   const pairs={};
   edges.forEach(e=>{
     const lo = e.from<e.to ? e.from : e.to, hi = e.from<e.to ? e.to : e.from;
-    const k=lo+"|"+hi;
-    (pairs[k]=pairs[k]||{lo, hi, sum:0, parts:[]});
+    const k=e.cur+"|"+lo+"|"+hi;
+    (pairs[k]=pairs[k]||{lo, hi, cur:e.cur, sum:0, parts:[]});
     pairs[k].sum += (e.from===lo ? 1 : -1) * e.amt;
     pairs[k].parts.push(e);
   });
   const transfers=Object.keys(pairs).map(k=>{
     const p=pairs[k], s=Math.round(p.sum*100)/100;
-    return {from: s>=0 ? p.lo : p.hi, to: s>=0 ? p.hi : p.lo, amt: Math.abs(s), parts: p.parts};
+    return {from: s>=0 ? p.lo : p.hi, to: s>=0 ? p.hi : p.lo, amt: Math.abs(s), cur: p.cur, parts: p.parts};
   });
   return {meKey, people, edges, transfers};
 }
@@ -7861,7 +8447,7 @@ function vzSettleEverything(main, L){
           avatarHTML("", ini(B), B.color, B.photo)+'</span>'+
         '<span class="vz-b"><span class="vz-t"><b>'+esc(A.name)+'</b> '+(out?'pay':'pays')+' <b>'+esc(inn?'you':B.name)+'</b></span>'+
           '<span class="vz-m">'+(t.parts.length>1 ? 'Nets '+t.parts.length+' debts · ' : '')+esc(gnames.join(", "))+'</span></span>'+
-        '<span class="vz-r"><span class="vz-val '+(out?'neg':inn?'pos':'')+'">'+esc(money(t.amt))+'</span></span>';
+        '<span class="vz-r"><span class="vz-val '+(out?'neg':inn?'pos':'')+'">'+esc(money(t.amt, t.cur))+'</span></span>';
       const right=r.querySelector(".vz-r");
       if(out) right.appendChild(vzPayBtn(()=> sheetNetSettle(t, L)));
       else if(inn){
@@ -7898,9 +8484,17 @@ function vzNetSvg(L, moves){
     pos[k]={x:cx+rx*Math.cos(a), y:cy+ry*Math.sin(a)};
   });
   const f=v=>Math.round(v*10)/10;
+  // Line weight and circle size compare amounts, which only means something
+  // in one currency. With rupees and dollars on the same drawing, every line
+  // is drawn alike and a circle grows with how many payments touch it.
+  const oneCur=moves.every(t=> t.cur===moves[0].cur);
   const maxAmt=Math.max.apply(null, moves.map(t=>t.amt)) || 1;
   const maxNet=Math.max.apply(null, keys.map(k=>Math.abs(L.people[k].net))) || 1;
-  const rad={}; keys.forEach(k=>{ rad[k]=17+9*Math.min(1, Math.abs(L.people[k].net)/maxNet); });
+  const deg={}; moves.forEach(t=>{ deg[t.from]=(deg[t.from]||0)+1; deg[t.to]=(deg[t.to]||0)+1; });
+  const maxDeg=Math.max.apply(null, keys.map(k=>deg[k]||0)) || 1;
+  const rad={}; keys.forEach(k=>{
+    rad[k]=17+9*Math.min(1, oneCur ? Math.abs(L.people[k].net)/maxNet : (deg[k]||0)/maxDeg);
+  });
   let flows="", labels="", nodes="";
   moves.forEach(t=>{
     const a=pos[t.from], b=pos[t.to];
@@ -7913,7 +8507,7 @@ function vzNetSvg(L, moves){
       '" stroke-width="'+f(1.8+3.2*t.amt/maxAmt)+'" marker-end="url(#vzA-'+tone+')"/>';
     // On the curve itself, halfway along - clear of the circles at either end.
     const mx=.25*a.x+.5*qx+.25*b.x, my=.25*a.y+.5*qy+.25*b.y;
-    labels+='<text class="vz-amt" x="'+f(mx)+'" y="'+f(my+4)+'">'+esc(money(t.amt))+'</text>';
+    labels+='<text class="vz-amt" x="'+f(mx)+'" y="'+f(my+4)+'">'+esc(money(t.amt, t.cur))+'</text>';
   });
   keys.forEach(k=>{
     const p=L.people[k], q=pos[k], r=rad[k], me=k===L.meKey;
@@ -7941,7 +8535,7 @@ function sheetNetSettle(t, L){
   const lines=t.parts.map(p=>{
     const mineOut=p.from===L.meKey;
     return '<div class="ns-line"><span>'+esc(groupName(p.gid))+'</span><span class="'+(mineOut?'neg':'pos')+'">'+
-      (mineOut ? 'You owe ' : 'Owes you ')+esc(money(p.amt))+'</span></div>';
+      (mineOut ? 'You owe ' : 'Owes you ')+esc(money(p.amt, t.cur))+'</span></div>';
   }).join("");
   openSheet(iSend ? "Settle with "+other.name : "Even with "+other.name, (b)=>{
     b.innerHTML=
@@ -7949,9 +8543,9 @@ function sheetNetSettle(t, L){
         ? 'One payment clears '+t.parts.length+' debts in '+groups.length+' group'+(groups.length===1?'':'s')+'.'
         : 'This clears the debt.')+'</p>'+
       '<div class="ns-lines">'+lines+
-        '<div class="ns-line total"><span>'+(iSend ? 'You send' : 'Nothing to send')+'</span><b>'+esc(money(t.amt))+'</b></div></div>'+
+        '<div class="ns-line total"><span>'+(iSend ? 'You send' : 'Nothing to send')+'</span><b>'+esc(money(t.amt, t.cur))+'</b></div></div>'+
       '<div id="nsEtx"></div>'+
-      vzSlideHTML("nsSlide", iSend ? "Slide to record "+money(t.amt) : "Slide to mark even")+
+      vzSlideHTML("nsSlide", iSend ? "Slide to record "+money(t.amt, t.cur) : "Slide to mark even")+
       '<p class="pf-slide-hint">'+(t.parts.some(p=>p.to===L.meKey)
         ? 'What '+esc(other.name)+' owed you is marked as netted, not as money received.'
         : 'Slide all the way across to record it.')+'</p>';
@@ -7973,7 +8567,7 @@ function sheetNetSettle(t, L){
                                       amount:amt, ref:key});
       });
       closeSheet();
-      setTimeout(()=> iSend ? celebratePayment(t.amt, other.name) : toast("Marked even with "+other.name), 260);
+      setTimeout(()=> iSend ? celebratePayment(t.amt, other.name, t.cur) : toast("Marked even with "+other.name), 260);
       return true;
     };
     slideToConfirm($("nsSlide"), save);
@@ -8017,7 +8611,7 @@ function vzWhoNext(main){
   const behind = next.gap < -EVEN;
   const who=n=> n===me ? "You" : n;
   const tone=g=> g < -EVEN ? "neg" : g > EVEN ? "pos" : "zero";
-  const tag=g=> tone(g)==="neg" ? "−"+money(-g) : tone(g)==="pos" ? "+"+money(g) : "Even";
+  const tag=g=> tone(g)==="neg" ? "−"+money(-g, gid) : tone(g)==="pos" ? "+"+money(g, gid) : "Even";
   const face=(r, cls)=>{
     const m=memberOf(r.n, gid);
     return '<span class="wn-av'+(cls ? ' '+cls : '')+'" style="--c:'+r.color+(m && m.photo ? '' : ';background:'+r.color)+'">'+
@@ -8029,7 +8623,7 @@ function vzWhoNext(main){
   hero.innerHTML = behind
     ? face(next, "big")+
       '<div class="wn-hero-t"><small>Next to pay</small><b>'+esc(who(next.n))+'</b>'+
-        '<p>'+(next.n===me ? 'You’ve' : esc(next.n)+' has')+' paid <strong>'+esc(money(-next.gap))+'</strong> less than '+
+        '<p>'+(next.n===me ? 'You’ve' : esc(next.n)+' has')+' paid <strong>'+esc(money(-next.gap, gid))+'</strong> less than '+
         (next.n===me ? 'your' : 'their')+' share so far.</p></div>'
     : '<span class="wn-av big even"><span class="ms" aria-hidden="true">handshake</span></span>'+
       '<div class="wn-hero-t"><small>Next to pay</small><b>Anyone</b><p>Everyone has paid about their share.</p></div>';
@@ -8067,7 +8661,7 @@ function vzWhoNext(main){
         '<span class="wn-name"><i style="background:'+r.color+'"></i><span>'+esc(who(r.n))+'</span></span>'+
         '<span class="wn-bar">'+(t==="zero" ? '' : '<span class="wn-fill '+t+'" style="width:'+w+'%"></span>')+'</span>'+
         '<span class="wn-val '+t+'">'+esc(tag(r.gap))+'</span>'+
-        '<span class="wn-sub">Paid '+esc(money(r.paid))+' · share '+esc(money(r.share))+'</span>'+
+        '<span class="wn-sub">Paid '+esc(money(r.paid, gid))+' · share '+esc(money(r.share, gid))+'</span>'+
       '</div>';
     }).join("");
   card.appendChild(list);
@@ -8077,40 +8671,51 @@ function vzWhoNext(main){
 /* ---------- 3. what this really cost you ---------- */
 function vzRealCost(main){
   const sec=vzSection(main, "pie_chart", "What this really cost you", "Your own share of the spending - not the group’s total.");
-  const cats={}; let share=0, paid=0, groupTotal=0; const per=[];
+  // One card per currency: a share in rupees and a share in dollars are never
+  // added together.
+  const by={};
   JOINED.forEach(g=>{
     if(!loaded(g.id)) return;
     const me=meIn(g.id); if(!me) return;
+    const c=curOf(g.id);
+    const t=by[c]=by[c]||{cats:{}, share:0, paid:0, groupTotal:0, per:[]};
     const gc={}; let gs=0;
     expensesOf(g.id).forEach(e=>{
-      const a=Number(e.amount)||0; groupTotal+=a;
-      if(e.payer===me) paid+=a;
+      const a=Number(e.amount)||0; t.groupTotal+=a;
+      if(e.payer===me) t.paid+=a;
       const s=sharesOf(e)[me]||0;
-      if(s>0.004){ const k=catOf(e.cat).k; gc[k]=(gc[k]||0)+s; cats[k]=(cats[k]||0)+s; gs+=s; }
+      if(s>0.004){ const k=catOf(e.cat).k; gc[k]=(gc[k]||0)+s; t.cats[k]=(t.cats[k]||0)+s; gs+=s; }
     });
-    if(gs>0.004) per.push({gid:g.id, share:gs, cats:gc});
-    share+=gs;
+    if(gs>0.004) t.per.push({gid:g.id, share:gs, cats:gc});
+    t.share+=gs;
   });
-  const card=el("div","card vz-card"); sec.appendChild(card);
-  if(share<0.005){
+  const curs=Object.keys(CURRENCIES).filter(c=> by[c] && by[c].share>=0.005);
+  if(!curs.length){
+    const card=el("div","card vz-card"); sec.appendChild(card);
     card.innerHTML='<div class="vz-empty"><span class="ms" aria-hidden="true">receipt_long</span><b>Nothing on you yet</b>'+
       '<p>Once you’re part of an expense, your share shows up here.</p></div>';
     return;
   }
-  const order=Object.keys(cats).sort((a,b)=> cats[b]-cats[a]);
-  const stack=(cmap, tot)=> '<div class="vz-stack">'+order.filter(k=>cmap[k]).map(k=>
-    '<i style="width:'+(cmap[k]/tot*100).toFixed(2)+'%;background:'+(VZ_CAT_TINT[k]||"#8A8F84")+'" title="'+esc(catOf(k).n)+'"></i>').join("")+'</div>';
-  const diff=Math.round((paid-share)*100)/100;
-  card.innerHTML=
-    '<div class="vz-headline"><span class="vz-big">'+esc(money(share))+'</span><span>your share of '+esc(money(groupTotal))+' spent</span></div>'+
-    '<p class="vz-note vz-tight">You fronted '+esc(money(paid))+(diff>0.004 ? ' - '+esc(money(diff))+' more than your share.'
-      : diff<-0.004 ? ' - '+esc(money(-diff))+' less than your share.' : ', exactly your share.')+'</p>'+
-    stack(cats, share)+
-    '<div class="vz-legend">'+order.map(k=>
-      '<span class="vz-leg"><span class="ms" aria-hidden="true" style="background:'+(VZ_CAT_TINT[k]||"#8A8F84")+'">'+catOf(k).i+'</span>'+
-      '<span class="vz-leg-n">'+esc(catOf(k).n)+'</span><b>'+esc(money(cats[k]))+'</b></span>').join("")+'</div>'+
-    (per.length>1 ? '<div class="vz-gl">'+per.sort((a,b)=> b.share-a.share).map(p=>
-      '<div class="vz-gl-row"><span>'+esc(groupName(p.gid))+'</span><b>'+esc(money(p.share))+'</b>'+stack(p.cats, p.share)+'</div>').join("")+'</div>' : '');
+  curs.forEach(c=>{
+    const {cats, share, paid, groupTotal, per}=by[c];
+    const m=(n)=> esc(money(n, c));
+    const card=el("div","card vz-card"); sec.appendChild(card);
+    const order=Object.keys(cats).sort((a,b)=> cats[b]-cats[a]);
+    const stack=(cmap, tot)=> '<div class="vz-stack">'+order.filter(k=>cmap[k]).map(k=>
+      '<i style="width:'+(cmap[k]/tot*100).toFixed(2)+'%;background:'+(VZ_CAT_TINT[k]||"#8A8F84")+'" title="'+esc(catOf(k).n)+'"></i>').join("")+'</div>';
+    const diff=Math.round((paid-share)*100)/100;
+    card.innerHTML=
+      (curs.length>1 ? '<span class="vz-curtag">'+esc(CURRENCIES[c].sym+" "+CURRENCIES[c].name+"s")+'</span>' : '')+
+      '<div class="vz-headline"><span class="vz-big">'+m(share)+'</span><span>your share of '+m(groupTotal)+' spent</span></div>'+
+      '<p class="vz-note vz-tight">You fronted '+m(paid)+(diff>0.004 ? ' - '+m(diff)+' more than your share.'
+        : diff<-0.004 ? ' - '+m(-diff)+' less than your share.' : ', exactly your share.')+'</p>'+
+      stack(cats, share)+
+      '<div class="vz-legend">'+order.map(k=>
+        '<span class="vz-leg"><span class="ms" aria-hidden="true" style="background:'+(VZ_CAT_TINT[k]||"#8A8F84")+'">'+catOf(k).i+'</span>'+
+        '<span class="vz-leg-n">'+esc(catOf(k).n)+'</span><b>'+m(cats[k])+'</b></span>').join("")+'</div>'+
+      (per.length>1 ? '<div class="vz-gl">'+per.sort((a,b)=> b.share-a.share).map(p=>
+        '<div class="vz-gl-row"><span>'+esc(groupName(p.gid))+'</span><b>'+m(p.share)+'</b>'+stack(p.cats, p.share)+'</div>').join("")+'</div>' : '');
+  });
 }
 
 /* ---------- 4. old debts ---------- */
@@ -8151,7 +8756,7 @@ function vzOldDebts(main, L){
     r.innerHTML=
       '<div class="vz-debt-top">'+avatarHTML("", other.name, other.color, other.photo)+
         '<span class="vz-b"><span class="vz-t">'+(out ? 'You owe <b>'+esc(other.name)+'</b>' : '<b>'+esc(other.name)+'</b> owes you')+
-          ' <b>'+esc(money(e.amt))+'</b></span><span class="vz-m">'+esc(groupName(e.gid))+'</span></span>'+
+          ' <b>'+esc(money(e.amt, e.gid))+'</b></span><span class="vz-m">'+esc(groupName(e.gid))+'</span></span>'+
         '<span class="vz-days '+tone+'">'+(days===0 ? "today" : days===1 ? "1 day" : days+" days")+'</span></div>'+
       '<div class="vz-agebar"><i class="'+tone+'" style="width:'+Math.max(4, Math.min(100, days/span*100)).toFixed(1)+'%"></i></div>';
     r.querySelector(".vz-debt-top").appendChild(out
@@ -8180,15 +8785,15 @@ function vzLeaveClean(main, L){
         ? '<span class="vz-todo">'+mine.length+' to do</span>'
         : '<span class="vz-ok"><span class="ms" aria-hidden="true">check_circle</span>Clean</span>')+'</div>'+
       '<p class="vz-lc-sum">'+(mine.length
-        ? (pay>0.004 ? 'Pay <b>'+esc(money(pay))+'</b>' : '')+(pay>0.004 && get>0.004 ? ' · ' : '')+
-          (get>0.004 ? 'Collect <b>'+esc(money(get))+'</b>' : '')
+        ? (pay>0.004 ? 'Pay <b>'+esc(money(pay, g.gid))+'</b>' : '')+(pay>0.004 && get>0.004 ? ' · ' : '')+
+          (get>0.004 ? 'Collect <b>'+esc(money(get, g.gid))+'</b>' : '')
         : 'You owe nothing here and nobody owes you. You can leave any time.')+'</p>';
     mine.forEach(e=>{
       const out=e.from===L.meKey, name=out ? e.toName : e.fromName;
       const line=el("div","vz-lc-line");
       line.innerHTML='<span class="ms" aria-hidden="true">'+(out ? 'north_east' : 'south_west')+'</span>'+
         '<span class="vz-lc-t">'+(out ? 'Pay <b>'+esc(name)+'</b>' : 'Collect from <b>'+esc(name)+'</b>')+'</span>'+
-        '<b class="vz-val '+(out ? 'neg' : 'pos')+'">'+esc(money(e.amt))+'</b>';
+        '<b class="vz-val '+(out ? 'neg' : 'pos')+'">'+esc(money(e.amt, g.gid))+'</b>';
       line.appendChild(out ? vzPayBtn(()=> vzPay(g.gid, e.fromName, e.toName, e.amt)) : vzRemindBtn(g.gid, name, e.amt));
       c.appendChild(line);
     });
@@ -8360,7 +8965,8 @@ function arrKnock(){
 /* ---------- the receiver: did it land? ---------- */
 function arrIncoming(item, total){
   const {gid, p}=item, amt=Number(p.amount)||0, me=meIn(gid);
-  const bank=myBank(), bankHref=bank && etxBankLink(bank);
+  // Rupees land in an Indian account, not the Canadian bank app picked for Interac.
+  const bank=curOf(gid)==="INR" ? null : myBank(), bankHref=bank && etxBankLink(bank);
   const node=el("div","arr");
   node.innerHTML=
     '<div class="arr-scrim" aria-hidden="true"></div>'+
@@ -8372,7 +8978,7 @@ function arrIncoming(item, total){
           '<span class="arr-count"'+(total<2?' hidden':'')+'>1 of '+total+'</span></div>'+
         '<div class="arr-flow" aria-hidden="true">'+arrFace(p.from, gid)+
           '<span class="arr-track"><i></i><i></i><i></i></span>'+arrFace(me, gid, "me")+'</div>'+
-        '<div class="arr-amt">'+esc(money(amt))+'</div>'+
+        '<div class="arr-amt">'+esc(money(amt, gid))+'</div>'+
         '<p class="arr-what" id="arrWhat"><b>'+esc(p.from)+'</b> says this is on its way to you'+
           ' <span class="arr-dot">·</span> '+esc(arrAgo(p.at))+
           (p.note ? '<span class="arr-note">“'+esc(String(p.note).slice(0,60))+'”</span>' : '')+'</p>'+
@@ -8460,7 +9066,7 @@ function arrConfirmed(item){
   node.innerHTML=
     '<div class="arr-hold"><button class="arr-pill" type="button" role="status" aria-live="polite">'+
       '<span class="arr-pseal"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M10 21l7 7 14-15"/></svg></span>'+
-      '<span class="arr-ptext"><b>'+esc(p.to)+' got your '+esc(money(Number(p.amount)||0))+'</b>'+
+      '<span class="arr-ptext"><b>'+esc(p.to)+' got your '+esc(money(Number(p.amount)||0, gid))+'</b>'+
         '<span>Confirmed '+esc(arrAgo(p.got.at))+' · '+esc(groupName(gid))+'</span></span>'+
     '</button></div>';
   document.body.appendChild(node);
@@ -8485,13 +9091,14 @@ function arrNotArrived(item){
           '<span class="arr-grp">'+esc(groupName(gid))+'</span></div>'+
         '<div class="arr-flow broken" aria-hidden="true">'+arrFace(p.from, gid)+
           '<span class="arr-track"><i></i><i></i><i></i><b class="ms">question_mark</b></span>'+arrFace(p.to, gid)+'</div>'+
-        '<div class="arr-amt">'+esc(money(amt))+'</div>'+
+        '<div class="arr-amt">'+esc(money(amt, gid))+'</div>'+
         '<p class="arr-what" id="arrWhat"><b>'+esc(p.to)+'</b> checked and can’t see your payment'+
           ' <span class="arr-dot">·</span> sent '+esc(fmtDate(p.at))+'</p>'+
       '</div>'+
       '<div class="arr-stub">'+
         '<h2 id="arrQ">Worth a second look</h2>'+
-        '<p>Make sure it went to '+esc(p.to)+'’s Interac address and wasn’t held by your bank. '+
+        '<p>Make sure it went to '+esc(p.to)+'’s '+(curOf(gid)==="INR"
+          ? 'UPI ID and shows as successful in your UPI app. ' : 'Interac address and wasn’t held by your bank. ')+
           'Once it’s sorted, ask them to check again.</p>'+
         '<div class="arr-acts">'+
           '<button class="arr-yes" type="button"><span class="ms" aria-hidden="true">refresh</span>Ask '+esc(p.to)+' again</button>'+
@@ -9043,7 +9650,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260915003557";
+const APP_BUILD = "20260915012301";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";

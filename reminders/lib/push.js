@@ -68,46 +68,49 @@ export function subscriptionsOf(user) {
    the body says what to do about it. */
 
 /** To the person a payment went to: did it arrive? */
-export function askMessage({ from, amount, group, url, tag }) {
+/* Every amount is written in the group's own currency (`cur`, CAD when absent). */
+
+/** To the person a payment went to: did it arrive? */
+export function askMessage({ from, amount, group, url, tag, cur }) {
   return {
-    title: "Did " + money(amount) + " arrive?",
+    title: "Did " + money(amount, cur) + " arrive?",
     body: clip(from, 40) + " says they sent it to you · " + clip(group, 40) +
-          ". Check your bank, then tap to answer.",
+          ". Check your " + (cur === "INR" ? "UPI app" : "bank") + ", then tap to answer.",
     url, tag, sticky: true
   };
 }
 
 /** To whoever recorded the payment: the answer. */
-export function answerMessage({ to, amount, ok, group, url, tag }) {
+export function answerMessage({ to, amount, ok, group, url, tag, cur }) {
   return ok
-    ? { title: clip(to, 40) + " got your " + money(amount),
+    ? { title: clip(to, 40) + " got your " + money(amount, cur),
         body: "Confirmed in " + clip(group, 40) + ".", url, tag }
-    : { title: clip(to, 40) + " can’t see your " + money(amount),
+    : { title: clip(to, 40) + " can’t see your " + money(amount, cur),
         body: "Check where it went in " + clip(group, 40) + ", then ask them to look again.",
         url, tag, sticky: true };
 }
 
 /** Somebody added, changed or deleted an expense the reader is in. */
-export function expenseMessage({ kind, actor, desc, amount, group, share, paidByYou, url, tag }) {
+export function expenseMessage({ kind, actor, desc, amount, group, share, paidByYou, url, tag, cur }) {
   const verb = kind === "expense.add" ? "added" : kind === "expense.edit" ? "changed" : "deleted";
   const where = clip(group, 40);
   let body;
   if (kind === "expense.del") body = "Removed from " + where + ". Your balance has been updated.";
   else if (paidByYou) body = "You paid · " + where;
-  else if (share != null && share > 0.004) body = "Your share " + money(share) + " · " + where;
+  else if (share != null && share > 0.004) body = "Your share " + money(share, cur) + " · " + where;
   else body = where;
   return {
     title: clip(actor, 30) + " " + verb + " " + clip(desc || "an expense", 40) +
-           (amount ? " · " + money(amount) : ""),
+           (amount ? " · " + money(amount, cur) : ""),
     body, url, tag
   };
 }
 
 /** A reminder to pay somebody back. */
-export function nudgeMessage({ from, amount, group, url, tag }) {
+export function nudgeMessage({ from, amount, group, url, tag, cur }) {
   return {
     title: clip(from, 40) + " sent you a reminder",
-    body: (amount ? "You owe " + money(amount) + " in " : "About ") + clip(group, 40) + ". Tap to settle up.",
+    body: (amount ? "You owe " + money(amount, cur) + " in " : "About ") + clip(group, 40) + ". Tap to settle up.",
     url, tag
   };
 }

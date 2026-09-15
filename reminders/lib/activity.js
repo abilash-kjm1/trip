@@ -10,7 +10,7 @@
    here, from the group's own membership, so a tampered-with note can reach
    nobody its author could not already reach.
    --------------------------------------------------------------------------- */
-import { money, sharesOf, cents } from "./ledger.js";
+import { money, sharesOf, cents, currencyOf } from "./ledger.js";
 import { activityEmail, accessRequestEmail, groupInviteEmail, nudgeEmail } from "./template.js";
 import { makeToken, normaliseAccess } from "./access.js";
 import { deliver, subscriptionsOf, askMessage, answerMessage, nudgeMessage, expenseMessage } from "./push.js";
@@ -136,10 +136,10 @@ export function isMember(group, uid) {
   return Object.keys(people).some((k) => people[k] && people[k].uid === uid);
 }
 
-/** One line of an email, in plain words. */
-export function lineFor(e) {
+/** One line of an email, in plain words, in the group's currency. */
+export function lineFor(e, cur) {
   const k = KINDS[e.kind];
-  const amt = e.amount != null ? " - " + money(e.amount) : "";
+  const amt = e.amount != null ? " - " + money(e.amount, cur) : "";
 
   if (k.noun === "payment") {
     const what = e.desc || "a payment";
@@ -278,6 +278,7 @@ export async function runActivity({ users, at, dry, appUrl, db, send, push,
         from: e.actor,
         group: (g.meta && g.meta.name) || e.gid,
         amount: e.amount != null ? e.amount : 0,
+        cur: currencyOf(g),
         appUrl
       });
       if (!dry) {
@@ -286,7 +287,7 @@ export async function runActivity({ users, at, dry, appUrl, db, send, push,
       }
       log.nudges++;
       await deliver({ uid: seat.uid, users, dry, push, db, log,
-        message: nudgeMessage({ from: e.actor, amount: e.amount,
+        message: nudgeMessage({ from: e.actor, amount: e.amount, cur: currencyOf(g),
                                 group: (g.meta && g.meta.name) || e.gid,
                                 url: openAt(e.gid), tag: "nudge-" + e.gid }) });
       console.log("[nudge] " + (dry ? "DRY " : "") + e.actor + " nudged " + to);
@@ -330,7 +331,7 @@ export async function runActivity({ users, at, dry, appUrl, db, send, push,
       const bundle = bundles.get(uid);
       if (!bundle.groups.has(e.gid)) bundle.groups.set(e.gid, { group: gname, lines: [] });
       const slot = bundle.groups.get(e.gid);
-      if (slot.lines.length < MAX_ITEMS) slot.lines.push(lineFor(e));
+      if (slot.lines.length < MAX_ITEMS) slot.lines.push(lineFor(e, currencyOf(g)));
     }
   }
 
@@ -434,7 +435,7 @@ export async function runPush({ entries, users, dry, push, db, log, appUrl, grou
         if (!(await claim(e))) { skip(e, "already sent"); continue; }
         console.log("[push] " + (dry ? "DRY " : "") + "asking " + seat.uid + " about " + e.ref);
         await deliver({ uid: seat.uid, users, dry, push, db, log,
-          message: askMessage({ from: p.from, amount, group: gname, url: openAt(e.gid),
+          message: askMessage({ from: p.from, amount, cur: currencyOf(g), group: gname, url: openAt(e.gid),
                                 tag: "arrive-" + e.gid + "-" + e.ref }) });
       } else {
         // Answered by the person it went to, and told to whoever recorded it.
@@ -448,7 +449,7 @@ export async function runPush({ entries, users, dry, push, db, log, appUrl, grou
         if (!(await claim(e))) { skip(e, "already sent"); continue; }
         console.log("[push] " + (dry ? "DRY " : "") + "telling " + p.byUid + " the answer to " + e.ref);
         await deliver({ uid: p.byUid, users, dry, push, db, log,
-          message: answerMessage({ to: p.to, amount, ok: got.ok === true, group: gname,
+          message: answerMessage({ to: p.to, amount, cur: currencyOf(g), ok: got.ok === true, group: gname,
                                    url: openAt(e.gid), tag: "answer-" + e.gid + "-" + e.ref }) });
       }
     } catch (err) {
@@ -494,7 +495,7 @@ export async function runPush({ entries, users, dry, push, db, log, appUrl, grou
       const me = nameOf(g, u);
       await deliver({ uid: u, users, dry, push, db, log,
         message: expenseMessage({
-          kind: e.kind, actor, group: gname,
+          kind: e.kind, actor, group: gname, cur: currencyOf(g),
           desc: exp ? exp.desc : e.desc,
           amount: exp ? Number(exp.amount) : e.amount,
           share: exp ? cents(shares[me] || 0) : null,

@@ -36,6 +36,9 @@ is(askMessage({ from: "Kelvin", amount: 45.5, group: "Montreal" }).title, "Did $
 is(askMessage({ from: "Kelvin", amount: 45.5, group: "Montreal" }).sticky, true, "stays until it is dealt with");
 is(answerMessage({ to: "Kelvin", amount: 45.5, ok: true, group: "Montreal" }).title, "Kelvin got your $45.50", "a yes");
 is(answerMessage({ to: "Kelvin", amount: 45.5, ok: false, group: "Montreal" }).sticky, true, "a no stays on screen");
+is(askMessage({ from: "Priya", amount: 4500, group: "Goa", cur: "INR" }).title, "Did ₹4,500.00 arrive?", "the question, in rupees");
+is(/UPI app/.test(askMessage({ from: "Priya", amount: 4500, group: "Goa", cur: "INR" }).body), true, "a rupee payment is checked in a UPI app");
+is(answerMessage({ to: "Priya", amount: 250000, ok: true, group: "Goa", cur: "INR" }).title, "Priya got your ₹2,50,000.00", "a yes, in lakhs");
 
 /* ---- a small world ---- */
 const group = {

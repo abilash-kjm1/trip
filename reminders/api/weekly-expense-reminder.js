@@ -420,6 +420,8 @@ export default async function handler(req, res) {
                               access: (access[uid] && access[uid].status) || "no record - would be locked out",
                               groupsListed: gids.length, groups: why });
 
+        // Only asked whether anything is outstanding at all. The email itself
+        // works its totals out per currency from each group, never across them.
         owe = cents(owe); owed = cents(owed);
 
         // Nothing outstanding anywhere: say nothing.

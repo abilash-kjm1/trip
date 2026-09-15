@@ -1,7 +1,8 @@
 /* Run with: node test/ledger.test.js
    No framework. The point is to prove the server's arithmetic matches the
    app's, so an email never contradicts the screen. */
-import { balances, settlements, sharesOf, groupSummary, cents } from "../lib/ledger.js";
+import { balances, settlements, sharesOf, groupSummary, cents, money, currencyOf } from "../lib/ledger.js";
+import { reminderEmail } from "../lib/template.js";
 
 let failed = 0;
 function is(actual, expected, what) {
@@ -37,7 +38,41 @@ const group = {
   }
 };
 
-console.log("split modes");
+console.log("currencies");
+is(money(1234.5), "$1234.50", "dollars read as they always have");
+is(money(-12.346), "-$12.35", "a negative, rounded to the cent");
+is(money(4500, "INR"), "₹4,500.00", "rupees, in thousands");
+is(money(1234567.891, "INR"), "₹12,34,567.89", "rupees, in lakhs");
+is(money(123456789, "INR"), "₹12,34,56,789.00", "rupees, in crores");
+is(money(999, "INR"), "₹999.00", "rupees under a thousand");
+is(money(-100000, "INR"), "-₹1,00,000.00", "negative rupees");
+is(money(20, "USD"), "US$20.00", "US dollars");
+is(money(20, "EUR"), "$20.00", "anything unexpected is dollars");
+is(currencyOf({ meta: { currency: "INR" } }), "INR", "a rupee group");
+is(currencyOf({ meta: {} }), "CAD", "no currency means Canadian dollars");
+is(currencyOf({ meta: { currency: "toString" } }), "CAD", "not fooled by an inherited name");
+is(groupSummary({ meta: { currency: "INR" }, people: { a: { n: "A", uid: "u1" }, b: { n: "B" } },
+                  expenses: { e: { desc: "Chai", amount: 100, payer: "B", between: ["A", "B"] } } }, "Goa", "u1").cur,
+   "INR", "a summary says which currency it is in");
+
+// Two groups in two currencies: totals stay apart.
+const two = reminderEmail({
+  name: "Abi", owe: 50, owed: 900, appUrl: "https://x",
+  groups: [
+    { group: "Goa", cur: "INR", me: "A", net: 900, owes: [], lent: [], plan: [{ from: "B", to: "A", amt: 900 }] },
+    { group: "Montreal", cur: "CAD", me: "A", net: -50, owes: [], lent: [], plan: [{ from: "A", to: "C", amt: 50 }] }
+  ]
+});
+is(two.subject, "You are owed ₹900.00 · You owe $50.00", "the subject names each currency");
+is(/Total you owe \(INR\): ₹0\.00/.test(two.text) && /Total you owe \(CAD\): \$50\.00/.test(two.text), true,
+   "a total per currency, never added together");
+is(/B in Goa: ₹900\.00/.test(two.text), true, "who owes, in their group's currency");
+const one = reminderEmail({ name: "Abi", owe: 12.5, owed: 0, appUrl: "https://x",
+  groups: [{ group: "Montreal", me: "A", net: -12.5, owes: [], lent: [], plan: [] }] });
+is(one.subject, "You owe $12.50", "one currency reads exactly as before");
+is(/Total you owe: \$12\.50/.test(one.text), true, "and its totals carry no currency tag");
+
+console.log("\nsplit modes");
 is(sharesOf(group.expenses.e1), { Abilash: 75, Kalai: 75, Kavya: 75, Kelvin: 75 }, "equal");
 is(sharesOf(group.expenses.e2), { Abilash: 40, Kalai: 30, Kavya: 20, Kelvin: 10 }, "exact");
 is(sharesOf(group.expenses.e4), { Abilash: 100, Kalai: 100, Kavya: 50, Kelvin: 50 }, "shares");

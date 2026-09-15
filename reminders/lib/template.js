@@ -2,7 +2,7 @@
    The reminder email. Inline styles only, tables for layout, no external
    images or webfonts - the things mail clients actually strip.
    --------------------------------------------------------------------------- */
-import { money } from "./ledger.js";
+import { money, cents } from "./ledger.js";
 
 const esc = (s) => String(s == null ? "" : s)
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -37,18 +37,34 @@ function section(title, rowsHtml) {
  * @param {string} p.appUrl
  */
 export function reminderEmail({ name, owe, owed, groups, appUrl }) {
-  const net = owed - owe;
-  const headline = Math.abs(net) < 0.005
-    ? "You are all square"
-    : net > 0 ? `You are owed ${money(net)}` : `You owe ${money(-net)}`;
-  const headColour = Math.abs(net) < 0.005 ? SOFT : (net > 0 ? GREEN : RED);
+  // Totals are kept per currency. A rupee group and a dollar group are never
+  // added together - nothing is converted - so with both, each has its own
+  // line. With a single currency the totals passed in are used as they are.
+  const tot = {};
+  groups.forEach((g) => {
+    const c = g.cur || "CAD";
+    const t = (tot[c] = tot[c] || { owe: 0, owed: 0 });
+    if (g.net < -0.004) t.owe += -g.net; else if (g.net > 0.004) t.owed += g.net;
+  });
+  let curs = Object.keys(tot);
+  if (curs.length <= 1) {
+    const c = curs[0] || "CAD";
+    tot[c] = { owe: Number(owe) || 0, owed: Number(owed) || 0 };
+    curs = [c];
+  }
+  const many = curs.length > 1;
+  const nets = curs.map((c) => ({ c, n: tot[c].owed - tot[c].owe })).filter((x) => Math.abs(x.n) >= 0.005);
+  const say = (x) => x.n > 0 ? `You are owed ${money(x.n, x.c)}` : `You owe ${money(-x.n, x.c)}`;
+  const headline = nets.length ? nets.map(say).join(" · ") : "You are all square";
+  const headColour = !nets.length ? SOFT
+    : nets.every((x) => x.n > 0) ? GREEN : nets.every((x) => x.n < 0) ? RED : INK;
 
   // Who to pay, gathered across every group. This is the part somebody acts
   // on, so it goes first rather than under a list of expenses.
   const toPay = [], toGet = [];
   groups.forEach((g) => {
     (g.plan || []).forEach((t) => {
-      const entry = { who: t.from === g.me ? t.to : t.from, amt: t.amt, group: g.group };
+      const entry = { who: t.from === g.me ? t.to : t.from, amt: t.amt, group: g.group, cur: g.cur || "CAD" };
       (t.from === g.me ? toPay : toGet).push(entry);
     });
   });
@@ -61,7 +77,7 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
         <br><span style="color:${SOFT};font-size:13px">in ${esc(x.group)}</span>
       </td>
       <td style="padding:13px 0;border-bottom:1px solid ${LINE};text-align:right;white-space:nowrap">
-        <span style="font-size:20px;font-weight:700;color:${colour}">${money(x.amt)}</span>
+        <span style="font-size:20px;font-weight:700;color:${colour}">${money(x.amt, x.cur)}</span>
       </td>
     </tr>`;
   }
@@ -78,30 +94,33 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
     body += section("Settling up", row("Nobody owes anybody", "settled", SOFT));
   }
 
-  body += section("Totals",
-    row("Total you owe", money(owe), owe > 0.004 ? RED : SOFT) +
-    row("Total owed to you", money(owed), owed > 0.004 ? GREEN : SOFT)
-  );
+  body += section("Totals", curs.map((c) => {
+    const tag = many ? ` (${c})` : "";
+    const t = tot[c];
+    return row("Total you owe" + tag, money(t.owe, c), t.owe > 0.004 ? RED : SOFT) +
+           row("Total owed to you" + tag, money(t.owed, c), t.owed > 0.004 ? GREEN : SOFT);
+  }).join(""));
 
   groups.forEach((g) => {
+    const c = g.cur || "CAD";
     let rows = "";
     g.owes.forEach((x) => {
       rows += row(
-        `${esc(x.desc)}<br><span style="color:${SOFT};font-size:13px">${esc(x.payer)} paid ${money(x.amount)}</span>`,
-        `${money(x.share)}<br><span style="color:${SOFT};font-size:12px;font-weight:400">your share</span>`,
+        `${esc(x.desc)}<br><span style="color:${SOFT};font-size:13px">${esc(x.payer)} paid ${money(x.amount, c)}</span>`,
+        `${money(x.share, c)}<br><span style="color:${SOFT};font-size:12px;font-weight:400">your share</span>`,
         RED
       );
     });
     g.lent.forEach((x) => {
       rows += row(
-        `${esc(x.desc)}<br><span style="color:${SOFT};font-size:13px">you paid ${money(x.amount)}</span>`,
-        `${money(x.out)}<br><span style="color:${SOFT};font-size:12px;font-weight:400">still out</span>`,
+        `${esc(x.desc)}<br><span style="color:${SOFT};font-size:13px">you paid ${money(x.amount, c)}</span>`,
+        `${money(x.out, c)}<br><span style="color:${SOFT};font-size:12px;font-weight:400">still out</span>`,
         GREEN
       );
     });
 
     const label = `${g.group} — ${Math.abs(g.net) < 0.005 ? "settled"
-      : g.net > 0 ? `you are owed ${money(g.net)}` : `you owe ${money(-g.net)}`}`;
+      : g.net > 0 ? `you are owed ${money(g.net, c)}` : `you owe ${money(-g.net, c)}`}`;
 
     body += section(label, rows);
   });
@@ -120,7 +139,7 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
     <tr><td>
       <p style="margin:0 0 4px;font-size:14px;color:${SOFT}">Sunday round-up</p>
       <h1 style="margin:0 0 2px;font-size:26px;line-height:1.2;color:${INK}">Hello ${esc(name)},</h1>
-      <p style="margin:10px 0 0;font-size:22px;font-weight:700;color:${headColour}">${headline}</p>
+      <p style="margin:10px 0 0;font-size:22px;font-weight:700;color:${headColour}">${esc(headline)}</p>
       ${body}
       <p style="margin:30px 0 0">
         <a href="${esc(appUrl)}" style="display:inline-block;background:#34c759;color:#ffffff;text-decoration:none;
@@ -139,23 +158,26 @@ export function reminderEmail({ name, owe, owed, groups, appUrl }) {
   let t = `Hello ${name},\n\n${headline}\n`;
   if (toPay.length) {
     t += `\nPAY THESE PEOPLE\n`;
-    toPay.forEach((x) => { t += `  ${x.who} in ${x.group}: ${money(x.amt)}\n`; });
+    toPay.forEach((x) => { t += `  ${x.who} in ${x.group}: ${money(x.amt, x.cur)}\n`; });
   }
   if (toGet.length) {
     t += `\nTHESE PEOPLE OWE YOU\n`;
-    toGet.forEach((x) => { t += `  ${x.who} in ${x.group}: ${money(x.amt)}\n`; });
+    toGet.forEach((x) => { t += `  ${x.who} in ${x.group}: ${money(x.amt, x.cur)}\n`; });
   }
-  t += `\nTotal you owe: ${money(owe)}\nTotal owed to you: ${money(owed)}\n`;
+  t += "\n";
+  curs.forEach((c) => {
+    const tag = many ? ` (${c})` : "";
+    t += `Total you owe${tag}: ${money(tot[c].owe, c)}\nTotal owed to you${tag}: ${money(tot[c].owed, c)}\n`;
+  });
   groups.forEach((g) => {
+    const c = g.cur || "CAD";
     t += `\n${g.group}\n`;
-    g.owes.forEach((x) => { t += `  ${x.desc} — ${x.payer} paid ${money(x.amount)}, your share ${money(x.share)}\n`; });
-    g.lent.forEach((x) => { t += `  ${x.desc} — you paid ${money(x.amount)}, ${money(x.out)} still out\n`; });
+    g.owes.forEach((x) => { t += `  ${x.desc} — ${x.payer} paid ${money(x.amount, c)}, your share ${money(x.share, c)}\n`; });
+    g.lent.forEach((x) => { t += `  ${x.desc} — you paid ${money(x.amount, c)}, ${money(x.out, c)} still out\n`; });
   });
   t += `\nOpen Settle: ${appUrl}\nTurn this off under Account > Notifications.\n`;
 
-  const subject = Math.abs(net) < 0.005
-    ? "Your weekly expenses round-up"
-    : net > 0 ? `You are owed ${money(net)}` : `You owe ${money(-net)}`;
+  const subject = nets.length ? headline : "Your weekly expenses round-up";
 
   return { subject, html, text: t };
 }
@@ -371,7 +393,7 @@ export function groupInviteEmail({ name, inviter, group, appUrl }) {
 }
 
 /** A nudge: somebody is asking to be paid back. */
-export function nudgeEmail({ name, from, group, amount, appUrl }) {
+export function nudgeEmail({ name, from, group, amount, appUrl, cur }) {
   const headline = from + " is asking you to settle up";
 
   const html = `<!doctype html>
@@ -392,7 +414,7 @@ export function nudgeEmail({ name, from, group, amount, appUrl }) {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
              style="border-collapse:collapse;margin-top:18px">
         ${row("Group", esc(group))}
-        ${row("What you owe " + esc(from), money(amount), RED)}
+        ${row("What you owe " + esc(from), money(amount, cur), RED)}
       </table>
       <p style="margin:22px 0 0;font-size:14px;line-height:1.55;color:${SOFT}">
         Once you have paid, open Settle and record it so everybody's balance is
@@ -408,7 +430,7 @@ export function nudgeEmail({ name, from, group, amount, appUrl }) {
 </body></html>`;
 
   const text = `Hello ${name},\n\n${headline}\n\nGroup: ${group}\n` +
-    `What you owe ${from}: ${money(amount)}\n\n` +
+    `What you owe ${from}: ${money(amount, cur)}\n\n` +
     `Once you have paid, open Settle and record it so everybody's balance is right. ` +
     `This is only a reminder - nothing has been taken from anywhere.\n\nOpen Settle: ${appUrl}\n`;
 

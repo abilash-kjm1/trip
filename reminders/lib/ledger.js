@@ -10,9 +10,32 @@
 /** Round to cents the way the client does. */
 export const cents = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
-export function money(n) {
+/* Each group has its own currency - Canadian dollars unless it says otherwise.
+   Nothing is ever converted. The same list, written the same way, as the app:
+   rupees grouped in lakhs and crores, "₹1,23,456.00". */
+export const CURRENCIES = { CAD: "$", INR: "₹", USD: "US$" };
+const isCurrency = (c) => typeof c === "string" && Object.prototype.hasOwnProperty.call(CURRENCIES, c);
+
+/** The group's currency code, or CAD for anything missing or unexpected. */
+export function currencyOf(group) {
+  const c = group && group.meta && group.meta.currency;
+  return isCurrency(c) ? c : "CAD";
+}
+
+function groupIN(s) {
+  const last = s.slice(-3), rest = s.slice(0, -3);
+  return rest ? rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last : last;
+}
+
+export function money(n, cur) {
+  const code = isCurrency(cur) ? cur : "CAD";
   const v = cents(n);
-  return (v < 0 ? "-$" : "$") + Math.abs(v).toFixed(2);
+  const abs = Math.abs(v).toFixed(2), sign = v < 0 ? "-" : "";
+  if (code === "INR") {
+    const [i, d] = abs.split(".");
+    return sign + "₹" + groupIN(i) + "." + d;
+  }
+  return sign + CURRENCIES[code] + abs;
 }
 
 /** {name: amountOwed} for one expense. Modes: equal | exact | percent | shares */
@@ -148,6 +171,7 @@ export function groupSummary(group, groupName, uid) {
 
   return {
     group: groupName,
+    cur: currencyOf(group),
     me,
     net: cents(net),
     owes: owes.sort((a, b) => b.share - a.share),

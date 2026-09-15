@@ -13,6 +13,10 @@
 // Interac details live at directory/{uid}/pay. The person can write their own;
 // the administrator can write that part - and only that part - of anyone's
 // entry. Its shape is checked for both: a name and an email or phone.
+// UPI details for India sit beside them at directory/{uid}/upi, under the same
+// arrangement: a name and a UPI ID shaped like name@bank.
+//
+// A group's currency (meta/currency) can only be CAD, INR or USD.
 //
 // Only the administrator can delete a group. Members can still change what is
 // inside it, but a write that would leave the group without its details -
@@ -25,7 +29,10 @@
         ".read": "auth != null && (data.child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
         ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (data.child('uids').child(auth.uid).exists() && newData.exists() && (newData.child('meta').exists() || !data.child('meta').exists())) || (!data.exists() && newData.child('uids').child(auth.uid).exists()))",
         "meta": {
-          ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
+          ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
+          "currency": {
+            ".validate": "newData.isString() && newData.val().matches(/^(CAD|INR|USD)$/)"
+          }
         }
       }
     },
@@ -45,6 +52,10 @@
         "pay": {
           ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
           ".validate": "newData.hasChildren(['name','handle']) && newData.child('name').isString() && newData.child('name').val().length <= 60 && newData.child('handle').isString() && newData.child('handle').val().length <= 120"
+        },
+        "upi": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'",
+          ".validate": "newData.hasChildren(['name','vpa']) && newData.child('name').isString() && newData.child('name').val().length <= 60 && newData.child('vpa').isString() && newData.child('vpa').val().length <= 120 && newData.child('vpa').val().matches(/^[a-z0-9][a-z0-9._-]+@[a-z][a-z0-9]+$/)"
         }
       }
     },

@@ -1,5 +1,5 @@
 /* Settle - offline service worker */
-const VERSION = 'settle-20260915003557';
+const VERSION = 'settle-20260915012301';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 // The Firebase code: versioned files that never change, so they are kept
@@ -70,6 +70,20 @@ self.addEventListener('fetch', (e) => {
   // The Firebase code itself: kept once fetched, since its address names its
   // version and it never changes. Sign-in and the database still go live.
   if (url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/')) {
+    e.respondWith((async () => {
+      const c = await caches.open(LIBS);
+      const hit = await c.match(req.url, { ignoreVary: true });
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res && res.ok) c.put(req.url, res.clone());
+      return res;
+    })());
+    return;
+  }
+
+  // The QR code maker for UPI, pinned to one version: kept once fetched, the
+  // same as the Firebase code, so a payment QR still draws with no signal.
+  if (url.hostname === 'cdnjs.cloudflare.com' && url.pathname.startsWith('/ajax/libs/qrcode-generator/1.4.4/')) {
     e.respondWith((async () => {
       const c = await caches.open(LIBS);
       const hit = await c.match(req.url, { ignoreVary: true });
