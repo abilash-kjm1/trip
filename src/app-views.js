@@ -692,7 +692,6 @@ function groupExpenses(main, gid){
       // A per-person line for everyone actually in it - what each one owes,
       // with whoever paid picked out from the rest - so nobody has to open
       // the expense just to see who was involved and for how much.
-      const payerIn = between.indexOf(e.payer)>-1;
       const personRow=(name, isPayer, share)=>{
         const m=memberOf(name,gid);
         return '<span class="prow'+(isPayer?" paid":"")+'">'+
@@ -700,8 +699,11 @@ function groupExpenses(main, gid){
           '<span class="nm">'+esc(name===ME?"you":name)+(isPayer?' <span class="ptag">paid</span>':'')+'</span>'+
           '<span class="sh">'+money(isPayer?amt:share)+'</span></span>';
       };
-      const plist = (payerIn ? between : [e.payer].concat(between))
-        .map(name=> personRow(name, name===e.payer, sh[name]||0)).join("");
+      // Only whoever the expense is actually split between goes in this list -
+      // a payer who covered it entirely for other people, and isn't part of
+      // the split themselves, is already named in the line above and doesn't
+      // get a row of their own down here.
+      const plist = between.map(name=> personRow(name, name===e.payer, sh[name]||0)).join("");
       const r=el("button","ex2row"); r.type="button";
       r.innerHTML=
         '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
