@@ -361,7 +361,15 @@ function viewGroup(main){
               "What each person paid against their share.");
   groupBalances(main, gid);
   sectionHead(main, "swap_horiz", "Who owes whom",
-              "The fewest payments that settle everyone.");
+              simplifyOn(gid) ? "Squashed down to as few payments as possible."
+                              : "Exactly what you owe the people you actually split with.");
+  if(simplifyOn(gid) && pairSettlements(gid).length){
+    const h=el("button","btn s howbtn");
+    h.type="button";
+    h.innerHTML='<span class="ms" aria-hidden="true">help</span>Why does it say I owe them?';
+    h.addEventListener("click", ()=>sheetSimplifyDiagram(gid));
+    main.appendChild(h);
+  }
   sectionWhoOwes(main, gid);
   sectionPayments(main, gid);
 }
@@ -761,7 +769,7 @@ function groupBalances(main, gid){
 }
 
 function sectionWhoOwes(main, gid){
-  const st=settlements(gid);
+  const st=transferPlan(gid);
   if(!st.length){
     main.appendChild(el("div","empty",
       '<span class="ms" aria-hidden="true">check_circle</span>'+

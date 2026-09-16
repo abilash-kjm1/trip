@@ -83,7 +83,7 @@ function vzLedger(){
   const edges=[];
   joinedHere().forEach(g=>{
     if(!loaded(g.id)) return;
-    settlements(g.id).forEach(s=>{
+    transferPlan(g.id).forEach(s=>{
       const a=touch(g.id, s.from), b=touch(g.id, s.to);
       if(a.key===b.key) return;
       a.net-=s.amt; b.net+=s.amt;

@@ -1780,6 +1780,7 @@ function sheetGroupMenu(){
       ["Settle up","Record a cash or transfer payment","payments", function(){ sheetSettle(); }],
       ["Rename group","","edit", sheetGroupRename],
       ["Side", SIDES[curOf(gid)].name+(curOf(gid)==="INR" ? " · ₹ rupees, UPI" : " · $ dollars, Interac"), "flag", sheetGroupCurrency],
+      ["Simplify debts", simplifyOn(gid) ? "On · fewest payments" : "Off · every direct debt shown", "call_split", sheetSimplifyToggle],
       ["Invite people","Share the link or code","person_add", sheetShare],
       ["Print / save as PDF","A full statement of this group","print", doPrint],
       ["Leave group","Your name and balances stay in it for everyone else.","logout", function(){
@@ -1847,6 +1848,75 @@ function sheetGroupCurrency(){
       });
       $("curList").appendChild(r);
     });
+  });
+}
+/* Fewest payments (the default) nets the whole group down to a minimum
+   number of transfers, which can route your payment to someone you never
+   actually split anything with - confusing when nobody can see why. Turning
+   it off shows every pair's own direct debt instead: more payments, but each
+   one traces back to money that actually passed between those two people. */
+function sheetSimplifyToggle(){
+  const gid=CURRENT, on=simplifyOn(gid);
+  const set=(val)=>{
+    updStrict("trips/"+gid+"/meta", {simplify:val}).then(()=>{
+      if(DATA[gid] && DATA[gid].meta) DATA[gid].meta.simplify=val;
+      closeSheet(); toast(val ? "Simplifying to the fewest payments" : "Showing every direct debt");
+      render();
+    }, e=> toast(writeError(e)));
+  };
+  openSheet("Simplify debts", (b)=>{
+    b.innerHTML='<p class="lead">How "Who owes whom" works out payments in '+esc(groupName(gid))+'.</p>'+
+      '<div class="card cur-list" id="simpList"></div>';
+    const opts=[
+      {v:true,  t:"On · fewer payments", d:"Combines everyone's debts so the group clears up with as few payments as possible. Quicker to settle, but you might end up paying someone you never actually split anything with — tap “How this was worked out” to see why."},
+      {v:false, t:"Off · pay who you actually owe", d:"Shows exactly what you owe each person, only for things you two actually split together. Easier to follow, even if it takes a few more payments to clear everyone."}
+    ];
+    opts.forEach(o=>{
+      const r=el("button","row cur-row"+(o.v===on?" on":"")); r.type="button";
+      r.setAttribute("aria-pressed", o.v===on?"true":"false");
+      r.innerHTML='<span class="cat"><span class="ms" aria-hidden="true">'+(o.v?"call_split":"link")+'</span></span>'+
+        '<span class="body"><span class="t1">'+esc(o.t)+'</span><span class="t2">'+esc(o.d)+'</span></span>'+
+        '<span class="right">'+(o.v===on ? '<span class="ms" aria-hidden="true" style="color:var(--good)">check_circle</span>' : '')+'</span>';
+      r.addEventListener("click", ()=>{ if(o.v===on){ closeSheet(); return; } set(o.v); });
+      $("simpList").appendChild(r);
+    });
+  });
+}
+/* The visual the user actually asked for: show the raw, pair-by-pair debts
+   as they really are, then the optimized plan they collapse into, so anyone
+   can see why the plan asks them to pay a specific person a specific amount
+   even when it isn't who they personally split something with. */
+function sheetSimplifyDiagram(gid){
+  const raw=pairSettlements(gid), plan=settlements(gid);
+  const arrowRow=(t)=>{
+    const fm=memberOf(t.from,gid), tm=memberOf(t.to,gid);
+    const r=el("div","owe-row");
+    r.innerHTML=
+      '<span class="owe-pair">'+avatarHTML("sm", t.from, fm&&fm.color, fm&&fm.photo)+
+        '<span class="ms" aria-hidden="true">arrow_forward</span>'+
+        avatarHTML("sm", t.to, tm&&tm.color, tm&&tm.photo)+'</span>'+
+      '<span class="owe-b"><span class="owe-t"><b>'+esc(t.from)+'</b> to <b>'+esc(t.to)+'</b></span></span>'+
+      '<span class="owe-r"><span class="owe-amt zero">'+money(t.amt, curOf(gid))+'</span></span>';
+    return r;
+  };
+  openSheet("How this was worked out", (b)=>{
+    b.innerHTML=
+      '<p class="lead">This is why the plan asks for the payments it does — even ones between people who never split anything together.</p>'+
+      '<div class="sect" style="margin-top:0"><h2><span class="ms" aria-hidden="true">people</span>Step 1 · What everyone really owes</h2></div>'+
+      '<p class="fine" style="margin:-8px var(--s4) 10px">Based only on what each pair actually split together.</p>'+
+      '<div class="card owelist" id="simpRaw"></div>'+
+      '<div class="simp-combine"><span class="ms" aria-hidden="true">south</span>gets squashed down into</div>'+
+      '<div class="sect"><h2><span class="ms" aria-hidden="true">swap_horiz</span>Step 2 · The payments you’ll actually see</h2></div>'+
+      '<div class="card owelist" id="simpPlan"></div>'+
+      '<p class="fine" id="simpNote"></p>';
+    const rawHost=$("simpRaw"), planHost=$("simpPlan");
+    if(!raw.length) rawHost.innerHTML='<div class="mom"><span class="b"><span class="m">Nobody owes anybody anything here.</span></span></div>';
+    else raw.forEach(t=> rawHost.appendChild(arrowRow(t)) );
+    if(!plan.length) planHost.innerHTML='<div class="mom"><span class="b"><span class="m">All square.</span></span></div>';
+    else plan.forEach(t=> planHost.appendChild(arrowRow(t)) );
+    $("simpNote").textContent = raw.length && plan.length
+      ? raw.length+" real "+(raw.length===1?"debt":"debts")+" got squashed into just "+plan.length+" "+(plan.length===1?"payment":"payments")+". Everyone ends up with exactly what they owed or were owed — the app just found a shorter way to get there, even if it means paying someone new."
+      : "";
   });
 }
 function sheetGroupRename(){

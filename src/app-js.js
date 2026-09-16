@@ -728,11 +728,38 @@ function pairNet(gid, a, b){
   });
   return Math.round(net*100)/100;
 }
+// Whether this group nets everyone down to the fewest transfers (default,
+// unchanged behaviour) or keeps every pair's own direct debt untouched.
+// Off by default only where a group has explicitly turned it off.
+function simplifyOn(gid){
+  const m=DATA[gid] && DATA[gid].meta;
+  return !(m && m.simplify===false);
+}
+// The "who pays whom" list with simplification switched off: every pair of
+// people who owe each other something directly, exactly as pairNet() sees
+// it - no netting across the group, so a transfer always traces back to
+// money that actually passed between those two people.
+function pairSettlements(gid){
+  const ppl=names(gid), out=[];
+  for(let i=0;i<ppl.length;i++){
+    for(let j=i+1;j<ppl.length;j++){
+      const a=ppl[i], b=ppl[j], net=pairNet(gid, a, b); // net>0: a owes b
+      if(net>0.004) out.push({from:a, to:b, amt:net});
+      else if(net<-0.004) out.push({from:b, to:a, amt:-net});
+    }
+  }
+  return out;
+}
+// The list every screen should actually show: the optimized plan, or the
+// group's own direct debts, depending on the group's "simplify debts" setting.
+function transferPlan(gid){
+  return simplifyOn(gid) ? settlements(gid) : pairSettlements(gid);
+}
 
 // What to put in the amount box for a given pair, and why.
 function suggestSettle(gid, from, to){
   if(from===to) return {amt:0, why:"Pick two different people."};
-  const plan=settlements(gid).find(t=>t.from===from && t.to===to);
+  const plan=transferPlan(gid).find(t=>t.from===from && t.to===to);
   if(plan) return {amt:Math.round(plan.amt*100)/100,
                    why:"This clears "+(from===ME?"you":from)+" in the settle-up plan."};
   const net=pairNet(gid, from, to);

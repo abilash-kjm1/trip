@@ -3,7 +3,7 @@ function doPrint(){
   const gid=CURRENT; if(!gid) return;
   const old=document.getElementById("printArea"); if(old) old.remove();
   const area=el("div"); area.id="printArea";
-  const b=balances(gid), st=settlements(gid), ppl=everyoneIn(gid);
+  const b=balances(gid), st=transferPlan(gid), ppl=everyoneIn(gid);
   const total=totalOf(gid);
 
   let h='<h1>'+esc(groupName(gid))+'</h1>'+

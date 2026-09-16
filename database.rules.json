@@ -55,6 +55,9 @@
           ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || root.child('trips').child($gid).child('uids').child(auth.uid).exists() || !data.child('name').exists())",
           "currency": {
             ".validate": "newData.isString() && newData.val().matches(/^(CAD|INR)$/)"
+          },
+          "simplify": {
+            ".validate": "newData.isBoolean()"
           }
         },
         "people": {

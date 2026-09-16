@@ -11,7 +11,7 @@ function toDoNext(){
   joinedHere().forEach(g=>{
     const me = meIn(g.id);
     if(!me) return;
-    settlements(g.id).forEach(t=>{
+    transferPlan(g.id).forEach(t=>{
       if(t.from===me)    out.push({dir:"pay", who:t.to,   amt:t.amt, gid:g.id});
       else if(t.to===me) out.push({dir:"get", who:t.from, amt:t.amt, gid:g.id});
     });
@@ -52,7 +52,7 @@ function friendsAcross(){
       const sh = sharesOf(e);
       Object.keys(sh).forEach(n=>{ if(n!==me && by[n]) by[n].bills++; });
     });
-    settlements(g.id).forEach(t=>{
+    transferPlan(g.id).forEach(t=>{
       if(t.from===me && by[t.to])      curAdd(by[t.to].net, g.id, -t.amt);
       else if(t.to===me && by[t.from]) curAdd(by[t.from].net, g.id, t.amt);
     });
@@ -636,7 +636,7 @@ function sheetFriend(name){
       const me=meIn(g.id);
       if(!me || everyoneIn(g.id).indexOf(name)<0) return;
       let net=0;
-      settlements(g.id).forEach(t=>{
+      transferPlan(g.id).forEach(t=>{
         if(t.from===me && t.to===name) net-=t.amt;
         else if(t.to===me && t.from===name) net+=t.amt;
       });
