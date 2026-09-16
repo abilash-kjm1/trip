@@ -744,15 +744,10 @@ function groupExpenses(main, gid){
     if(foot.children.length) host.appendChild(foot);
   }
 }
-function fmtAdded(ts){
-  if(!ts) return "";
-  const d=new Date(ts); if(isNaN(d.getTime())) return "";
-  const o={weekday:"short", day:"numeric", month:"short"};
-  if(d.getFullYear()!==new Date().getFullYear()) o.year="numeric";
-  const date=d.toLocaleDateString(undefined,o).replace(/,/g,"");
-  const time=d.toLocaleTimeString(undefined,{hour:"2-digit", minute:"2-digit"});
-  return date+" · "+time;
-}
+// "Sep 5 · 3:45 PM" - the year only when it isn't this one, and never a
+// leading zero on the hour ("3:45 PM", not "03:45 PM"). A weekday alongside
+// the date and time was one thing too many to read at a glance.
+function fmtAdded(ts){ return fmtWhen(ts); }
 
 function groupBalances(main, gid){
   const b=balances(gid), all=everyoneIn(gid);

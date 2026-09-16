@@ -329,7 +329,9 @@ function fmtDate(ts){
 function fmtWhen(ts){
   if(!ts) return "";
   const d=new Date(ts); if(isNaN(d)) return "";
-  return fmtDate(ts)+" · "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+  // "numeric" (not "2-digit") drops the clumsy leading zero - "3:45 PM", not
+  // "03:45 PM".
+  return fmtDate(ts)+" · "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
 }
 function dayKey(ts){ const d=new Date(ts||0);
   return isNaN(d) ? "" : d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); }
