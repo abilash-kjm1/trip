@@ -1,5 +1,5 @@
 /* Settle - offline service worker */
-const VERSION = 'settle-20260916004310';
+const VERSION = 'settle-20260916005103';
 const SHELL   = `${VERSION}-shell`;
 const FONTS   = `${VERSION}-fonts`;
 // The Firebase code: versioned files that never change, so they are kept

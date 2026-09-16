@@ -701,11 +701,21 @@ function groupExpenses(main, gid){
       const equal = !e.mode || e.mode==="equal";
       const cap = mine>0.004 && n>1 ? "your share "+money(mine)
                 : (equal && n>1) ? money(amt/n)+" each" : "";
+      // A tiny stack of the actual faces who share this, in the same colours
+      // as everywhere else in the app - so who's in it is something you
+      // recognise at a glance, not just something you can read.
+      const FACE_CAP=4;
+      const faces = between.slice(0,FACE_CAP).map(p=>{
+        const m=memberOf(p,gid);
+        return avatarHTML("xs", p, m&&m.color, m&&m.photo);
+      }).join("");
+      const moreN = between.length>FACE_CAP ? between.length-FACE_CAP : 0;
       const r=el("button","ex2row"); r.type="button";
       r.innerHTML=
         '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
-          '<span class="ex-m">'+esc(who)+' paid &middot; '+esc(split)+(day ? ' &middot; '+esc(day) : '')+'</span></span>'+
+          '<span class="ex-m"><span class="ex-faces">'+faces+(moreN?'<span class="ex-more">+'+moreN+'</span>':'')+'</span>'+
+          '<span class="ex-txt">'+esc(who)+' paid &middot; '+esc(split)+(day ? ' &middot; '+esc(day) : '')+'</span></span></span>'+
         '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
           (cap ? '<span class="ex-cap">'+cap+'</span>' : '')+'</span>';
       r.addEventListener("click", ()=>sheetExpense(e));
