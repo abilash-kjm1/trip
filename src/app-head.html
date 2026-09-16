@@ -2240,7 +2240,7 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
 .fcount b{ color:var(--ink); font-weight:700; }
 .fcount button{ color:var(--apricot-dk); font-size:13.5px; }
 .exlist{ padding:4px 0; overflow:hidden; }
-.ex2row{ position:relative; display:flex; align-items:center; gap:12px; width:100%; padding:12px var(--s4);
+.ex2row{ position:relative; display:flex; align-items:flex-start; gap:12px; width:100%; padding:12px var(--s4);
   border:0; background:transparent; font:inherit; color:inherit; text-align:left; cursor:pointer;
   -webkit-tap-highlight-color:transparent; transition:background .15s; }
 .ex2row + .ex2row::before{ content:""; position:absolute; top:0; left:68px; right:var(--s4); height:1px;
@@ -2254,19 +2254,21 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
 .ex-b{ flex:1; min-width:0; display:flex; flex-direction:column; }
 .ex-t{ font-size:15px; font-weight:600; letter-spacing:-.01em; color:var(--ink);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ex-m{ margin-top:3px; display:flex; align-items:flex-start; gap:6px; min-width:0; }
-.ex-faces{ flex:0 0 auto; display:flex; align-items:center; margin-top:1px; }
-.ex-faces .av{ margin-left:-6px; }
-.ex-faces .av:first-child{ margin-left:0; }
-.ex-more{ flex:0 0 auto; width:17px; height:17px; margin-left:-6px; border-radius:50%; box-sizing:border-box;
-  border:1.5px solid var(--surface); background:var(--fill-2); color:var(--ink-3);
-  display:flex; align-items:center; justify-content:center; font-size:7px; font-weight:700; }
-/* Truncating this with an ellipsis was exactly the complaint - a longer
-   list of names just vanished off the edge of a narrow phone screen. It
-   wraps onto a second line instead, so every name stays readable; the row
-   simply grows a little taller when there's a lot to say. */
-.ex-txt{ flex:1; min-width:0; font-size:12.5px; line-height:1.35; color:var(--ink-3);
-  white-space:normal; overflow-wrap:anywhere; }
+.ex-txt{ margin-top:2px; font-size:12.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* A per-person receipt under the title: everyone actually in it, on their
+   own line, with what they owe - and whoever paid picked out from the rest,
+   so who covered it is something you see, not something you infer. */
+.ex-plist{ margin-top:7px; display:flex; flex-direction:column; gap:1px; }
+.prow{ display:flex; align-items:center; gap:8px; padding:4px 8px; border-radius:8px; font-size:12.5px; }
+.prow .av{ width:18px; height:18px; }
+.prow .nm{ flex:1; min-width:0; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.prow .sh{ flex:0 0 auto; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.prow.paid{ background:var(--apricot-lt); }
+.prow.paid .nm{ color:var(--apricot-dk); font-weight:700; }
+.prow.paid .sh{ color:var(--apricot-dk); font-weight:700; }
+.ptag{ display:inline-block; margin-left:3px; padding:1px 6px; border-radius:100px; background:var(--apricot-dk);
+  color:var(--surface); font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.02em;
+  vertical-align:1px; }
 .ex-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; }
 .ex-amt{ font-size:15.5px; font-weight:700; letter-spacing:-.01em; color:var(--ink); font-variant-numeric:tabular-nums; }
 .ex-cap{ margin-top:2px; font-size:11.5px; color:var(--ink-3); white-space:nowrap; font-variant-numeric:tabular-nums; }

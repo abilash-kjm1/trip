@@ -675,7 +675,7 @@ function groupExpenses(main, gid){
         '<p>Try a different search, or clear the filters.</p>'));
       return;
     }
-    const headcount=ppl.length, CAP=6;
+    const CAP=6;
     const showAll = FULLVIEW || EXP_ALL[gid] || filtering;
     const shown = showAll ? list : list.slice(0, CAP);
     const card=el("div","card exlist");
@@ -683,39 +683,31 @@ function groupExpenses(main, gid){
       const between=(e.between&&e.between.length)?e.between:[e.payer];
       const n=between.length, c=catOf(e.cat), amt=Number(e.amount)||0;
       const who = e.payer===ME ? "You" : e.payer;
-      // Naming who else it was split with (instead of just a count) is what
-      // makes "who owes what" traceable at a glance - the payer is already
-      // named by "who paid", so they're left off this list to avoid saying
-      // the same name twice. Whether the payer owes a share themselves
-      // changes the wording on purpose: "split with" means they're in it
-      // too; "for" means they covered it entirely on someone else's behalf,
-      // like Abi paying a bill that's only Kavya and Ravi's to begin with.
-      const payerIn = between.indexOf(e.payer)>-1;
-      const others = payerIn ? between.filter(p=>p!==e.payer) : between;
-      const names = others.map(p=> p===ME ? "you" : p);
-      const split = n===1 ? "for "+(between[0]===ME ? "you" : between[0])
-                  : (headcount>1 && n===headcount) ? "everyone"
-                  : (payerIn ? "split with " : "for ")+joinNames(names);
       const day = e.at ? new Date(e.at).toLocaleDateString(undefined,{day:"numeric", month:"short"}) : "";
-      const mine = ME ? (sharesOf(e)[ME]||0) : 0;
+      const sh = sharesOf(e);
+      const mine = ME ? (sh[ME]||0) : 0;
       const equal = !e.mode || e.mode==="equal";
       const cap = mine>0.004 && n>1 ? "your share "+money(mine)
                 : (equal && n>1) ? money(amt/n)+" each" : "";
-      // A tiny stack of the actual faces who share this, in the same colours
-      // as everywhere else in the app - so who's in it is something you
-      // recognise at a glance, not just something you can read.
-      const FACE_CAP=4;
-      const faces = between.slice(0,FACE_CAP).map(p=>{
-        const m=memberOf(p,gid);
-        return avatarHTML("xs", p, m&&m.color, m&&m.photo);
-      }).join("");
-      const moreN = between.length>FACE_CAP ? between.length-FACE_CAP : 0;
+      // A per-person line for everyone actually in it - what each one owes,
+      // with whoever paid picked out from the rest - so nobody has to open
+      // the expense just to see who was involved and for how much.
+      const payerIn = between.indexOf(e.payer)>-1;
+      const personRow=(name, isPayer, share)=>{
+        const m=memberOf(name,gid);
+        return '<span class="prow'+(isPayer?" paid":"")+'">'+
+          avatarHTML("xs", name, m&&m.color, m&&m.photo)+
+          '<span class="nm">'+esc(name===ME?"you":name)+(isPayer?' <span class="ptag">paid</span>':'')+'</span>'+
+          '<span class="sh">'+money(isPayer?amt:share)+'</span></span>';
+      };
+      const plist = (payerIn ? between : [e.payer].concat(between))
+        .map(name=> personRow(name, name===e.payer, sh[name]||0)).join("");
       const r=el("button","ex2row"); r.type="button";
       r.innerHTML=
         '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
-          '<span class="ex-m"><span class="ex-faces">'+faces+(moreN?'<span class="ex-more">+'+moreN+'</span>':'')+'</span>'+
-          '<span class="ex-txt">'+esc(who)+' paid &middot; '+esc(split)+(day ? ' &middot; '+esc(day) : '')+'</span></span></span>'+
+          '<span class="ex-txt">'+esc(who)+' paid'+(day ? ' &middot; '+esc(day) : '')+'</span>'+
+          '<span class="ex-plist">'+plist+'</span></span>'+
         '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
           (cap ? '<span class="ex-cap">'+cap+'</span>' : '')+'</span>';
       r.addEventListener("click", ()=>sheetExpense(e));
