@@ -2254,14 +2254,19 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
 .ex-b{ flex:1; min-width:0; display:flex; flex-direction:column; }
 .ex-t{ font-size:15px; font-weight:600; letter-spacing:-.01em; color:var(--ink);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ex-m{ margin-top:3px; display:flex; align-items:center; gap:6px; min-width:0; }
-.ex-faces{ flex:0 0 auto; display:flex; align-items:center; }
+.ex-m{ margin-top:3px; display:flex; align-items:flex-start; gap:6px; min-width:0; }
+.ex-faces{ flex:0 0 auto; display:flex; align-items:center; margin-top:1px; }
 .ex-faces .av{ margin-left:-6px; }
 .ex-faces .av:first-child{ margin-left:0; }
 .ex-more{ flex:0 0 auto; width:17px; height:17px; margin-left:-6px; border-radius:50%; box-sizing:border-box;
   border:1.5px solid var(--surface); background:var(--fill-2); color:var(--ink-3);
   display:flex; align-items:center; justify-content:center; font-size:7px; font-weight:700; }
-.ex-txt{ flex:1; min-width:0; font-size:12.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* Truncating this with an ellipsis was exactly the complaint - a longer
+   list of names just vanished off the edge of a narrow phone screen. It
+   wraps onto a second line instead, so every name stays readable; the row
+   simply grows a little taller when there's a lot to say. */
+.ex-txt{ flex:1; min-width:0; font-size:12.5px; line-height:1.35; color:var(--ink-3);
+  white-space:normal; overflow-wrap:anywhere; }
 .ex-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; }
 .ex-amt{ font-size:15.5px; font-weight:700; letter-spacing:-.01em; color:var(--ink); font-variant-numeric:tabular-nums; }
 .ex-cap{ margin-top:2px; font-size:11.5px; color:var(--ink-3); white-space:nowrap; font-variant-numeric:tabular-nums; }
@@ -10527,7 +10532,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260916005846";
+const APP_BUILD = "20260916010337";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
