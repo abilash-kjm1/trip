@@ -82,7 +82,7 @@ function sheetClaim(gid){
         r.innerHTML='<span class="av" style="background:'+m.color+'">'+esc(initials(m.name))+'</span>'+
           '<span class="body"><span class="t1">'+esc(m.name)+
             (hit?' <span class="tag on">probably you</span>':'')+'</span>'+
-          '<span class="t2">'+esc(paidShareLine(m.name,gid))+'</span></span>'+
+          '<span class="t2">'+paidShareLine(m.name,gid)+'</span></span>'+
           '<span class="right"><span class="ms" aria-hidden="true" style="color:var(--tint)">how_to_reg</span></span>';
         r.addEventListener("click", ()=>claim(gid, m.k, m.name));
         card.appendChild(r);
