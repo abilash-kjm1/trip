@@ -716,7 +716,7 @@ function groupExpenses(main, gid){
       r.innerHTML=
         '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
-          '<span class="ex-txt">'+esc(who)+' paid'+(gifted?' for them':'')+
+          '<span class="ex-txt">'+(gifted?esc(who)+' covered it':esc(who)+' paid')+
           (day ? ' &middot; '+esc(day) : '')+'</span>'+
           '<span class="ex-plist">'+plist+'</span></span>'+
         '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+

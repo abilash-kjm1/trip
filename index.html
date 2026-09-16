@@ -2270,12 +2270,11 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
   color:var(--surface); font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.02em;
   vertical-align:1px; }
 /* Paid entirely for other people, with no share of it themselves - its own
-   colour (the green used everywhere else for money moving toward somebody).
-   A pill badge sitting mid-sentence read as clutter once the line also
-   carried a date and time, so it's plain text now, colored the same green
-   as the icon rather than boxed off from it. */
+   colour (the green used everywhere else for money moving toward somebody),
+   kept as light a touch as every other meta line: same weight as the rest,
+   just tinted, so it reads as a quiet accent rather than a shout. */
 .ex2row.gifted .ex-ic{ background:var(--green-lt); color:var(--green-dk); }
-.ex2row.gifted .ex-txt{ color:var(--green-dk); font-weight:600; }
+.ex2row.gifted .ex-txt{ color:var(--green-dk); }
 .ex-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; }
 .ex-amt{ font-size:15.5px; font-weight:700; letter-spacing:-.01em; color:var(--ink); font-variant-numeric:tabular-nums; }
 .ex-cap{ margin-top:2px; font-size:11.5px; color:var(--ink-3); white-space:nowrap; font-variant-numeric:tabular-nums; }
@@ -5080,7 +5079,7 @@ function groupExpenses(main, gid){
       r.innerHTML=
         '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
-          '<span class="ex-txt">'+esc(who)+' paid'+(gifted?' for them':'')+
+          '<span class="ex-txt">'+(gifted?esc(who)+' covered it':esc(who)+' paid')+
           (day ? ' &middot; '+esc(day) : '')+'</span>'+
           '<span class="ex-plist">'+plist+'</span></span>'+
         '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
@@ -10541,7 +10540,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260916015928";
+const APP_BUILD = "20260916020514";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
