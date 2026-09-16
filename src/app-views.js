@@ -689,15 +689,15 @@ function groupExpenses(main, gid){
       const equal = !e.mode || e.mode==="equal";
       const cap = mine>0.004 && n>1 ? "your share "+money(mine)
                 : (equal && n>1) ? money(amt/n)+" each" : "";
-      // A per-person line for everyone actually in it - just their name and
-      // what they owe, plain as a receipt - with whoever paid picked out by
-      // a highlighted row, so nobody has to open the expense just to see who
-      // was involved and for how much.
+      // A per-person line for everyone actually in it - what each one owes,
+      // with whoever paid picked out from the rest - so nobody has to open
+      // the expense just to see who was involved and for how much.
       const personRow=(name, isPayer, share)=>{
         const m=memberOf(name,gid);
         return '<span class="prow'+(isPayer?" paid":"")+'">'+
           avatarHTML("xs", name, m&&m.color, m&&m.photo)+
-          '<span class="nm">'+esc(name===ME?"you":name)+' = '+money(share)+'</span></span>';
+          '<span class="nm">'+esc(name===ME?"you":name)+(isPayer?' <span class="ptag">paid</span>':'')+'</span>'+
+          '<span class="sh">'+money(isPayer?amt:share)+'</span></span>';
       };
       // Only whoever the expense is actually split between goes in this list -
       // a payer who covered it entirely for other people, and isn't part of
@@ -708,7 +708,7 @@ function groupExpenses(main, gid){
       r.innerHTML=
         '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
-          '<span class="ex-txt">'+esc(who)+' paid = '+money(amt)+(day ? ' &middot; '+esc(day) : '')+'</span>'+
+          '<span class="ex-txt">'+esc(who)+' paid'+(day ? ' &middot; '+esc(day) : '')+'</span>'+
           '<span class="ex-plist">'+plist+'</span></span>'+
         '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
           (cap ? '<span class="ex-cap">'+cap+'</span>' : '')+'</span>';
