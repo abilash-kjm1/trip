@@ -683,7 +683,7 @@ function groupExpenses(main, gid){
       const between=(e.between&&e.between.length)?e.between:[e.payer];
       const n=between.length, c=catOf(e.cat), amt=Number(e.amount)||0;
       const who = e.payer===ME ? "You" : e.payer;
-      const day = e.at ? fmtWhen(e.at) : "";
+      const day = e.at ? new Date(e.at).toLocaleDateString(undefined,{day:"numeric", month:"short"}) : "";
       const sh = sharesOf(e);
       const mine = ME ? (sh[ME]||0) : 0;
       const equal = !e.mode || e.mode==="equal";
