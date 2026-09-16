@@ -707,7 +707,12 @@ function groupExpenses(main, gid){
       // the split themselves, is already named in the line above and doesn't
       // get a row of their own down here.
       const plist = between.map(name=> personRow(name, name===e.payer, sh[name]||0)).join("");
-      const r=el("button","ex2row"); r.type="button";
+      // Paid for other people entirely, with no share of it themselves - a
+      // different kind of line from an ordinary split, so it gets its own
+      // colour (the same green used for money coming back to somebody)
+      // instead of blending into every other row.
+      const gifted = between.indexOf(e.payer)<0;
+      const r=el("button","ex2row"+(gifted?" gifted":"")); r.type="button";
       r.innerHTML=
         '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+

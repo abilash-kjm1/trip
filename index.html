@@ -2269,6 +2269,16 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
 .ptag{ display:inline-block; margin-left:3px; padding:1px 6px; border-radius:100px; background:var(--apricot-dk);
   color:var(--surface); font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.02em;
   vertical-align:1px; }
+/* Paid entirely for other people, with no share of it themselves - its own
+   colour (the green used everywhere else for money moving toward somebody)
+   so this kind of line stands apart from an ordinary split at a glance. */
+.ex2row.gifted{ background:var(--green-lt); }
+.ex2row.gifted::before{ background:transparent; }
+.ex2row.gifted::after{ content:""; position:absolute; left:0; top:8px; bottom:8px; width:3px;
+  border-radius:0 3px 3px 0; background:var(--green-dk); }
+@media (hover:hover){ .ex2row.gifted:hover{ background:color-mix(in srgb, var(--green-lt) 70%, var(--fill-1)); } }
+.ex2row.gifted:active{ background:color-mix(in srgb, var(--green-lt) 70%, var(--fill-1)); }
+.ex2row.gifted .ex-txt{ color:var(--green-dk); font-weight:600; }
 .ex-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; }
 .ex-amt{ font-size:15.5px; font-weight:700; letter-spacing:-.01em; color:var(--ink); font-variant-numeric:tabular-nums; }
 .ex-cap{ margin-top:2px; font-size:11.5px; color:var(--ink-3); white-space:nowrap; font-variant-numeric:tabular-nums; }
@@ -5062,7 +5072,12 @@ function groupExpenses(main, gid){
       // the split themselves, is already named in the line above and doesn't
       // get a row of their own down here.
       const plist = between.map(name=> personRow(name, name===e.payer, sh[name]||0)).join("");
-      const r=el("button","ex2row"); r.type="button";
+      // Paid for other people entirely, with no share of it themselves - a
+      // different kind of line from an ordinary split, so it gets its own
+      // colour (the same green used for money coming back to somebody)
+      // instead of blending into every other row.
+      const gifted = between.indexOf(e.payer)<0;
+      const r=el("button","ex2row"+(gifted?" gifted":"")); r.type="button";
       r.innerHTML=
         '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
         '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
@@ -10531,7 +10546,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260916012816";
+const APP_BUILD = "20260916013259";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
