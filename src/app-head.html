@@ -2270,15 +2270,18 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
 .prow .av{ width:18px; height:18px; }
 .prow .nm{ flex:1; min-width:0; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .prow .sh{ flex:0 0 auto; color:var(--ink-3); font-variant-numeric:tabular-nums; }
-/* A lighter wash than a solid tint: enough to pick the payer out of a quiet
-   list without dropping a heavy block into the middle of it. */
-.prow.paid{ background:color-mix(in srgb, var(--apricot-lt) 60%, transparent); }
+.prow.paid{ background:var(--apricot-lt); }
 .prow.paid .nm{ color:var(--apricot-dk); font-weight:600; }
 .prow.paid .sh{ color:var(--apricot-dk); font-weight:700; }
-.ptag{ display:inline-block; margin-left:4px; padding:1px 5px; border-radius:100px;
-  background:color-mix(in srgb, var(--apricot-dk) 14%, transparent);
-  color:var(--apricot-dk); font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+.ptag{ display:inline-block; margin-left:5px; padding:1.5px 7px; border-radius:100px;
+  background:var(--apricot-dk); color:var(--surface);
+  font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
   vertical-align:1px; }
+/* "Paid by Kalai" - the app's own phrasing for this everywhere else, rather
+   than a dangling "Kalai paid" - with the name carrying the weight and the
+   label staying quiet behind it. */
+.ex-txt b{ color:var(--ink-2); font-weight:600; }
+.ex2row.gifted .ex-txt b{ color:var(--green-dk); }
 /* Paid entirely for other people, with no share of it themselves - its own
    colour (the green used everywhere else for money moving toward somebody),
    kept as light a touch as every other meta line: same weight as the rest,

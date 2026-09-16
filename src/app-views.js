@@ -682,7 +682,7 @@ function groupExpenses(main, gid){
     shown.forEach(e=>{
       const between=(e.between&&e.between.length)?e.between:[e.payer];
       const n=between.length, c=catOf(e.cat), amt=Number(e.amount)||0;
-      const who = e.payer===ME ? "You" : e.payer;
+      const who = e.payer===ME ? "you" : e.payer;
       const sh = sharesOf(e);
       const mine = ME ? (sh[ME]||0) : 0;
       const equal = !e.mode || e.mode==="equal";
@@ -725,7 +725,7 @@ function groupExpenses(main, gid){
         '<span class="ex-head">'+
           '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
           '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
-            '<span class="ex-txt">'+esc(who)+' paid'+(gifted?' for them':'')+'</span></span>'+
+            '<span class="ex-txt">Paid by <b>'+esc(who)+'</b>'+(gifted?' for the others':'')+'</span></span>'+
           '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
             (!plist && cap ? '<span class="ex-cap">'+cap+'</span>' : '')+'</span>'+
         '</span>'+
