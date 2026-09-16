@@ -686,11 +686,16 @@ function groupExpenses(main, gid){
       // Naming who else it was split with (instead of just a count) is what
       // makes "who owes what" traceable at a glance - the payer is already
       // named by "who paid", so they're left off this list to avoid saying
-      // the same name twice.
-      const others=between.filter(p=>p!==e.payer).map(p=> p===ME ? "you" : p);
+      // the same name twice. Whether the payer owes a share themselves
+      // changes the wording on purpose: "split with" means they're in it
+      // too; "for" means they covered it entirely on someone else's behalf,
+      // like Abi paying a bill that's only Kavya and Ravi's to begin with.
+      const payerIn = between.indexOf(e.payer)>-1;
+      const others = payerIn ? between.filter(p=>p!==e.payer) : between;
+      const names = others.map(p=> p===ME ? "you" : p);
       const split = n===1 ? "for "+(between[0]===ME ? "you" : between[0])
                   : (headcount>1 && n===headcount) ? "everyone"
-                  : "split with "+joinNames(others);
+                  : (payerIn ? "split with " : "for ")+joinNames(names);
       const day = e.at ? new Date(e.at).toLocaleDateString(undefined,{day:"numeric", month:"short"}) : "";
       const mine = ME ? (sharesOf(e)[ME]||0) : 0;
       const equal = !e.mode || e.mode==="equal";
