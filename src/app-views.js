@@ -706,21 +706,32 @@ function groupExpenses(main, gid){
       // a payer who covered it entirely for other people, and isn't part of
       // the split themselves, is already named in the line above and doesn't
       // get a row of their own down here.
-      const plist = between.map(name=> personRow(name, name===e.payer, sh[name]||0)).join("");
+      // Nothing to break down when the only person in it is whoever paid -
+      // a one-line "receipt" repeating the amount already on the right is
+      // noise, so that expense just keeps its header.
+      const soloSelf = between.length===1 && between[0]===e.payer;
+      const plist = soloSelf ? "" : between.map(name=> personRow(name, name===e.payer, sh[name]||0)).join("");
       // Paid for other people entirely, with no share of it themselves - a
       // different kind of line from an ordinary split, so it gets its own
       // colour (the same green used for money coming back to somebody)
       // instead of blending into every other row.
       const gifted = between.indexOf(e.payer)<0;
       const r=el("button","ex2row"+(gifted?" gifted":"")); r.type="button";
+      // Header and breakdown are stacked, not side by side, so every figure -
+      // the total and each person's share - lines up on one right edge
+      // instead of the breakdown stopping short of the total's column.
+      // "$12.00 each" is dropped whenever the breakdown is showing, since
+      // each line already says exactly that.
       r.innerHTML=
-        '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
-        '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
-          '<span class="ex-txt">'+(gifted?esc(who)+' covered it':esc(who)+' paid')+
-          (day ? ' &middot; '+esc(day) : '')+'</span>'+
-          '<span class="ex-plist">'+plist+'</span></span>'+
-        '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
-          (cap ? '<span class="ex-cap">'+cap+'</span>' : '')+'</span>';
+        '<span class="ex-head">'+
+          '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
+          '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
+            '<span class="ex-txt">'+(gifted?esc(who)+' covered it':esc(who)+' paid')+
+            (day ? ' &middot; '+esc(day) : '')+'</span></span>'+
+          '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
+            (!plist && cap ? '<span class="ex-cap">'+cap+'</span>' : '')+'</span>'+
+        '</span>'+
+        (plist ? '<span class="ex-plist">'+plist+'</span>' : '');
       r.addEventListener("click", ()=>sheetExpense(e));
       card.appendChild(r);
     });

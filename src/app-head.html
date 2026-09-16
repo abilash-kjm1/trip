@@ -2240,9 +2240,11 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
 .fcount b{ color:var(--ink); font-weight:700; }
 .fcount button{ color:var(--apricot-dk); font-size:13.5px; }
 .exlist{ padding:4px 0; overflow:hidden; }
-.ex2row{ position:relative; display:flex; align-items:flex-start; gap:12px; width:100%; padding:12px var(--s4);
+.ex2row{ position:relative; display:flex; flex-direction:column; align-items:stretch; width:100%;
+  padding:12px var(--s4);
   border:0; background:transparent; font:inherit; color:inherit; text-align:left; cursor:pointer;
   -webkit-tap-highlight-color:transparent; transition:background .15s; }
+.ex-head{ display:flex; align-items:center; gap:12px; }
 .ex2row + .ex2row::before{ content:""; position:absolute; top:0; left:68px; right:var(--s4); height:1px;
   background:var(--line-2); }
 .ex2row:active{ background:var(--fill-1); }
@@ -2258,16 +2260,24 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
 /* A per-person receipt under the title: everyone actually in it, on their
    own line, with what they owe - and whoever paid picked out from the rest,
    so who covered it is something you see, not something you infer. */
-.ex-plist{ margin-top:7px; display:flex; flex-direction:column; gap:1px; }
+/* Indented to sit under the title (44 + the row's own 8 = the 52px the icon
+   and its gap take up), and pulled 8px past the right edge so that each
+   share lands on exactly the same line as the total above it - one column
+   of figures down the card, the way a receipt reads, instead of the
+   breakdown stopping short of the total's column. */
+.ex-plist{ margin:9px -8px 0 0; padding-left:44px; display:flex; flex-direction:column; gap:1px; }
 .prow{ display:flex; align-items:center; gap:8px; padding:4px 8px; border-radius:8px; font-size:12.5px; }
 .prow .av{ width:18px; height:18px; }
 .prow .nm{ flex:1; min-width:0; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .prow .sh{ flex:0 0 auto; color:var(--ink-3); font-variant-numeric:tabular-nums; }
-.prow.paid{ background:var(--apricot-lt); }
-.prow.paid .nm{ color:var(--apricot-dk); font-weight:700; }
+/* A lighter wash than a solid tint: enough to pick the payer out of a quiet
+   list without dropping a heavy block into the middle of it. */
+.prow.paid{ background:color-mix(in srgb, var(--apricot-lt) 60%, transparent); }
+.prow.paid .nm{ color:var(--apricot-dk); font-weight:600; }
 .prow.paid .sh{ color:var(--apricot-dk); font-weight:700; }
-.ptag{ display:inline-block; margin-left:3px; padding:1px 6px; border-radius:100px; background:var(--apricot-dk);
-  color:var(--surface); font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.02em;
+.ptag{ display:inline-block; margin-left:4px; padding:1px 5px; border-radius:100px;
+  background:color-mix(in srgb, var(--apricot-dk) 14%, transparent);
+  color:var(--apricot-dk); font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
   vertical-align:1px; }
 /* Paid entirely for other people, with no share of it themselves - its own
    colour (the green used everywhere else for money moving toward somebody),

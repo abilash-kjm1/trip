@@ -2240,9 +2240,11 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
 .fcount b{ color:var(--ink); font-weight:700; }
 .fcount button{ color:var(--apricot-dk); font-size:13.5px; }
 .exlist{ padding:4px 0; overflow:hidden; }
-.ex2row{ position:relative; display:flex; align-items:flex-start; gap:12px; width:100%; padding:12px var(--s4);
+.ex2row{ position:relative; display:flex; flex-direction:column; align-items:stretch; width:100%;
+  padding:12px var(--s4);
   border:0; background:transparent; font:inherit; color:inherit; text-align:left; cursor:pointer;
   -webkit-tap-highlight-color:transparent; transition:background .15s; }
+.ex-head{ display:flex; align-items:center; gap:12px; }
 .ex2row + .ex2row::before{ content:""; position:absolute; top:0; left:68px; right:var(--s4); height:1px;
   background:var(--line-2); }
 .ex2row:active{ background:var(--fill-1); }
@@ -2258,16 +2260,24 @@ a.etx-open{ display:flex; align-items:center; justify-content:center; text-decor
 /* A per-person receipt under the title: everyone actually in it, on their
    own line, with what they owe - and whoever paid picked out from the rest,
    so who covered it is something you see, not something you infer. */
-.ex-plist{ margin-top:7px; display:flex; flex-direction:column; gap:1px; }
+/* Indented to sit under the title (44 + the row's own 8 = the 52px the icon
+   and its gap take up), and pulled 8px past the right edge so that each
+   share lands on exactly the same line as the total above it - one column
+   of figures down the card, the way a receipt reads, instead of the
+   breakdown stopping short of the total's column. */
+.ex-plist{ margin:9px -8px 0 0; padding-left:44px; display:flex; flex-direction:column; gap:1px; }
 .prow{ display:flex; align-items:center; gap:8px; padding:4px 8px; border-radius:8px; font-size:12.5px; }
 .prow .av{ width:18px; height:18px; }
 .prow .nm{ flex:1; min-width:0; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .prow .sh{ flex:0 0 auto; color:var(--ink-3); font-variant-numeric:tabular-nums; }
-.prow.paid{ background:var(--apricot-lt); }
-.prow.paid .nm{ color:var(--apricot-dk); font-weight:700; }
+/* A lighter wash than a solid tint: enough to pick the payer out of a quiet
+   list without dropping a heavy block into the middle of it. */
+.prow.paid{ background:color-mix(in srgb, var(--apricot-lt) 60%, transparent); }
+.prow.paid .nm{ color:var(--apricot-dk); font-weight:600; }
 .prow.paid .sh{ color:var(--apricot-dk); font-weight:700; }
-.ptag{ display:inline-block; margin-left:3px; padding:1px 6px; border-radius:100px; background:var(--apricot-dk);
-  color:var(--surface); font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.02em;
+.ptag{ display:inline-block; margin-left:4px; padding:1px 5px; border-radius:100px;
+  background:color-mix(in srgb, var(--apricot-dk) 14%, transparent);
+  color:var(--apricot-dk); font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
   vertical-align:1px; }
 /* Paid entirely for other people, with no share of it themselves - its own
    colour (the green used everywhere else for money moving toward somebody),
@@ -5069,21 +5079,32 @@ function groupExpenses(main, gid){
       // a payer who covered it entirely for other people, and isn't part of
       // the split themselves, is already named in the line above and doesn't
       // get a row of their own down here.
-      const plist = between.map(name=> personRow(name, name===e.payer, sh[name]||0)).join("");
+      // Nothing to break down when the only person in it is whoever paid -
+      // a one-line "receipt" repeating the amount already on the right is
+      // noise, so that expense just keeps its header.
+      const soloSelf = between.length===1 && between[0]===e.payer;
+      const plist = soloSelf ? "" : between.map(name=> personRow(name, name===e.payer, sh[name]||0)).join("");
       // Paid for other people entirely, with no share of it themselves - a
       // different kind of line from an ordinary split, so it gets its own
       // colour (the same green used for money coming back to somebody)
       // instead of blending into every other row.
       const gifted = between.indexOf(e.payer)<0;
       const r=el("button","ex2row"+(gifted?" gifted":"")); r.type="button";
+      // Header and breakdown are stacked, not side by side, so every figure -
+      // the total and each person's share - lines up on one right edge
+      // instead of the breakdown stopping short of the total's column.
+      // "$12.00 each" is dropped whenever the breakdown is showing, since
+      // each line already says exactly that.
       r.innerHTML=
-        '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
-        '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
-          '<span class="ex-txt">'+(gifted?esc(who)+' covered it':esc(who)+' paid')+
-          (day ? ' &middot; '+esc(day) : '')+'</span>'+
-          '<span class="ex-plist">'+plist+'</span></span>'+
-        '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
-          (cap ? '<span class="ex-cap">'+cap+'</span>' : '')+'</span>';
+        '<span class="ex-head">'+
+          '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
+          '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
+            '<span class="ex-txt">'+(gifted?esc(who)+' covered it':esc(who)+' paid')+
+            (day ? ' &middot; '+esc(day) : '')+'</span></span>'+
+          '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
+            (!plist && cap ? '<span class="ex-cap">'+cap+'</span>' : '')+'</span>'+
+        '</span>'+
+        (plist ? '<span class="ex-plist">'+plist+'</span>' : '');
       r.addEventListener("click", ()=>sheetExpense(e));
       card.appendChild(r);
     });
@@ -10540,7 +10561,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20260916020514";
+const APP_BUILD = "20260916021114";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
