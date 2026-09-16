@@ -683,7 +683,6 @@ function groupExpenses(main, gid){
       const between=(e.between&&e.between.length)?e.between:[e.payer];
       const n=between.length, c=catOf(e.cat), amt=Number(e.amount)||0;
       const who = e.payer===ME ? "You" : e.payer;
-      const day = e.at ? new Date(e.at).toLocaleDateString(undefined,{day:"numeric", month:"short"}) : "";
       const sh = sharesOf(e);
       const mine = ME ? (sh[ME]||0) : 0;
       const equal = !e.mode || e.mode==="equal";
@@ -726,8 +725,7 @@ function groupExpenses(main, gid){
         '<span class="ex-head">'+
           '<span class="ex-ic" style="--c:'+colorOf(e.payer,gid)+'"><span class="ms" aria-hidden="true">'+c.i+'</span></span>'+
           '<span class="ex-b"><span class="ex-t">'+esc(e.desc)+'</span>'+
-            '<span class="ex-txt">'+(gifted?esc(who)+' covered it':esc(who)+' paid')+
-            (day ? ' &middot; '+esc(day) : '')+'</span></span>'+
+            '<span class="ex-txt">'+esc(who)+' paid'+(gifted?' for them':'')+'</span></span>'+
           '<span class="ex-r"><span class="ex-amt">'+money(amt)+'</span>'+
             (!plist && cap ? '<span class="ex-cap">'+cap+'</span>' : '')+'</span>'+
         '</span>'+
