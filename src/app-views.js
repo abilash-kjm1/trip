@@ -691,13 +691,16 @@ function groupExpenses(main, gid){
                 : (equal && n>1) ? money(amt/n)+" each" : "";
       // A per-person line for everyone actually in it - what each one owes,
       // with whoever paid picked out from the rest - so nobody has to open
-      // the expense just to see who was involved and for how much.
+      // the expense just to see who was involved and for how much. The
+      // payer's own row still shows their SHARE, not the total - the line
+      // above already said they paid the total, so repeating it here would
+      // just read as a second, bigger number for no reason.
       const personRow=(name, isPayer, share)=>{
         const m=memberOf(name,gid);
         return '<span class="prow'+(isPayer?" paid":"")+'">'+
           avatarHTML("xs", name, m&&m.color, m&&m.photo)+
           '<span class="nm">'+esc(name===ME?"you":name)+(isPayer?' <span class="ptag">paid</span>':'')+'</span>'+
-          '<span class="sh">'+money(isPayer?amt:share)+'</span></span>';
+          '<span class="sh">'+money(share)+'</span></span>';
       };
       // Only whoever the expense is actually split between goes in this list -
       // a payer who covered it entirely for other people, and isn't part of
