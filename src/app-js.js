@@ -305,6 +305,15 @@ function bagNet(a, b){
 function plain(n){ return (Math.round((n+Number.EPSILON)*100)/100).toFixed(2); }
 function trim(n){ return String(Math.round((n+Number.EPSILON)*100)/100); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+// "Kavya", "Kavya and Abi", "Kavya, Abi and Kelvin" - a plain, readable list
+// of names instead of a bare count, so who was actually involved is never a
+// mystery someone has to tap in to find out.
+function joinNames(list){
+  if(!list.length) return "";
+  if(list.length===1) return list[0];
+  if(list.length===2) return list[0]+" and "+list[1];
+  return list.slice(0,-1).join(", ")+" and "+list[list.length-1];
+}
 function initials(n){ const p=String(n||"?").trim().split(/\s+/); return (p[0].charAt(0)+(p[1]?p[1].charAt(0):"")).toUpperCase(); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 let toastT;
