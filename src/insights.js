@@ -204,7 +204,17 @@ function vzFlow(main, L, gids){
       if(out) right.appendChild(vzPayBtn(()=> sheetNetSettle(t, L)));
       else if(inn){
         const p=t.parts.filter(x=>x.to===L.meKey).sort((a,b)=>b.amt-a.amt)[0];
-        if(p) right.appendChild(vzRemindBtn(p.gid, p.fromName, t.amt));
+        if(p){
+          // Recorded in the group it belongs to, for that group's own share of
+          // the debt - not the netted total, which can span several groups.
+          const mk=el("button","vz-btn","Mark paid"); mk.type="button";
+          mk.addEventListener("click", ()=>{
+            openGroup(p.gid);
+            setTimeout(()=> sheetSettle(p.fromName, p.toName, p.amt, null), 260);
+          });
+          right.appendChild(mk);
+          right.appendChild(vzRemindBtn(p.gid, p.fromName, t.amt));
+        }
       }
       list.appendChild(r);
     });

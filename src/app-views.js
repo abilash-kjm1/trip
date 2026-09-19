@@ -836,6 +836,9 @@ function sectionWhoOwes(main, gid){
     if(iPay){
       btn("Pay").addEventListener("click", ()=> sheetSettle(t.from, t.to, t.amt) );
     } else if(iGet){
+      // They may have paid already and forgotten to say so. If the money has
+      // reached you, record it yourself instead of waiting on them.
+      btn("Mark paid").addEventListener("click", ()=> sheetSettle(t.from, t.to, t.amt) );
       const key=gid+"|"+t.from, b=btn(NUDGED[key] ? "Reminder sent" : "Remind", true);
       b.disabled=!!NUDGED[key];
       b.addEventListener("click", ()=>{ if(sendNudge(gid, t.from, t.amt, b)) NUDGED[key]=true; });

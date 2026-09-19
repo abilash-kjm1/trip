@@ -399,8 +399,8 @@ function viewHome(main){
         setTimeout(()=> sheetSettle(me, t.who, t.amt, null), 260);
         return;
       }
-      // They owe me: ask them for it. Recording a payment they have not made
-      // would put a falsehood in the ledger.
+      // They owe me: ask them for it. If they have already paid and simply
+      // forgot to say so, "They paid me" beside this records it instead.
       if(sendNudge(t.gid, t.who, t.amt, b)){
         NUDGED[key] = true;
         b.innerHTML = face("done","Reminder sent");
@@ -408,6 +408,19 @@ function viewHome(main){
       }
     });
     sl.querySelector(".act").appendChild(b);
+    // Money that has already arrived, which they never got round to recording.
+    if(!pay){
+      const m = el("button","hc-btn2");
+      m.type = "button";
+      m.innerHTML = face("task_alt","They paid me");
+      m.setAttribute("aria-label", t.who+" paid me - mark "+money(t.amt, t.gid)+" as received");
+      m.addEventListener("click", ()=>{
+        const me = meIn(t.gid);
+        openGroup(t.gid);
+        setTimeout(()=> sheetSettle(t.who, me, t.amt, null), 260);
+      });
+      sl.querySelector(".act").appendChild(m);
+    }
     track.appendChild(sl);
   });
 

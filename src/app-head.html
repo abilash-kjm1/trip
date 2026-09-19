@@ -2472,6 +2472,16 @@ span.af-pill{ cursor:default; padding-right:12px; }
 .hc-btn .ms{ font-size:18px; }
 .hc-btn:disabled{ opacity:1; cursor:default; background:rgba(255,255,255,.58);
   color:var(--hero-get); box-shadow:none; }
+/* Beside "Remind" on a slide where somebody owes you: the quieter action for
+   money that has already arrived and was never recorded. Two actions sit
+   side by side rather than at opposite ends of the row. */
+.hc-slide .act{ justify-content:flex-start; gap:10px; }
+.hc-btn2{ display:inline-flex; align-items:center; gap:8px; padding:11px 16px; border:0; border-radius:999px;
+  background:rgba(255,255,255,.62); color:var(--ink); font:inherit; font-size:14px; font-weight:700;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .15s ease; }
+.hc-btn2 .ms{ font-size:18px; }
+.hc-btn2:active{ transform:scale(.97); }
+.hc-btn2:focus:not(:focus-visible){ outline:none; }
 
 .hc-foot{ position:relative; display:flex; align-items:center; justify-content:space-between;
   gap:var(--s4); margin-top:var(--s5); padding-top:var(--s3); border-top:1px solid var(--hero-line); }

@@ -583,9 +583,15 @@ function sheetSettle(from, to, amt, existing){
   const ppl=names(gid).slice();
   if(existing){ [existing.from, existing.to].forEach(n=>{ if(n && ppl.indexOf(n)<0) ppl.push(n); }); }
   if(ppl.length<2){ toast("You need at least two people"); return; }
-  // Only whoever paid may record a payment. Editing keeps the payer the row
-  // already has. The administrator may record for anyone.
-  const fromChoices = existing ? (isAdmin() ? ppl : [existing.from]) : payersAllowed(gid, ppl);
+  /* Whoever paid records it - and so may whoever was paid. People forget to
+     say they have sent money, and the person it went to is the one who can
+     actually see it arrive, so they can mark it themselves rather than wait.
+     Editing keeps the payer the row already has; the administrator may record
+     for anyone. */
+  const recvMode = !existing && !isAdmin() && !!ME && to===ME && from!==ME;
+  const fromChoices = existing ? (isAdmin() ? ppl : [existing.from])
+    : recvMode ? ppl.filter(n=>n!==ME)
+    : payersAllowed(gid, ppl);
   if(!fromChoices.length){ toast("Say which name in this group is yours first"); return sheetClaim(gid); }
   if(!existing && from && fromChoices.indexOf(from)<0){
     toast("Only "+from+" can record a payment they made");
@@ -593,18 +599,22 @@ function sheetSettle(from, to, amt, existing){
   }
   from = from || (fromChoices.indexOf(ME)>-1 ? ME : fromChoices[0]);
   const fromLocked = fromChoices.length===1;
-  // With who paid fixed, they cannot also be the one who received it.
-  const toChoices = fromLocked ? ppl.filter(n=>n!==from) : ppl;
+  // With who paid fixed, they cannot also be the one who received it - and
+  // when this is money that came to me, the other end is me and stays me.
+  const toChoices = recvMode ? [ME] : fromLocked ? ppl.filter(n=>n!==from) : ppl;
   if(!to || toChoices.indexOf(to)<0) to = toChoices.filter(n=>n!==from)[0] || toChoices[0];
+  const toLocked = toChoices.length===1;
   const mayEdit = !existing || canEdit(existing);
-  openSheet(existing?(mayEdit?"Edit payment":"Payment"):"Record a payment", (b)=>{
+  openSheet(existing ? (mayEdit?"Edit payment":"Payment") : recvMode ? "Mark as received" : "Record a payment", (b)=>{
     /* Who paid whom, as two faces and an arrow; the amount large under it,
        with the outstanding figure a tap away; then the Interac details if
        there are any, the date and a note side by side, and one button that
        says exactly what it will record. */
     const opts=(list, pick)=> list.map(n=>'<option value="'+esc(n)+'"'+(n===pick?' selected':'')+'>'+esc(n)+(n===ME?" (you)":"")+'</option>').join("");
     b.innerHTML=
-      (existing ? '' : '<p class="pf-sub">For cash or a transfer that has already happened.</p>')+
+      (existing ? '' : '<p class="pf-sub">'+(recvMode
+        ? 'For money that has already reached you, when whoever paid forgot to record it.'
+        : 'For cash or a transfer that has already happened.')+'</p>')+
       '<div class="pf">'+
         // No choice to make: say the name plainly, so it can wrap instead of
         // being cut short inside a dropdown that does nothing.
@@ -616,8 +626,11 @@ function sheetSettle(from, to, amt, existing){
               '<span class="ms" aria-hidden="true">expand_more</span></label>')+'</div>'+
         '<div class="pf-arrow" aria-hidden="true"><span class="pf-line"></span><span class="ms">arrow_forward</span></div>'+
         '<div class="pf-person"><span class="pf-av" id="pfToAv"></span><span class="pf-role">To</span>'+
-          '<label class="pf-select"><select id="stTo" aria-label="Who received it">'+opts(toChoices, to)+'</select>'+
-          '<span class="ms" aria-hidden="true">expand_more</span></label></div>'+
+          (toLocked
+            ? '<span class="pf-name">'+esc(to===ME ? "You" : to)+'</span>'+
+              '<select id="stTo" hidden disabled>'+opts(toChoices, to)+'</select>'
+            : '<label class="pf-select"><select id="stTo" aria-label="Who received it">'+opts(toChoices, to)+'</select>'+
+              '<span class="ms" aria-hidden="true">expand_more</span></label>')+'</div>'+
       '</div>'+
       '<div class="pf-amount"><label class="pf-lab" for="stAmt">Amount</label>'+
         '<div class="pf-amt"><span class="cur">'+esc(curSym(gid))+'</span><input id="stAmt" type="number" inputmode="decimal" step="0.01" min="0" '+
@@ -630,7 +643,10 @@ function sheetSettle(from, to, amt, existing){
         '<input id="stNote" type="text" placeholder="'+(curOf(gid)==="INR" ? "UPI, cash…" : "e-Transfer, cash…")+'" value="'+
           esc(existing?(existing.note||""):"")+'"></div>'+
       '</div>'+
-      (fromLocked && !existing && mayEdit ? '<p class="pf-help">You can only record a payment you made. If someone paid you, they record it.</p>' : '')+
+      (recvMode
+        ? '<p class="pf-help">Mark this once the money has actually reached you. Whoever paid will see that you recorded it.</p>'
+        : fromLocked && !existing && mayEdit
+          ? '<p class="pf-help">You can only record a payment you made, or one that was paid to you.</p>' : '')+
       (mayEdit
         ? (existing
             ? '<button class="btn p wide pf-save" id="stSave"><span class="ms" aria-hidden="true">check</span>'+
@@ -664,6 +680,7 @@ function sheetSettle(from, to, amt, existing){
       if(!$("stSaveLbl")) return;
       const a=Math.round((Number($("stAmt").value)||0)*100)/100, t=$("stTo").value;
       $("stSaveLbl").textContent = existing ? "Save changes"
+        : recvMode ? (a>0 ? "Slide to mark "+money(a)+" received" : "Slide to mark received")
         : a>0 ? "Slide to record "+money(a) : "Slide to record";
     };
     refresh();
@@ -738,7 +755,7 @@ function sheetSettle(from, to, amt, existing){
       const a=Math.round((Number($("stAmt").value)||0)*100)/100;
       if(f===t) return toast("Pick two different people");
       if(!(a>0)) return toast("Enter an amount");
-      if(fromChoices.indexOf(f)<0) return toast("You can only record a payment you made");
+      if(fromChoices.indexOf(f)<0) return toast(recvMode ? "Pick who paid you" : "You can only record a payment you made");
       const rec={from:f, to:t, amount:a, note:$("stNote").value.trim(),
                  at:tsFromDate($("stDate").value, existing?existing.at:null),
                  by: existing ? (existing.by||ME||USER.name) : (ME||USER.name),
@@ -747,6 +764,11 @@ function sheetSettle(from, to, amt, existing){
       // a date keeps their answer; changing who or how much asks them again.
       const same = existing && existing.to===t && Math.abs((Number(existing.amount)||0)-a) < 0.005;
       if(existing && existing.netted) rec.netted = true;      // no money moved: nobody to ask
+      else if(recvMode){
+        // I am the end it came to, so there is nobody to ask whether it
+        // arrived: recording it is itself the answer.
+        rec.got = {ok:true, at:Date.now(), uid:USER.uid, name:ME||USER.name};
+      }
       else {
         if(!existing || !same || existing.ask) rec.ask = true;
         if(same && existing.got) rec.got = existing.got;
@@ -761,6 +783,7 @@ function sheetSettle(from, to, amt, existing){
       if(existing && !same && rec.ask) notify("payment.ask", gid, {ref: key});
       closeSheet();
       if(existing) toast("Payment updated");
+      else if(recvMode) toast("Marked as received · "+f+" will see it");
       else setTimeout(()=> celebratePayment(a, t), 260);   // once the sheet has slid away
       return true;
     };
