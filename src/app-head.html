@@ -1208,6 +1208,9 @@ button, input, select, textarea{ font-family:var(--f); }
 @media (prefers-reduced-motion:reduce){ .nav-fab::after{ animation:none; opacity:.6; } }
 
 /* ---- Visualize --------------------------------------------------------- */
+.vz-scope{ display:flex; gap:7px; overflow-x:auto; margin:0 0 var(--s4); padding:2px 2px 4px; scrollbar-width:none; }
+.vz-scope::-webkit-scrollbar{ display:none; }
+.vz-scope .chip{ flex:0 0 auto; }
 .vz-sec{ margin:0 0 var(--s5); }
 .vz-sec.enter{ animation:gxRise .55s cubic-bezier(.22,.61,.36,1) backwards; }
 .vz-head{ display:flex; align-items:flex-start; gap:12px; margin:0 2px 10px; }
@@ -1218,13 +1221,13 @@ button, input, select, textarea{ font-family:var(--f); }
 .vz-head p{ margin:2px 0 0; font-size:12.5px; color:var(--ink-3); }
 .vz-card{ padding:var(--s4); overflow:hidden; }
 .vz-headline{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 8px; font-size:14px; color:var(--ink-2); }
-.vz-big{ font-family:var(--serif); font-size:38px; font-weight:600; line-height:1; letter-spacing:-.02em; color:var(--ink);
+.vz-big{ font-family:var(--serif); font-size:34px; font-weight:600; line-height:1; letter-spacing:-.02em; color:var(--ink);
   font-variant-numeric:tabular-nums; }
 .vz-headline em{ font-style:normal; color:var(--ink-3); text-decoration:line-through;
   text-decoration-color:color-mix(in srgb, var(--bad) 55%, transparent); }
-.vz-note{ margin:10px 2px 0; font-size:12.5px; line-height:1.45; color:var(--ink-3); }
-.vz-note.vz-tight{ margin-top:6px; }
-.vz-small{ font-size:12.5px !important; color:var(--ink-3) !important; }
+.vz-note{ margin:12px 2px 0; font-size:12.5px; line-height:1.45; color:var(--ink-3); }
+.vz-note b{ color:var(--ink); }
+.vz-hint{ margin:6px 0 0; text-align:center; font-size:11.5px; color:var(--ink-3); }
 .vz-empty{ padding:12px 6px; text-align:center; }
 .vz-empty .ms{ font-size:34px; color:var(--apricot-dk); }
 .vz-empty b{ display:block; margin-top:6px; font-size:16px; color:var(--ink); }
@@ -1241,56 +1244,125 @@ button, input, select, textarea{ font-family:var(--f); }
 .vz-t b{ font-weight:700; color:var(--ink); }
 .vz-m{ display:block; margin-top:2px; font-size:12px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-/* settle everything */
-.vz-svg{ display:block; width:100%; max-width:420px; height:auto; margin:4px auto 0; overflow:visible; }
-.vz-flow{ fill:none; stroke-linecap:round; stroke-dasharray:7 7; animation:vzFlow 1.1s linear infinite; }
-.vz-flow.out{ stroke:var(--bad); } .vz-flow.in{ stroke:var(--good); }
-.vz-flow.other{ stroke:color-mix(in srgb, var(--ink) 32%, transparent); }
-@keyframes vzFlow{ to{ stroke-dashoffset:-28; } }
-.vz-arrow.out{ fill:var(--bad); } .vz-arrow.in{ fill:var(--good); }
-.vz-arrow.other{ fill:color-mix(in srgb, var(--ink) 32%, transparent); }
-.vz-amt{ font-size:11px; font-weight:700; text-anchor:middle; fill:var(--ink); paint-order:stroke; stroke:var(--surface);
-  stroke-width:4px; stroke-linejoin:round; font-variant-numeric:tabular-nums; }
-.vz-node circle{ stroke:var(--surface); stroke-width:3; }
-.vz-node.me circle{ stroke:var(--apricot); stroke-width:4; }
-.vz-node .ini{ font-size:12px; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:central; }
-.vz-node .nm{ font-size:11px; font-weight:600; fill:var(--ink-2); text-anchor:middle; }
-.vz-legendline{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:4px 12px; margin:2px 0 0;
+/* who pays whom: faces, names and amounts are HTML laid over an SVG of the
+   arrows, placed in percentages of the same box so the two stay aligned at
+   any width. */
+.vz-net{ position:relative; width:100%; max-width:360px; margin:16px auto 8px; }
+.vz-net svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.vz-edge{ fill:none; stroke-linecap:round; transition:opacity .25s ease; }
+.vz-edge.out{ stroke:var(--bad); } .vz-edge.in{ stroke:var(--good); }
+.vz-edge.other{ stroke:color-mix(in srgb, var(--ink) 24%, transparent); }
+.vz-tip.out, .vz-dot.out{ fill:var(--bad); } .vz-tip.in, .vz-dot.in{ fill:var(--good); }
+.vz-tip.other{ fill:color-mix(in srgb, var(--ink) 24%, transparent); } .vz-dot.other{ fill:var(--ink-3); }
+.vz-amt{ position:absolute; z-index:1; transform:translate(-50%,-50%); padding:2px 8px; border-radius:999px;
+  background:var(--surface); box-shadow:0 0 0 1px var(--line), 0 3px 8px -4px rgba(0,0,0,.18);
+  font-size:11px; font-weight:700; line-height:1.4; color:var(--ink-2); white-space:nowrap; font-variant-numeric:tabular-nums;
+  pointer-events:none; transition:opacity .25s ease; }
+.vz-amt.out{ color:var(--bad); } .vz-amt.in{ color:var(--good); }
+/* The button is given the face's exact size - left to shrink-wrap, it came
+   out smaller than the face inside it and pushed every face off its point. */
+.vz-node{ position:absolute; z-index:2; width:42px; height:42px; transform:translate(-50%,-50%); display:block;
+  padding:0; border:0; border-radius:50%; background:none; font:inherit; color:inherit; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:opacity .25s ease, transform .25s ease; }
+.vz-node.is-me{ width:50px; height:50px; }
+.vz-net.dense .vz-node{ width:38px; height:38px; }
+.vz-net.dense .vz-node.is-me{ width:46px; height:46px; }
+.vz-node .avwrap, .vz-node .av{ width:100%; height:100%; margin:0; }
+.vz-node .av{ font-size:14px; box-shadow:0 0 0 3px var(--surface), 0 6px 14px -6px rgba(0,0,0,.35); }
+.vz-net.dense .vz-node .av{ font-size:13px; }
+.vz-node.is-me .av{ font-size:16px;
+  box-shadow:0 0 0 3px var(--surface), 0 0 0 5.5px var(--apricot), 0 8px 18px -8px rgba(0,0,0,.4); }
+.vz-nm{ position:absolute; left:50%; top:calc(100% + 6px); transform:translateX(-50%); max-width:88px;
+  font-size:11.5px; font-weight:600; line-height:1.2; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vz-node.up .vz-nm{ top:auto; bottom:calc(100% + 6px); }
+/* Sits on the bottom edge of your face, like a name tag: below it would run
+   into the label of any arrow heading downwards. The ring of surface colour
+   separates it from the face and from any line passing behind. */
+.vz-node.is-me .vz-nm{ top:auto; bottom:-8px; padding:1px 8px; border-radius:999px;
+  background:var(--apricot-dk); color:var(--surface); box-shadow:0 0 0 2px var(--surface);
+  font-size:9.5px; font-weight:700; line-height:1.5; letter-spacing:.06em; text-transform:uppercase; }
+.vz-node:focus:not(:focus-visible){ outline:none; }
+.vz-net.focus .vz-edge.dim, .vz-net.focus .vz-amt.dim{ opacity:.1; }
+.vz-net.focus .vz-dot.dim{ visibility:hidden; }
+.vz-net.focus .vz-node.dim{ opacity:.3; }
+.vz-net.focus .vz-node.on{ transform:translate(-50%,-50%) scale(1.1); }
+.vz-legendline{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:4px 14px; margin:6px 0 0;
   font-size:11.5px; color:var(--ink-3); }
-.vz-key{ display:inline-block; width:18px; height:3px; margin-right:-6px; border-radius:2px; vertical-align:middle; }
+.vz-key{ display:inline-block; width:16px; height:3px; margin-right:6px; border-radius:2px; vertical-align:middle; }
 .vz-key.out{ background:var(--bad); } .vz-key.in{ background:var(--good); }
-.vz-key.other{ background:color-mix(in srgb, var(--ink) 32%, transparent); }
-.vz-list{ margin-top:12px; border-top:1px solid var(--line-2); }
+.vz-key.other{ background:color-mix(in srgb, var(--ink) 24%, transparent); }
+.vz-list{ margin-top:14px; border-top:1px solid var(--line-2); }
 .vz-move{ display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line-2); }
 .vz-move:last-child{ border-bottom:0; }
 .vz-pair{ flex:0 0 auto; display:flex; align-items:center; }
 .vz-pair .av{ width:28px; height:28px; font-size:10.5px; }
 .vz-pair > .ms{ margin:0 1px; font-size:13px; color:var(--ink-3); }
 .vz-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.vz-age{ display:inline-block; margin-right:6px; padding:0 7px; border-radius:999px; font-size:10.5px; font-weight:700;
+  line-height:1.6; vertical-align:1px; }
+.vz-age.warm{ background:color-mix(in srgb, #C8892A 16%, transparent); color:#8A5A12; }
+.vz-age.old{ background:color-mix(in srgb, var(--bad) 13%, transparent); color:var(--bad); }
 .vz-even{ display:flex; align-items:center; gap:8px; margin-top:10px; padding:10px 12px; border-radius:12px;
   background:var(--fill-1); font-size:12.5px; color:var(--ink-2); }
 .vz-even .ms{ font-size:18px; color:var(--ink-3); }
 .vz-even .vz-btn{ margin-left:auto; }
 
-/* who should pay next */
-.vz-chips{ display:flex; gap:7px; overflow-x:auto; margin:0 0 12px; padding:0 0 2px; scrollbar-width:none; }
-.vz-chips::-webkit-scrollbar{ display:none; }
-.vz-chips .chip{ flex:0 0 auto; }
-.vz-turn{ display:flex; align-items:center; flex-wrap:wrap; gap:14px 18px; }
-.vz-donut{ position:relative; flex:0 0 auto; width:148px; height:148px; margin:0 auto; }
+/* when it was spent: one bar per day (or week, or month), your share filled
+   from the bottom of each, and a readout for whichever bar is picked */
+.vz-read{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:14px 0 12px; padding:10px 14px;
+  border-radius:14px; background:var(--fill-1); }
+.vz-read-d{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:13px; font-weight:700; color:var(--ink); }
+.vz-read-d em{ padding:1px 8px; border-radius:999px; background:var(--apricot-lt); color:var(--apricot-dk);
+  font-style:normal; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+.vz-read-v{ flex:none; text-align:right; font-size:16px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
+.vz-read-v small{ display:block; font-size:11.5px; font-weight:600; color:var(--ink-3); }
+.vz-cols{ display:flex; align-items:flex-end; gap:5px; overflow-x:auto; padding:0 0 2px; scrollbar-width:none; }
+.vz-cols::-webkit-scrollbar{ display:none; }
+.vz-cols.few{ justify-content:center; }
+.vz-col{ flex:1 0 12px; max-width:46px; display:flex; flex-direction:column; align-items:stretch; gap:7px; padding:0; border:0;
+  background:none; font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.vz-col:focus:not(:focus-visible){ outline:none; }
+.vz-colbox{ height:118px; display:flex; align-items:flex-end; }
+.vz-colbar{ position:relative; width:100%; overflow:hidden; border-radius:7px 7px 3px 3px; transform-origin:bottom;
+  background:color-mix(in srgb, var(--apricot) 38%, var(--surface)); transition:background .2s ease; }
+.vz-colmine{ position:absolute; left:0; right:0; bottom:0; transition:background .2s ease;
+  background:color-mix(in srgb, var(--apricot-dk) 55%, var(--apricot)); }
+.vz-col.zero .vz-colbar{ background:var(--fill-2); }
+.vz-col.on .vz-colbar{ background:var(--apricot); }
+.vz-col.on .vz-colmine{ background:var(--apricot-dk); }
+.vz-col-l{ height:14px; font-size:10.5px; font-weight:600; line-height:14px; color:var(--ink-3); text-align:center; white-space:nowrap; }
+.vz-col-l.hide{ visibility:hidden; }
+.vz-col.on .vz-col-l{ visibility:visible; color:var(--ink); font-weight:700; }
+.vz-sec.enter .vz-colbar{ animation:vzRise .8s cubic-bezier(.22,.61,.36,1) .15s backwards; }
+@keyframes vzRise{ from{ transform:scaleY(0); } }
+.vz-keys{ display:flex; justify-content:center; gap:16px; margin-top:12px; font-size:11.5px; color:var(--ink-3); }
+.vz-keys i{ display:inline-block; width:10px; height:10px; margin-right:6px; border-radius:3px; vertical-align:-1px; }
+.vz-keys i.all{ background:color-mix(in srgb, var(--apricot) 38%, var(--surface)); }
+.vz-keys i.mine{ background:color-mix(in srgb, var(--apricot-dk) 55%, var(--apricot)); }
+
+/* where it went */
+.vz-toggle{ display:flex; width:max-content; margin:0 auto 16px; padding:3px; border-radius:999px; background:var(--fill-1); }
+.vz-toggle button{ border:0; border-radius:999px; padding:6px 16px; background:none; font:inherit; font-size:12.5px; font-weight:700;
+  color:var(--ink-3); cursor:pointer; transition:background .2s ease, color .2s ease; -webkit-tap-highlight-color:transparent; }
+.vz-toggle button[aria-pressed="true"]{ background:var(--surface); color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,.12); }
+.vz-toggle button:focus:not(:focus-visible){ outline:none; }
+.vz-where{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:18px 22px; }
+.vz-donut{ position:relative; flex:0 0 auto; width:156px; height:156px; }
 .vz-donut svg{ display:block; width:100%; height:100%; transform:rotate(-90deg); }
 .vz-donut circle{ fill:none; stroke-width:18; }
 .vz-donut .trk{ stroke:var(--fill-1); }
 .vz-donut-c{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
-.vz-donut-c small{ font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); }
-.vz-donut-c b{ max-width:96px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  font-family:var(--serif); font-size:20px; font-weight:600; color:var(--ink); }
+.vz-donut-c b{ max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-family:var(--serif); font-size:20px; font-weight:600; line-height:1.1; color:var(--ink); font-variant-numeric:tabular-nums; }
+.vz-donut-c small{ margin-top:3px; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); }
 .vz-sec.enter .vz-seg{ animation:vzSeg .9s cubic-bezier(.22,.61,.36,1) .2s backwards; }
 @keyframes vzSeg{ from{ stroke-dasharray:0 400; } }
-.vz-turn-txt{ flex:1 1 200px; min-width:0; }
-.vz-turn-txt p{ margin:0 0 8px; font-size:14px; line-height:1.45; color:var(--ink-2); }
-.vz-turn-txt p b{ color:var(--ink); }
-.vz-next{ margin-top:4px; }
+.vz-cats{ flex:1 1 210px; min-width:0; display:flex; flex-direction:column; gap:10px; }
+.vz-cat{ display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:10px; font-size:13.5px; color:var(--ink-2); }
+.vz-cat .ms{ width:28px; height:28px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px; color:#fff; }
+.vz-cat-n{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; color:var(--ink); }
+.vz-cat-n small{ margin-left:7px; font-size:11.5px; font-weight:600; color:var(--ink-3); }
+.vz-cat b{ font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
 
 /* ---- Today: latest moments, friends, your groups ---- */
 .th-head{ display:flex; align-items:center; gap:10px; margin:var(--s5) 2px 10px; }
@@ -1403,7 +1475,7 @@ button, input, select, textarea{ font-family:var(--f); }
   .th-friend:hover, .th-group:hover{ transform:none; }
 }
 
-/* ---- Who should pay next: the answer, the order, and why ---- */
+/* ---- Whose turn to pay: the answer, then why ---- */
 .wn-hero{ display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:18px;
   background:linear-gradient(135deg, var(--apricot-lt) 0%, color-mix(in srgb, var(--apricot) 32%, var(--surface)) 100%);
   border:1px solid color-mix(in srgb, var(--apricot) 40%, transparent); }
@@ -1426,24 +1498,7 @@ button, input, select, textarea{ font-family:var(--f); }
 .wn-hero-t strong{ color:var(--bad); font-weight:700; }
 .wn-cta{ display:flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:10px; }
 .wn-cta .ms{ font-size:20px; }
-.wn-label{ margin:18px 2px 8px; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); }
-
-.wn-queue{ display:flex; align-items:flex-start; gap:2px; overflow-x:auto; padding:6px 2px 4px; scrollbar-width:none; }
-.wn-queue::-webkit-scrollbar{ display:none; }
-.wn-q{ flex:0 0 auto; width:62px; display:flex; flex-direction:column; align-items:center; gap:5px; text-align:center; }
-.wn-q-av{ position:relative; }
-.wn-q-av i{ position:absolute; right:-4px; top:-4px; min-width:18px; height:18px; padding:0 4px; border-radius:999px;
-  display:flex; align-items:center; justify-content:center; font-style:normal; font-size:10.5px; font-weight:700;
-  background:var(--ink); color:var(--cream); box-shadow:0 0 0 2px var(--surface); }
-.wn-q.first .wn-q-av i{ background:var(--apricot-dk); }
-.wn-q.first .wn-av{ width:44px; height:44px; margin-top:-3px; }
-.wn-q .nm{ max-width:62px; font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.wn-arrow{ flex:none; align-self:flex-start; margin:12px -2px 0; font-size:16px; color:var(--ink-3); }
-.wn-tag{ padding:1px 7px; border-radius:999px; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.wn-tag.neg{ background:color-mix(in srgb, var(--bad) 12%, transparent); color:var(--bad); }
-.wn-tag.pos{ background:color-mix(in srgb, var(--good) 12%, transparent); color:var(--good); }
-.wn-tag.zero{ background:var(--fill-1); color:var(--ink-3); }
-
+.wn-label{ margin:18px 2px 10px; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); }
 .wn-list{ display:flex; flex-direction:column; gap:12px; }
 .wn-row{ display:grid; grid-template-columns:minmax(0, 92px) minmax(0, 1fr) 72px; align-items:center; gap:3px 10px; }
 .wn-axis{ margin-bottom:-6px; }
@@ -1463,67 +1518,18 @@ button, input, select, textarea{ font-family:var(--f); }
 .wn-val{ text-align:right; font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .wn-val.neg{ color:var(--bad); } .wn-val.pos{ color:var(--good); } .wn-val.zero{ color:var(--ink-3); }
 .wn-sub{ grid-column:2 / 4; margin-top:-1px; font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
-@media (prefers-reduced-motion:reduce){ .wn-av.big, .vz-sec.enter .wn-fill{ animation:none; } }
-.vz-bars{ display:flex; flex-direction:column; gap:12px; margin-top:16px; }
-.vz-bar-row{ display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 10px; }
-.vz-bar-n{ display:flex; align-items:center; gap:6px; min-width:0; font-size:13.5px; font-weight:600; color:var(--ink); }
-.vz-dot{ flex:0 0 auto; width:9px; height:9px; border-radius:50%; }
-.vz-gap{ font-size:12px; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
-.vz-gap.pos{ color:var(--good); } .vz-gap.neg{ color:var(--bad); } .vz-gap.zero{ color:var(--ink-3); }
-.vz-track{ grid-column:1 / -1; position:relative; height:8px; border-radius:999px; background:var(--fill-1); }
-.vz-fill{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; }
-.vz-mark{ position:absolute; top:-3px; bottom:-3px; width:2px; border-radius:2px; background:var(--ink); }
-.vz-sub{ grid-column:1 / -1; font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
-.vz-sec.enter .vz-fill{ animation:vzGrow .9s cubic-bezier(.22,.61,.36,1) .2s backwards; }
-@keyframes vzGrow{ from{ width:0; } }
-
-/* what this really cost you */
-.vz-stack{ display:flex; height:14px; margin:12px 0; overflow:hidden; border-radius:999px; background:var(--fill-1); }
-.vz-stack i{ display:block; height:100%; }
-.vz-sec.enter .vz-card > .vz-stack{ animation:vzGrow .9s cubic-bezier(.22,.61,.36,1) .2s backwards; }
-.vz-legend{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px 14px; }
-.vz-leg{ display:flex; align-items:center; gap:8px; min-width:0; font-size:13px; color:var(--ink-2); }
-.vz-leg .ms{ flex:0 0 auto; width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center;
-  font-size:16px; color:#fff; }
-.vz-leg-n{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.vz-leg b{ margin-left:auto; color:var(--ink); font-variant-numeric:tabular-nums; }
-.vz-gl{ display:flex; flex-direction:column; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line-2); }
-.vz-gl-row{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; font-size:13px; color:var(--ink-2); }
-.vz-gl-row b{ color:var(--ink); font-variant-numeric:tabular-nums; }
-.vz-gl-row .vz-stack{ grid-column:1 / -1; height:6px; margin:0; }
-
-/* old debts */
-.vz-debt{ padding:12px 2px; border-bottom:1px solid var(--line-2); }
-.vz-debt:first-child{ padding-top:2px; }
-.vz-debt:last-of-type{ border-bottom:0; }
-.vz-debt-top{ display:flex; align-items:center; gap:10px; }
-.vz-debt-top .av{ width:34px; height:34px; font-size:12px; }
-.vz-days{ flex:0 0 auto; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:700; white-space:nowrap; }
-.vz-days.fresh{ background:color-mix(in srgb, var(--good) 14%, transparent); color:var(--good); }
-.vz-days.warm{ background:rgba(200,137,42,.16); color:#8A5A12; }
-.vz-days.old{ background:color-mix(in srgb, var(--bad) 14%, transparent); color:var(--bad); }
-.vz-agebar{ position:relative; height:6px; margin:9px 0 0 44px; border-radius:999px; background:var(--fill-1); }
-.vz-agebar i{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; }
-.vz-agebar i.fresh{ background:var(--good); } .vz-agebar i.warm{ background:#C8892A; } .vz-agebar i.old{ background:var(--bad); }
-.vz-sec.enter .vz-agebar i{ animation:vzGrow .9s cubic-bezier(.22,.61,.36,1) .2s backwards; }
-
-/* leave clean */
-.vz-leave{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; }
-.vz-lc{ padding:14px; }
-.vz-lc.clean{ background:color-mix(in srgb, var(--good) 6%, var(--surface)); }
-.vz-lc-h{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.vz-lc-h b{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; color:var(--ink); }
-.vz-ok{ display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; color:var(--good); }
-.vz-ok .ms{ font-size:16px; }
-.vz-todo{ flex:0 0 auto; padding:2px 8px; border-radius:999px; font-size:11.5px; font-weight:700;
-  background:color-mix(in srgb, var(--bad) 12%, transparent); color:var(--bad); }
-.vz-lc-sum{ margin:4px 0 6px; font-size:13px; color:var(--ink-3); }
-.vz-lc-sum b{ color:var(--ink); }
-.vz-lc-line{ display:flex; align-items:center; gap:8px; padding:8px 0 0; margin-top:8px; border-top:1px solid var(--line-2);
-  font-size:13.5px; color:var(--ink-2); }
-.vz-lc-line > .ms{ font-size:17px; color:var(--ink-3); }
-.vz-lc-t{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.vz-lc-t b{ color:var(--ink); }
+/* all groups at once: one tappable row each, opening that group */
+.vz-fgs{ padding-top:4px; padding-bottom:4px; }
+.vz-fg{ display:flex; align-items:center; gap:12px; width:100%; padding:12px 2px; border:0; border-bottom:1px solid var(--line-2);
+  background:none; font:inherit; color:inherit; text-align:left; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.vz-fg:last-child{ border-bottom:0; }
+.vz-fg .wn-av{ width:38px; height:38px; }
+.vz-fg .wn-av.even .ms{ font-size:20px; }
+.vz-chev{ flex:none; font-size:20px; color:var(--ink-3); }
+@media (prefers-reduced-motion:reduce){
+  .wn-av.big, .vz-sec.enter, .vz-sec.enter .wn-fill, .vz-sec.enter .vz-colbar, .vz-sec.enter .vz-seg{ animation:none; }
+  .vz-node, .vz-edge, .vz-amt{ transition:none; }
+}
 
 /* one payment across groups */
 .ns-lines{ margin:0 0 14px; overflow:hidden; border-radius:16px; border:1px solid var(--line); }
@@ -1535,12 +1541,6 @@ button, input, select, textarea{ font-family:var(--f); }
 .ns-line.total b{ font-family:var(--serif); font-size:22px; font-variant-numeric:tabular-nums; }
 #nsEtx:not(:empty){ margin-bottom:12px; }
 
-@media (prefers-reduced-motion:reduce){
-  .vz-flow{ animation:none; stroke-dasharray:none; }
-  .vz-sec.enter, .vz-sec.enter .vz-fill, .vz-sec.enter .vz-seg, .vz-sec.enter .vz-agebar i,
-  .vz-sec.enter .vz-card > .vz-stack{ animation:none; }
-}
-:root[data-theme="purple"] .vz-node.me circle{ stroke:#C9B3F2; }
 
 /* ---- Record a payment: who to whom, the amount, then the details --------- */
 .pf-sub{ margin:-4px 0 14px; text-align:center; font-size:13px; color:var(--ink-3); }
@@ -3119,8 +3119,6 @@ span.af-pill{ cursor:default; padding-right:12px; }
 .cur-warn{ display:flex; gap:6px; align-items:flex-start; margin:14px 2px 0; text-align:left; }
 .cur-warn .ms{ flex:none; font-size:17px; color:var(--apricot-dk); }
 .vz-card + .vz-card{ margin-top:var(--s3); }
-.vz-curtag{ display:inline-block; margin:0 0 10px; padding:3px 10px; border-radius:999px; background:var(--fill-1);
-  font-size:12px; font-weight:700; color:var(--ink-2); }
 
 /* the UPI card: deep green with a saffron glow, in either theme */
 .ix-card.upi-card, :root[data-theme="purple"] .ix-card.upi-card{

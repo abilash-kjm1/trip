@@ -104,7 +104,7 @@ function flipSide(){
   const to=otherSide();
   if(!setSide(to)) return;
   if(CURRENT){ CURRENT=null; lsSet(LS.cur, null); if(location.hash) location.hash=""; }
-  ADMIN_VIEW=false; ADMIN_PEOPLE=false; HERO_I=0; VZ_GROUP=null;
+  ADMIN_VIEW=false; ADMIN_PEOPLE=false; HERO_I=0; VZ_SCOPE="all"; VZ_DAY=null; VZ_FOCUS=null;
   IX_SEEN=false; GROUPS_SEEN=false; TH_SEEN=false; IX_EDIT=false; UPI_EDIT=false;
   window.scrollTo(0,0);
   const main=$("main");
