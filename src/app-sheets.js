@@ -707,8 +707,12 @@ function sheetSettle(from, to, amt, existing){
       return;
     }
     // The amount follows whoever is picked, so choosing a different pair shows
-    // what is outstanding between them rather than leaving a stale figure.
-    let touched = false;
+    // what is outstanding between them rather than leaving a stale figure. A
+    // payment that already exists counts as set by hand: opening it to fix a
+    // note used to wipe the amount, because the payment itself had settled the
+    // debt and so nothing was outstanding to suggest - and then it could not
+    // be saved at all without typing the figure back in.
+    let touched = !!existing;
     $("stAmt").addEventListener("input", ()=>{ touched = true; refresh(); });
     // Paying somebody who saved their Interac details: show them, with the
     // amount, ready to copy - and the bank app one tap away.
