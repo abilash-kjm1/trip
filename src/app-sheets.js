@@ -1946,6 +1946,70 @@ function sheetSimplifyDiagram(gid){
       : "";
   });
 }
+/* One payment, explained to whoever is looking at it. Simplifying matches
+   totals, so it can ask somebody to pay a person they never shared anything
+   with - and that reads as arbitrary until you see the run of real debts it
+   stands in for, and where the figure itself came from. */
+function sheetWhyPayment(gid, t){
+  const me=meIn(gid), cur=curOf(gid);
+  const why=settleWhy(gid, t.from, t.to);
+  const Nm=(n)=> n===me ? "You" : n;
+  const low=(n)=> n===me ? "you" : n;
+  const owes=(n)=> n===me ? "You owe" : esc(n)+" owes";
+  const step=(from, to, amt)=>{
+    const fm=memberOf(from,gid), tm=memberOf(to,gid);
+    const r=el("div","owe-row");
+    r.innerHTML=
+      '<span class="owe-pair">'+avatarHTML("sm", from, fm&&fm.color, fm&&fm.photo)+
+        '<span class="ms" aria-hidden="true">arrow_forward</span>'+
+        avatarHTML("sm", to, tm&&tm.color, tm&&tm.photo)+'</span>'+
+      '<span class="owe-b"><span class="owe-t">'+owes(from)+' <b>'+esc(low(to))+'</b></span></span>'+
+      '<span class="owe-r"><span class="owe-amt zero">'+money(amt, cur)+'</span></span>';
+    return r;
+  };
+  // What whoever is paying has put in, against what they have used.
+  let paid=0, share=0, n=0;
+  expensesOf(gid).forEach(e=>{
+    const sh=sharesOf(e);
+    if(e.payer===t.from) paid+=Number(e.amount)||0;
+    if((sh[t.from]||0)>0.004){ share+=sh[t.from]; n++; }
+  });
+  const left=Math.round((share-paid)*100)/100;
+  openSheet("Why this payment?", (b)=>{
+    b.innerHTML=
+      '<p class="lead">'+(t.from===me ? 'You pay' : esc(t.from)+' pays')+' <b>'+esc(t.to===me ? 'you' : t.to)+'</b> '+
+        esc(money(t.amt, cur))+'. Here is where that comes from.</p>'+
+      (why.kind==="chain"
+        ? '<div class="sect" style="margin-top:0"><h2><span class="ms" aria-hidden="true">alt_route</span>What it stands in for</h2></div>'+
+          '<div class="card owelist" id="whyChain"></div>'+
+          '<p class="fine" style="margin-top:10px">'+esc(Nm(t.from))+' pay'+(t.from===me?'':'s')+' '+esc(low(t.to))+
+            ' directly instead, and all of those clear at once.</p>'
+        : '<div class="sect" style="margin-top:0"><h2><span class="ms" aria-hidden="true">balance</span>How the two were matched</h2></div>'+
+          '<div class="ns-lines">'+
+            '<div class="ns-line"><span>'+esc(Nm(t.from))+' owe'+(t.from===me?'':'s')+' across this group</span>'+
+              '<span class="neg">'+esc(money(why.totals.owes, cur))+'</span></div>'+
+            '<div class="ns-line"><span>'+esc(Nm(t.to))+' '+(t.to===me?'are':'is')+' owed</span>'+
+              '<span class="pos">'+esc(money(why.totals.owed, cur))+'</span></div>'+
+            '<div class="ns-line total"><span>So the two were matched up</span><b>'+esc(money(t.amt, cur))+'</b></div></div>')+
+      '<div class="sect"><h2><span class="ms" aria-hidden="true">receipt_long</span>Where the figure comes from</h2></div>'+
+      '<div class="ns-lines">'+
+        '<div class="ns-line"><span>'+(t.from===me ? 'Your share of ' : esc(t.from)+'’s share of ')+n+' expense'+(n===1?'':'s')+'</span>'+
+          '<span>'+esc(money(share, cur))+'</span></div>'+
+        '<div class="ns-line"><span>'+(t.from===me ? 'You have paid' : 'Already paid')+'</span>'+
+          '<span>'+esc(money(paid, cur))+'</span></div>'+
+        '<div class="ns-line total"><span>'+(t.from===me ? 'Leaves you owing' : 'Leaves '+esc(t.from)+' owing')+'</span>'+
+          '<b>'+esc(money(left>0?left:0, cur))+'</b></div></div>'+
+      '<button class="btn s wide" id="whyAll" style="margin-top:16px">See the whole group’s working</button>'+
+      '<p class="fine" style="text-align:center;margin-top:12px">Would you rather pay exactly who you split with? '+
+        '<button type="button" class="why-link" id="whyOff">Turn off simplifying</button></p>';
+    if(why.kind==="chain"){
+      const host=$("whyChain");
+      why.chain.forEach(e=> host.appendChild(step(e.from, e.to, e.amt)) );
+    }
+    $("whyAll").addEventListener("click", ()=>{ closeSheet(); setTimeout(()=> sheetSimplifyDiagram(gid), 240); });
+    $("whyOff").addEventListener("click", ()=>{ closeSheet(); setTimeout(sheetSimplifyToggle, 240); });
+  });
+}
 function sheetGroupRename(){
   const gid=CURRENT;
   openSheet("Rename group", (b)=>{
