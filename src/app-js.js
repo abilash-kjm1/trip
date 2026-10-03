@@ -766,61 +766,6 @@ function pairSettlements(gid){
 function transferPlan(gid){
   return simplifyOn(gid) ? settlements(gid) : pairSettlements(gid);
 }
-/* Why a simplified payment goes to the person it goes to.
-   Simplifying works out everyone's total first and then matches whoever owes
-   against whoever is owed, so it can ask you to pay somebody you never shared
-   anything with - which reads as arbitrary unless the app says otherwise.
-   Usually there is a plain story behind it: you owe Abi, Abi owes Kelvin, so
-   you pay Kelvin and both clear. That is a path through the real pair-by-pair
-   debts, so this walks the shortest one from whoever pays to whoever is paid.
-   Returns the kind of answer available:
-     direct - it really is a debt between those two, nothing to explain
-     chain  - the run of real debts this one payment stands in for
-     net    - no single path: fall back to the totals that were matched up */
-function settleWhy(gid, from, to){
-  const raw = pairSettlements(gid);
-  const b = balances(gid);
-  const cents = (n)=> Math.round((Number(n)||0)*100)/100;
-  const totals = {owes: cents(-(b[from]||0)), owed: cents(b[to]||0)};
-  const direct = raw.find(e=> e.from===from && e.to===to);
-  if(direct) return {kind:"direct", chain:[direct], totals};
-  const out = {};
-  raw.forEach(e=>{ (out[e.from] = out[e.from] || []).push(e); });
-  // Shortest run of "A owes B, B owes C" first, so the story stays short.
-  const seen = {}; seen[from] = true;
-  let edge = [{at:from, path:[]}], found = null, guard = 0;
-  while(edge.length && !found && guard++ < 200){
-    const next = [];
-    edge.forEach(step=>{
-      if(found) return;
-      (out[step.at] || []).forEach(e=>{
-        if(found || seen[e.to]) return;
-        const path = step.path.concat([e]);
-        if(e.to===to){ found = path; return; }
-        seen[e.to] = true;
-        next.push({at:e.to, path:path});
-      });
-    });
-    edge = next;
-  }
-  return found ? {kind:"chain", chain:found, totals} : {kind:"net", chain:[], totals};
-}
-/* The same answer in one short line, for under the payment it explains. */
-function settleWhyLine(gid, from, to, me){
-  const why = settleWhy(gid, from, to);
-  if(why.kind==="direct") return null;
-  const youFrom = from===me, youTo = to===me;
-  const nameTo = youTo ? "you" : to;
-  if(why.kind==="chain"){
-    const middles = why.chain.slice(0, -1).map(e=> e.to===me ? "you" : e.to);
-    if(middles.length===1){
-      return (youFrom ? "You owe " : from+" owes ")+middles[0]+", who owes "+nameTo;
-    }
-    return (youFrom ? "Your debt to " : from+"’s debt to ")+middles[0]+", passed along to "+nameTo;
-  }
-  return (youFrom ? "What you owe" : "What "+from+" owes")+" matched with what "+
-         (youTo ? "you are" : to+" is")+" owed";
-}
 
 // What to put in the amount box for a given pair, and why.
 function suggestSettle(gid, from, to){

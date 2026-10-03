@@ -818,22 +818,15 @@ function sectionWhoOwes(main, gid){
                : iGet ? '<b>'+esc(t.from)+'</b> pays <b>you</b>'
                :        '<b>'+esc(t.from)+'</b> pays <b>'+esc(t.to)+'</b>';
     const note = iPay ? "You owe this" : iGet ? "Owed to you" : "Between them";
-    // Simplifying can send a payment to somebody you never shared anything
-    // with. Say why right here, rather than leaving them to wonder - the whole
-    // working is a tap away.
-    const why = simplifyOn(gid) ? settleWhyLine(gid, t.from, t.to, me) : null;
     const r=el("div","owe-row"+(iPay||iGet ? " mine" : ""));
     r.innerHTML=
       '<span class="owe-pair">'+avatarHTML("sm", t.from, fm&&fm.color, fm&&fm.photo)+
         '<span class="ms" aria-hidden="true">arrow_forward</span>'+
         avatarHTML("sm", t.to, tm&&tm.color, tm&&tm.photo)+'</span>'+
       '<span class="owe-b"><span class="owe-t">'+line+'</span>'+
-        (why
-          ? '<button type="button" class="owe-why"><span class="ms" aria-hidden="true">help</span>'+esc(why)+'</button>'
-          : '<span class="owe-m">'+note+'</span>')+'</span>'+
+        '<span class="owe-m">'+note+'</span></span>'+
       '<span class="owe-r"><span class="owe-amt '+(iPay?"neg":iGet?"pos":"zero")+'">'+
         money(t.amt)+'</span></span>';
-    if(why) r.querySelector(".owe-why").addEventListener("click", ()=> sheetWhyPayment(gid, t) );
     const right=r.querySelector(".owe-r");
     const btn=(label, soft)=>{
       const b=el("button","owe-btn"+(soft?" soft":""), label); b.type="button";

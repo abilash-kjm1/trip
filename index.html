@@ -2396,15 +2396,6 @@ span.af-pill{ cursor:default; padding-right:12px; }
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .owe-t b{ font-weight:700; color:var(--ink); }
 .owe-m{ display:block; margin-top:2px; font-size:12px; color:var(--ink-3); }
-/* Why a simplified payment goes where it does, said under the payment itself
-   - the confusion happens at a glance, so the answer belongs at a glance. */
-.owe-why{ display:inline-flex; align-items:flex-start; gap:4px; margin-top:3px; padding:0; border:0; background:none;
-  font:inherit; font-size:12px; font-weight:600; line-height:1.35; color:var(--apricot-dk); text-align:left;
-  cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.owe-why .ms{ flex:none; font-size:14px; margin-top:-1px; }
-.owe-why:focus:not(:focus-visible){ outline:none; }
-.why-link{ padding:0; border:0; background:none; font:inherit; font-size:inherit; font-weight:700;
-  color:var(--apricot-dk); text-decoration:underline; cursor:pointer; }
 .owe-r{ flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
 .owe-amt{ font-size:15.5px; font-weight:700; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
 .owe-amt.neg{ color:var(--bad); } .owe-amt.pos{ color:var(--good); } .owe-amt.zero{ color:var(--ink); }
@@ -4135,61 +4126,6 @@ function pairSettlements(gid){
 function transferPlan(gid){
   return simplifyOn(gid) ? settlements(gid) : pairSettlements(gid);
 }
-/* Why a simplified payment goes to the person it goes to.
-   Simplifying works out everyone's total first and then matches whoever owes
-   against whoever is owed, so it can ask you to pay somebody you never shared
-   anything with - which reads as arbitrary unless the app says otherwise.
-   Usually there is a plain story behind it: you owe Abi, Abi owes Kelvin, so
-   you pay Kelvin and both clear. That is a path through the real pair-by-pair
-   debts, so this walks the shortest one from whoever pays to whoever is paid.
-   Returns the kind of answer available:
-     direct - it really is a debt between those two, nothing to explain
-     chain  - the run of real debts this one payment stands in for
-     net    - no single path: fall back to the totals that were matched up */
-function settleWhy(gid, from, to){
-  const raw = pairSettlements(gid);
-  const b = balances(gid);
-  const cents = (n)=> Math.round((Number(n)||0)*100)/100;
-  const totals = {owes: cents(-(b[from]||0)), owed: cents(b[to]||0)};
-  const direct = raw.find(e=> e.from===from && e.to===to);
-  if(direct) return {kind:"direct", chain:[direct], totals};
-  const out = {};
-  raw.forEach(e=>{ (out[e.from] = out[e.from] || []).push(e); });
-  // Shortest run of "A owes B, B owes C" first, so the story stays short.
-  const seen = {}; seen[from] = true;
-  let edge = [{at:from, path:[]}], found = null, guard = 0;
-  while(edge.length && !found && guard++ < 200){
-    const next = [];
-    edge.forEach(step=>{
-      if(found) return;
-      (out[step.at] || []).forEach(e=>{
-        if(found || seen[e.to]) return;
-        const path = step.path.concat([e]);
-        if(e.to===to){ found = path; return; }
-        seen[e.to] = true;
-        next.push({at:e.to, path:path});
-      });
-    });
-    edge = next;
-  }
-  return found ? {kind:"chain", chain:found, totals} : {kind:"net", chain:[], totals};
-}
-/* The same answer in one short line, for under the payment it explains. */
-function settleWhyLine(gid, from, to, me){
-  const why = settleWhy(gid, from, to);
-  if(why.kind==="direct") return null;
-  const youFrom = from===me, youTo = to===me;
-  const nameTo = youTo ? "you" : to;
-  if(why.kind==="chain"){
-    const middles = why.chain.slice(0, -1).map(e=> e.to===me ? "you" : e.to);
-    if(middles.length===1){
-      return (youFrom ? "You owe " : from+" owes ")+middles[0]+", who owes "+nameTo;
-    }
-    return (youFrom ? "Your debt to " : from+"’s debt to ")+middles[0]+", passed along to "+nameTo;
-  }
-  return (youFrom ? "What you owe" : "What "+from+" owes")+" matched with what "+
-         (youTo ? "you are" : to+" is")+" owed";
-}
 
 // What to put in the amount box for a given pair, and why.
 function suggestSettle(gid, from, to){
@@ -5266,22 +5202,15 @@ function sectionWhoOwes(main, gid){
                : iGet ? '<b>'+esc(t.from)+'</b> pays <b>you</b>'
                :        '<b>'+esc(t.from)+'</b> pays <b>'+esc(t.to)+'</b>';
     const note = iPay ? "You owe this" : iGet ? "Owed to you" : "Between them";
-    // Simplifying can send a payment to somebody you never shared anything
-    // with. Say why right here, rather than leaving them to wonder - the whole
-    // working is a tap away.
-    const why = simplifyOn(gid) ? settleWhyLine(gid, t.from, t.to, me) : null;
     const r=el("div","owe-row"+(iPay||iGet ? " mine" : ""));
     r.innerHTML=
       '<span class="owe-pair">'+avatarHTML("sm", t.from, fm&&fm.color, fm&&fm.photo)+
         '<span class="ms" aria-hidden="true">arrow_forward</span>'+
         avatarHTML("sm", t.to, tm&&tm.color, tm&&tm.photo)+'</span>'+
       '<span class="owe-b"><span class="owe-t">'+line+'</span>'+
-        (why
-          ? '<button type="button" class="owe-why"><span class="ms" aria-hidden="true">help</span>'+esc(why)+'</button>'
-          : '<span class="owe-m">'+note+'</span>')+'</span>'+
+        '<span class="owe-m">'+note+'</span></span>'+
       '<span class="owe-r"><span class="owe-amt '+(iPay?"neg":iGet?"pos":"zero")+'">'+
         money(t.amt)+'</span></span>';
-    if(why) r.querySelector(".owe-why").addEventListener("click", ()=> sheetWhyPayment(gid, t) );
     const right=r.querySelector(".owe-r");
     const btn=(label, soft)=>{
       const b=el("button","owe-btn"+(soft?" soft":""), label); b.type="button";
@@ -8819,70 +8748,6 @@ function sheetSimplifyDiagram(gid){
       : "";
   });
 }
-/* One payment, explained to whoever is looking at it. Simplifying matches
-   totals, so it can ask somebody to pay a person they never shared anything
-   with - and that reads as arbitrary until you see the run of real debts it
-   stands in for, and where the figure itself came from. */
-function sheetWhyPayment(gid, t){
-  const me=meIn(gid), cur=curOf(gid);
-  const why=settleWhy(gid, t.from, t.to);
-  const Nm=(n)=> n===me ? "You" : n;
-  const low=(n)=> n===me ? "you" : n;
-  const owes=(n)=> n===me ? "You owe" : esc(n)+" owes";
-  const step=(from, to, amt)=>{
-    const fm=memberOf(from,gid), tm=memberOf(to,gid);
-    const r=el("div","owe-row");
-    r.innerHTML=
-      '<span class="owe-pair">'+avatarHTML("sm", from, fm&&fm.color, fm&&fm.photo)+
-        '<span class="ms" aria-hidden="true">arrow_forward</span>'+
-        avatarHTML("sm", to, tm&&tm.color, tm&&tm.photo)+'</span>'+
-      '<span class="owe-b"><span class="owe-t">'+owes(from)+' <b>'+esc(low(to))+'</b></span></span>'+
-      '<span class="owe-r"><span class="owe-amt zero">'+money(amt, cur)+'</span></span>';
-    return r;
-  };
-  // What whoever is paying has put in, against what they have used.
-  let paid=0, share=0, n=0;
-  expensesOf(gid).forEach(e=>{
-    const sh=sharesOf(e);
-    if(e.payer===t.from) paid+=Number(e.amount)||0;
-    if((sh[t.from]||0)>0.004){ share+=sh[t.from]; n++; }
-  });
-  const left=Math.round((share-paid)*100)/100;
-  openSheet("Why this payment?", (b)=>{
-    b.innerHTML=
-      '<p class="lead">'+(t.from===me ? 'You pay' : esc(t.from)+' pays')+' <b>'+esc(t.to===me ? 'you' : t.to)+'</b> '+
-        esc(money(t.amt, cur))+'. Here is where that comes from.</p>'+
-      (why.kind==="chain"
-        ? '<div class="sect" style="margin-top:0"><h2><span class="ms" aria-hidden="true">alt_route</span>What it stands in for</h2></div>'+
-          '<div class="card owelist" id="whyChain"></div>'+
-          '<p class="fine" style="margin-top:10px">'+esc(Nm(t.from))+' pay'+(t.from===me?'':'s')+' '+esc(low(t.to))+
-            ' directly instead, and all of those clear at once.</p>'
-        : '<div class="sect" style="margin-top:0"><h2><span class="ms" aria-hidden="true">balance</span>How the two were matched</h2></div>'+
-          '<div class="ns-lines">'+
-            '<div class="ns-line"><span>'+esc(Nm(t.from))+' owe'+(t.from===me?'':'s')+' across this group</span>'+
-              '<span class="neg">'+esc(money(why.totals.owes, cur))+'</span></div>'+
-            '<div class="ns-line"><span>'+esc(Nm(t.to))+' '+(t.to===me?'are':'is')+' owed</span>'+
-              '<span class="pos">'+esc(money(why.totals.owed, cur))+'</span></div>'+
-            '<div class="ns-line total"><span>So the two were matched up</span><b>'+esc(money(t.amt, cur))+'</b></div></div>')+
-      '<div class="sect"><h2><span class="ms" aria-hidden="true">receipt_long</span>Where the figure comes from</h2></div>'+
-      '<div class="ns-lines">'+
-        '<div class="ns-line"><span>'+(t.from===me ? 'Your share of ' : esc(t.from)+'’s share of ')+n+' expense'+(n===1?'':'s')+'</span>'+
-          '<span>'+esc(money(share, cur))+'</span></div>'+
-        '<div class="ns-line"><span>'+(t.from===me ? 'You have paid' : 'Already paid')+'</span>'+
-          '<span>'+esc(money(paid, cur))+'</span></div>'+
-        '<div class="ns-line total"><span>'+(t.from===me ? 'Leaves you owing' : 'Leaves '+esc(t.from)+' owing')+'</span>'+
-          '<b>'+esc(money(left>0?left:0, cur))+'</b></div></div>'+
-      '<button class="btn s wide" id="whyAll" style="margin-top:16px">See the whole group’s working</button>'+
-      '<p class="fine" style="text-align:center;margin-top:12px">Would you rather pay exactly who you split with? '+
-        '<button type="button" class="why-link" id="whyOff">Turn off simplifying</button></p>';
-    if(why.kind==="chain"){
-      const host=$("whyChain");
-      why.chain.forEach(e=> host.appendChild(step(e.from, e.to, e.amt)) );
-    }
-    $("whyAll").addEventListener("click", ()=>{ closeSheet(); setTimeout(()=> sheetSimplifyDiagram(gid), 240); });
-    $("whyOff").addEventListener("click", ()=>{ closeSheet(); setTimeout(sheetSimplifyToggle, 240); });
-  });
-}
 function sheetGroupRename(){
   const gid=CURRENT;
   openSheet("Rename group", (b)=>{
@@ -10870,7 +10735,7 @@ function forgetCachedGroups(){
    it - at once if nothing is happening, or as soon as the person stops typing,
    closes a sheet or answers a question. Whichever tab they were on, they are
    still on after. */
-const APP_BUILD = "20261003211030";
+const APP_BUILD = "20260919133547";
 const UPDATE_EVERY_MS = 60e3;
 const UPDATE_KEY = "settle.updated.v1";     // sessionStorage: the reload was ours
 const UPDATE_TRIED = "settle.updateTried.v1";
