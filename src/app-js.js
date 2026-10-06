@@ -632,7 +632,24 @@ function addedByMe(rec){
   if(rec.byUid) return rec.byUid===USER.uid;
   return !!ME && rec.by===ME;
 }
-const canEdit = (rec) => isAdmin() || addedByMe(rec);
+/* ---------------- a group that is finished ----------------
+   Once nobody owes anybody, the administrator can close a group. It stays
+   readable for everyone - every expense, who paid, where it all landed - but
+   nothing in it can be added or changed again until it is reopened.
+   The flag sits at trips/{gid}/closed rather than inside meta on purpose: the
+   rule at $gid already limits writes there to the administrator, so no member
+   can close or reopen a group without a single new rule being written. */
+const isClosed = (gid) => !!(DATA[gid||CURRENT] && DATA[gid||CURRENT].closed);
+const closedInfo = (gid) => (DATA[gid||CURRENT] && DATA[gid||CURRENT].closed) || null;
+/* Nobody owes anybody, to the cent. A group has to be here before it can be
+   closed - sealing a debt in would leave somebody unable to settle it. */
+function allSettled(gid){
+  const b = balances(gid);
+  return Object.keys(b).every(n=> Math.abs(b[n]) < 0.005 );
+}
+// Closing freezes the ledger for everybody, the administrator included: the
+// way back is to reopen, not to edit around it.
+const canEdit = (rec) => !isClosed() && (isAdmin() || addedByMe(rec));
 
 /* Who may be named as the payer when recording something. Money goes into the
    ledger under the name of whoever paid, so only they may put it there - if
@@ -641,6 +658,7 @@ const canEdit = (rec) => isAdmin() || addedByMe(rec);
    said which name in the group is theirs. Used by every place that asks who
    paid, so they cannot drift apart. */
 function payersAllowed(gid, ppl){
+  if(isClosed(gid)) return [];          // a closed group takes nothing new
   if(isAdmin()) return ppl.slice();
   const me = meIn(gid);
   return me && ppl.indexOf(me) > -1 ? [me] : [];

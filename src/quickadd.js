@@ -15,8 +15,10 @@ function qaPeople(gid){ return [...new Set(names(gid))]; }
 function sheetQuickAdd(){
   if(!USER || !remote) return;
   let gid = CURRENT || QA_LAST || null;
-  if(gid && !joinedHere().some(g=>g.id===gid)) gid = null;
-  if(!gid && joinedHere().length===1) gid = joinedHere()[0].id;
+  // A closed group takes nothing new, so it is not on offer here at all.
+  const openGroups = ()=> joinedHere().filter(g=> !isClosed(g.id) );
+  if(gid && !openGroups().some(g=>g.id===gid)) gid = null;
+  if(!gid && openGroups().length===1) gid = openGroups()[0].id;
   let payer = null;
   let picked = {};
   let pickedFor = null;      // which group `picked` was filled for
@@ -40,7 +42,7 @@ function sheetQuickAdd(){
       // The symbol by the amount follows the group: ₹ for a rupee group.
       if($("qaCur")) $("qaCur").textContent = curSym(gid || curUsual());
       const host=$("qaGroups"); host.innerHTML="";
-      joinedHere().slice().sort((a,c)=>groupName(a.id).localeCompare(groupName(c.id))).forEach(g=>{
+      openGroups().slice().sort((a,c)=>groupName(a.id).localeCompare(groupName(c.id))).forEach(g=>{
         const ch=el("button","chip"); ch.type="button";
         ch.textContent=groupName(g.id);
         ch.setAttribute("aria-pressed", g.id===gid ? "true" : "false");

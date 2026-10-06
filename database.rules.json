@@ -34,6 +34,13 @@
     // whole-group operations: creating a brand new group, and the
     // administrator deleting or managing one.
     //
+    // A finished group can be closed, and "closed" sits at $gid rather than
+    // inside meta precisely because of that narrowing: writing it needs the
+    // administrator, so no member can seal a group or unseal one. While it is
+    // there, every member write below is refused - the group stays readable
+    // but nothing in it can be added or changed. The administrator is left a
+    // way in, so a mistake can always be undone by reopening.
+    //
     // expenses/$id and payments/$id: only whoever added a line (byUid) may
     // change or remove it, or the administrator - except a record from
     // before byUid was tracked, which stays open to any member exactly as
@@ -52,7 +59,7 @@
         ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (!data.exists() && newData.child('uids').child(auth.uid).exists()))",
         "meta": {
           ".read": "auth != null && (root.child('access').child(auth.uid).child('status').val() == 'approved' || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))",
-          ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || root.child('trips').child($gid).child('uids').child(auth.uid).exists() || !data.child('name').exists())",
+          ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (!root.child('trips').child($gid).child('closed').exists() && (root.child('trips').child($gid).child('uids').child(auth.uid).exists() || !data.child('name').exists())))",
           "currency": {
             ".validate": "newData.isString() && newData.val().matches(/^(CAD|INR)$/)"
           },
@@ -61,19 +68,19 @@
           }
         },
         "people": {
-          ".write": "auth != null && (root.child('trips').child($gid).child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
+          ".write": "auth != null && ((root.child('trips').child($gid).child('uids').child(auth.uid).exists() && !root.child('trips').child($gid).child('closed').exists()) || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
         },
         "uids": {
-          ".write": "auth != null && (root.child('trips').child($gid).child('uids').child(auth.uid).exists() || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
+          ".write": "auth != null && ((root.child('trips').child($gid).child('uids').child(auth.uid).exists() && !root.child('trips').child($gid).child('closed').exists()) || (auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com'))"
         },
         "expenses": {
           "$id": {
-            ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (root.child('trips').child($gid).child('uids').child(auth.uid).exists() && ((!data.exists() && newData.exists() && newData.child('byUid').val() == auth.uid) || (data.exists() && data.child('byUid').exists() && data.child('byUid').val() == auth.uid) || (data.exists() && !data.child('byUid').exists()) || (data.exists() && newData.exists() && newData.child('amount').val() == data.child('amount').val() && newData.child('mode').val() == data.child('mode').val()))))"
+            ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (root.child('trips').child($gid).child('uids').child(auth.uid).exists() && !root.child('trips').child($gid).child('closed').exists() && ((!data.exists() && newData.exists() && newData.child('byUid').val() == auth.uid) || (data.exists() && data.child('byUid').exists() && data.child('byUid').val() == auth.uid) || (data.exists() && !data.child('byUid').exists()) || (data.exists() && newData.exists() && newData.child('amount').val() == data.child('amount').val() && newData.child('mode').val() == data.child('mode').val()))))"
           }
         },
         "payments": {
           "$id": {
-            ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (root.child('trips').child($gid).child('uids').child(auth.uid).exists() && ((!data.exists() && newData.exists() && newData.child('byUid').val() == auth.uid) || (data.exists() && data.child('byUid').exists() && data.child('byUid').val() == auth.uid) || (data.exists() && !data.child('byUid').exists()) || (data.exists() && newData.exists() && newData.child('amount').val() == data.child('amount').val() && newData.child('at').val() == data.child('at').val()) || (data.exists() && newData.exists() && newData.child('from').val() == data.child('from').val() && newData.child('to').val() == data.child('to').val() && newData.child('amount').val() == data.child('amount').val() && newData.child('note').val() == data.child('note').val() && newData.child('at').val() == data.child('at').val() && newData.child('by').val() == data.child('by').val() && newData.child('byUid').val() == data.child('byUid').val()))))"
+            ".write": "auth != null && ((auth.token.email_verified == true && auth.token.email.toLowerCase() == 'abilashkjm01@gmail.com') || (root.child('trips').child($gid).child('uids').child(auth.uid).exists() && !root.child('trips').child($gid).child('closed').exists() && ((!data.exists() && newData.exists() && newData.child('byUid').val() == auth.uid) || (data.exists() && data.child('byUid').exists() && data.child('byUid').val() == auth.uid) || (data.exists() && !data.child('byUid').exists()) || (data.exists() && newData.exists() && newData.child('amount').val() == data.child('amount').val() && newData.child('at').val() == data.child('at').val()) || (data.exists() && newData.exists() && newData.child('from').val() == data.child('from').val() && newData.child('to').val() == data.child('to').val() && newData.child('amount').val() == data.child('amount').val() && newData.child('note').val() == data.child('note').val() && newData.child('at').val() == data.child('at').val() && newData.child('by').val() == data.child('by').val() && newData.child('byUid').val() == data.child('byUid').val()))))"
           }
         }
       }

@@ -270,7 +270,9 @@ function sheetExpense(existing){
         ? '<div class="btnrow"><button class="btn p" id="exSave">'+(existing?"Save changes":"Add expense")+'</button></div>'+
           (existing?'<button class="btn d wide" id="exDel" style="margin-top:10px">Delete this expense</button>':'')
         : '<p class="locked"><span class="ms" aria-hidden="true">lock</span>'+
-          'Only '+esc(ownerOf(existing))+' can change this, because they added it.</p>')+
+          (isClosed(gid)
+            ? 'This group is closed. Nothing in it can be changed until it is reopened.'
+            : 'Only '+esc(ownerOf(existing))+' can change this, because they added it.')+'</p>')+
       (existing?'<p class="fine" style="text-align:center;margin-top:12px">Added by '+
         esc(existing.by||existing.payer)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
 
@@ -663,7 +665,9 @@ function sheetSettle(from, to, amt, existing){
               '</div>'+
               '<p class="pf-slide-hint">Slide all the way across to record it.</p>')
         : '<p class="locked"><span class="ms" aria-hidden="true">lock</span>'+
-          'Only '+esc(ownerOf(existing))+' can change this, because they recorded it.</p>')+
+          (isClosed(gid)
+            ? 'This group is closed. Nothing in it can be changed until it is reopened.'
+            : 'Only '+esc(ownerOf(existing))+' can change this, because they recorded it.')+'</p>')+
       (existing?'<div id="stGot"></div><p class="fine">Recorded by '+esc(existing.by||existing.from)+' · '+esc(fmtWhen(existing.at))+'</p>':'');
     // The two faces and the button's wording follow the choices.
     const face=(id, name)=>{
@@ -1801,8 +1805,13 @@ function sheetGroupMenu(){
   // in it, so it is the administrator's alone - not whoever happened to create
   // it. The database rules say the same, so the menu is not the only guard.
   const canDelete = isAdmin();
+  const shut = isClosed(gid);
   openSheet(groupName(gid), (b)=>{
-    const items=[
+    // Closed: everything that would change the group is gone from the menu,
+    // leaving what only reads it - and, for the administrator, the way back.
+    const items = shut ? [
+      ["Print / save as PDF","A full statement of this group","print", doPrint]
+    ] : [
       ["People in this group","Add or remove members","group", sheetMembers],
       ["Settle up","Record a cash or transfer payment","payments", function(){ sheetSettle(); }],
       ["Rename group","","edit", sheetGroupRename],
@@ -1821,8 +1830,14 @@ function sheetGroupMenu(){
           off.then(()=>{ forgetGroup(gid); closeGroup(); });
       }]
     ];
-    if(!meIn(gid)) items.unshift(["Tell them which one is you","Claim your name in this group","how_to_reg",
+    if(!shut && !meIn(gid)) items.unshift(["Tell them which one is you","Claim your name in this group","how_to_reg",
       function(){ sheetClaim(gid); }]);
+    // Closing is the administrator's, like deleting - and only once the group
+    // has nothing left to settle.
+    if(isAdmin()) items.push(shut
+      ? ["Reopen group","Let everyone add and change things again","lock_open", function(){ sheetGroupReopen(gid); }]
+      : ["Close group", allSettled(gid) ? "Everyone is settled — seal it as it stands"
+                                        : "Only once everyone is settled up", "lock", function(){ sheetGroupClose(gid); }]);
     if(canDelete) items.push(["Delete group","Permanently delete it for everyone","delete_forever", function(){
           sheetGroupDelete(gid);
       }]);
@@ -1944,6 +1959,59 @@ function sheetSimplifyDiagram(gid){
     $("simpNote").textContent = raw.length && plan.length
       ? raw.length+" real "+(raw.length===1?"debt":"debts")+" got squashed into just "+plan.length+" "+(plan.length===1?"payment":"payments")+". Everyone ends up with exactly what they owed or were owed — the app just found a shorter way to get there, even if it means paying someone new."
       : "";
+  });
+}
+/* Closing a group, and only when there is nothing left to settle: sealing a
+   debt in would leave somebody who owes with no way to pay, and whoever is
+   owed with no way to be paid, until it was reopened again. */
+function sheetGroupClose(gid){
+  const bal=balances(gid), cur=curOf(gid);
+  const open=Object.keys(bal).filter(n=> Math.abs(bal[n])>=0.005 ).sort((a,c)=> bal[a]-bal[c]);
+  openSheet("Close this group?", (b)=>{
+    if(open.length){
+      b.innerHTML=
+        '<p class="lead">Not yet — '+esc(groupName(gid))+' still has money moving in it. '+
+          'Settle these, or record the payments that have already happened, and the group can be closed.</p>'+
+        '<div class="ns-lines">'+open.map(n=>
+          '<div class="ns-line"><span>'+esc(n)+'</span><span class="'+(bal[n]<0?'neg':'pos')+'">'+
+            (bal[n]<0 ? 'owes '+esc(money(-bal[n], cur)) : 'is owed '+esc(money(bal[n], cur)))+'</span></div>').join("")+
+        '</div>'+
+        '<p class="fine" style="text-align:center;margin-top:14px">Closing keeps a group readable but freezes it, '+
+          'so nobody could settle up afterwards.</p>';
+      return;
+    }
+    const tot=totalOf(gid), n=everyoneIn(gid).length;
+    b.innerHTML=
+      '<p class="lead">Everyone in '+esc(groupName(gid))+' is square. Closing it keeps every expense and '+
+        'payment here for all '+n+' of you to read — but nothing can be added or changed until you reopen it.</p>'+
+      '<div class="ns-lines">'+
+        '<div class="ns-line"><span>Spent together</span><span>'+esc(money(tot, cur))+'</span></div>'+
+        '<div class="ns-line"><span>Expenses</span><span>'+expensesOf(gid).length+'</span></div>'+
+        '<div class="ns-line total"><span>Everyone owes</span><b>nothing</b></div></div>'+
+      '<button class="btn p wide" id="gcGo" style="margin-top:16px">Close the group</button>'+
+      '<p class="fine" style="text-align:center;margin-top:12px">You can reopen it whenever you like.</p>';
+    $("gcGo").addEventListener("click", ()=>{
+      $("gcGo").disabled=true;
+      // updStrict, not set: a refusal has to stay a refusal, or the sheet
+      // would close saying "Group closed" over a group still wide open.
+      updStrict("trips/"+gid, {closed:{at:Date.now(), by: meIn(gid)||USER.name, byUid:USER.uid}})
+        .then(()=>{ closeSheet(); toast("Group closed"); render(); },
+              e=>{ $("gcGo").disabled=false; toast(writeError(e)); });
+    });
+  });
+}
+function sheetGroupReopen(gid){
+  openSheet("Reopen this group?", (b)=>{
+    b.innerHTML=
+      '<p class="lead">'+esc(groupName(gid))+' will take new expenses and payments again, and whoever added '+
+        'something will be able to change it.</p>'+
+      '<button class="btn p wide" id="goGo">Reopen the group</button>';
+    $("goGo").addEventListener("click", ()=>{
+      $("goGo").disabled=true;
+      updStrict("trips/"+gid, {closed:null})
+        .then(()=>{ closeSheet(); toast("Group reopened"); render(); },
+              e=>{ $("goGo").disabled=false; toast(writeError(e)); });
+    });
   });
 }
 function sheetGroupRename(){

@@ -32,7 +32,7 @@ function autoLink(gid){
 }
 
 function render(){
-  const main=$("main"); main.innerHTML="";
+  const main=$("main"); main.innerHTML=""; main.classList.remove("shut");
   $("fab").hidden=true; $("backBtn").hidden=true; $("gmenuBtn").hidden=true;
   $("nav").hidden = !USER;
   // Canada or India - and a count on the other flag for what is new there.
@@ -282,12 +282,16 @@ function viewGroups(main){
         (m.photo ? '<img src="'+esc(m.photo)+'" alt="" referrerpolicy="no-referrer">' : esc(initials(m.name)))+'</span>').join("")+
       (mem.length>4 ? '<span class="gx-face more">+'+(mem.length-4)+'</span>' : '');
     const when = at ? new Date(at).toLocaleDateString(undefined,{month:"short", day:"numeric"}) : "";
-    const t=el("button","gx-tile gc"+(Math.max(0, byName.indexOf(gid))%6)); t.type="button";
+    // A finished group reads as finished from the list: its colour drains away
+    // and the balance chip becomes a padlock.
+    const shut = isClosed(gid);
+    const t=el("button","gx-tile gc"+(Math.max(0, byName.indexOf(gid))%6)+(shut?" shut":"")); t.type="button";
     t.style.setProperty("--i", i);
     t.innerHTML=
       '<span class="gx-mark ms" aria-hidden="true">'+groupIcon(gid)+'</span>'+
       '<span class="gx-top"><span class="gx-ic"><span class="ms" aria-hidden="true">'+groupIcon(gid)+'</span></span>'+
-        '<span class="gx-chip '+tone+'">'+chip+'</span></span>'+
+        '<span class="gx-chip '+(shut?"shut":tone)+'">'+
+          (shut ? '<span class="ms" aria-hidden="true">lock</span>Closed' : chip)+'</span></span>'+
       '<span class="gx-name">'+esc(groupName(gid))+'</span>'+
       '<span class="gx-meta">'+money(tot, gid)+' spent'+(when ? ' · '+esc(when) : '')+'</span>'+
       '<span class="gx-foot"><span class="gx-faces">'+faces+'</span>'+
@@ -353,8 +357,15 @@ function viewGroup(main){
   }
 
   sectionTotal(main, gid);
-  if(!ME) sectionClaim(main, gid);
-  sectionAdd(main, gid);
+  // A closed group keeps everything on show and takes nothing new: the add
+  // form gives way to the reason it is gone.
+  if(isClosed(gid)){
+    main.classList.add("shut");
+    sectionClosed(main, gid);
+  } else {
+    if(!ME) sectionClaim(main, gid);
+    sectionAdd(main, gid);
+  }
   sectionHead(main, "list_alt", "Expenses", "Search, or filter by who paid.");
   groupExpenses(main, gid);
   sectionHead(main, "account_balance_wallet", "Balances",
@@ -422,6 +433,25 @@ function sectionTotal(main, gid){
     if(head) head.scrollIntoView({behavior:"smooth", block:"start"});
   });
   main.appendChild(s);
+}
+
+/* Why there is nothing to add, said where the add form used to be - with the
+   way back out for whoever can take it. */
+function sectionClosed(main, gid){
+  const c=closedInfo(gid)||{};
+  const w=el("div","gshut");
+  w.innerHTML=
+    '<span class="gshut-ic"><span class="ms" aria-hidden="true">lock</span></span>'+
+    '<div class="gshut-b"><b>This group is closed</b>'+
+      '<p>Everyone settled up'+(c.by ? ' and '+esc(c.by)+' closed it' : '')+
+      (c.at ? ' on '+esc(fmtDate(c.at)) : '')+'. Everything in it is still here to read - '+
+      'nothing can be added or changed.</p></div>';
+  if(isAdmin()){
+    const b=el("button","btn s","Reopen"); b.type="button";
+    b.addEventListener("click", ()=> sheetGroupReopen(gid));
+    w.appendChild(b);
+  }
+  main.appendChild(w);
 }
 
 function sectionClaim(main, gid){
