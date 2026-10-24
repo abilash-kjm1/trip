@@ -205,8 +205,17 @@ const nudge = { kind: NUDGE_KIND, gid: "g1", actorUid: "u1", actor: "Kalai",
 let k = await runNudge(nudge);
 is(k.log.nudges, 1, "one reminder goes out");
 is(k.sent[0].to, "abi@example.com", "to the account behind that name in the group");
-is(k.sent[0].subject, "Kalai is asking you to settle up", "and says who is asking");
+// Being asked for money is the one email that is about the reader rather than
+// about the group, so it is marked in the inbox list and carries the figure.
+is(k.sent[0].subject, "Attention: Kalai is asking you to settle up — $50.00",
+   "says who is asking, and what for, without opening it");
 is(/\$50\.00/.test(k.sent[0].text), true, "with the amount");
+is(/ATTENTION/.test(k.sent[0].text), true, "the plain-text copy is marked the same way");
+is(/#F15153/.test(k.sent[0].html), true, "and it arrives in red, unlike every other email");
+// No amount to name: the subject must not trail off into "- $0.00".
+const noAmt = await runNudge({ ...nudge, amount: 0 });
+is(noAmt.sent[0].subject, "Attention: Kalai is asking you to settle up",
+   "with nothing outstanding, the subject simply stops");
 is(k.wrote["trips/g1/nudges/u2"], NOW, "and the time is kept, so it cannot repeat");
 
 k = await runNudge({ ...nudge, desc: "Kelvin" });

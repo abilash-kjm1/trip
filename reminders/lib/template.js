@@ -13,6 +13,13 @@ const RED = "#c9271e";
 const INK = "#111318";
 const SOFT = "#5b6270";
 const LINE = "#e4e6ec";
+/* Being asked for money is the one message that is about the person reading
+   it rather than about the group, so it is the one that looks different: a
+   red band across the top, and red on the figure and the button. Every other
+   email stays calm, which is what makes this one carry. */
+const ALERT = "#F15153";        // the band and the button
+const ALERT_DK = "#B3262B";     // anything that has to be read as words
+const ALERT_BG = "#FFF5F3";     // the paper behind the card
 
 function row(left, right, colour) {
   return `<tr>
@@ -395,44 +402,51 @@ export function groupInviteEmail({ name, inviter, group, appUrl }) {
 /** A nudge: somebody is asking to be paid back. */
 export function nudgeEmail({ name, from, group, amount, appUrl, cur }) {
   const headline = from + " is asking you to settle up";
+  // The amount rides in the subject so it is answerable from the inbox list,
+  // without opening anything - but only when there is one to name.
+  const owed = Number(amount) || 0;
+  const subject = "Attention: " + headline + (owed > 0.004 ? " — " + money(owed, cur) : "");
 
   const html = `<!doctype html>
 <html><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>${esc(headline)}</title>
-</head><body style="margin:0;padding:0;background:#FCFAF5">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FCFAF5;padding:24px 12px">
+<title>${esc(subject)}</title>
+</head><body style="margin:0;padding:0;background:${ALERT_BG}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${ALERT_BG};padding:24px 12px">
 <tr><td align="center">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-         style="max-width:560px;background:#ffffff;border-radius:16px;padding:28px 26px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
-    <tr><td>
+         style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+    <tr><td style="background:${ALERT};padding:13px 26px">
+      <p style="margin:0;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#ffffff">Attention</p>
+    </td></tr>
+    <tr><td style="padding:26px">
       <p style="margin:0 0 4px;font-size:14px;color:${SOFT}">Settle</p>
       <h1 style="margin:0 0 2px;font-size:26px;line-height:1.2;color:${INK}">Hello ${esc(name)},</h1>
-      <p style="margin:10px 0 0;font-size:21px;font-weight:700;color:${INK}">${esc(headline)}</p>
+      <p style="margin:10px 0 0;font-size:21px;font-weight:700;color:${ALERT_DK}">${esc(headline)}</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
              style="border-collapse:collapse;margin-top:18px">
         ${row("Group", esc(group))}
-        ${row("What you owe " + esc(from), money(amount, cur), RED)}
+        ${row("What you owe " + esc(from), money(amount, cur), ALERT_DK)}
       </table>
       <p style="margin:22px 0 0;font-size:14px;line-height:1.55;color:${SOFT}">
         Once you have paid, open Settle and record it so everybody's balance is
         right. Nothing has been taken from anywhere - this is only a reminder.
       </p>
       <p style="margin:26px 0 0">
-        <a href="${esc(appUrl)}" style="display:inline-block;background:#2F332D;color:#FCFAF5;text-decoration:none;
-           font-size:16px;font-weight:600;padding:13px 24px;border-radius:999px">Open Settle</a>
+        <a href="${esc(appUrl)}" style="display:inline-block;background:${ALERT};color:#ffffff;text-decoration:none;
+           font-size:16px;font-weight:600;padding:13px 24px;border-radius:999px">Open Settle and pay</a>
       </p>
     </td></tr>
   </table>
 </td></tr></table>
 </body></html>`;
 
-  const text = `Hello ${name},\n\n${headline}\n\nGroup: ${group}\n` +
+  const text = `ATTENTION - ${headline}\n\nHello ${name},\n\nGroup: ${group}\n` +
     `What you owe ${from}: ${money(amount, cur)}\n\n` +
     `Once you have paid, open Settle and record it so everybody's balance is right. ` +
     `This is only a reminder - nothing has been taken from anywhere.\n\nOpen Settle: ${appUrl}\n`;
 
-  return { subject: headline, html, text };
+  return { subject, html, text };
 }
